@@ -1,0 +1,127 @@
+% Created 2009-10-15 Thu 07:48
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{soul}
+\usepackage{hyperref}
+
+
+\title{COMMON-DB: отладчик для кристаллов семейства Мультикор.}
+\author{Samium Gromoff}
+\date{15 October 2009}
+
+\begin{document}
+
+\maketitle
+
+\setcounter{tocdepth}{3}
+\tableofcontents
+\vspace*{1cm}
+
+\begin{center}
+Замечания по использованию. \\
+\\
+October 15, 2009, 05:51
+\end{center}
+
+
+\section{Замечания по использованию}
+\label{sec-1}
+
+\subsection{Параметры командной строки}
+\label{sec-1.1}
+
+\begin{itemize}
+\item интерпретация параметров командной строки осуществляется примерно следующим образом:
+
+\begin{itemize}
+\item всё что имеет форму \''quoted like this\'' воспринимается как строка,
+\item всё что похоже на целое число воспринимается как шестнадцатиричное,
+\item иначе объект воспринимается как символ\footnote{Символ в контексте языка Common Lisp, а проще говоря, либо
+\end{itemize}
+
+\end{itemize}
+символьная константа, вроде t/nil/pi (истина/ложь/3.14\ldots{}), либо
+значение соответствующее названной переменной. }
+
+\subsection{Командный интерфейс}
+\label{sec-1.2}
+
+\begin{itemize}
+\item команда `scan' необходима для поиска присоединённых устройств
+\item пути необходимо указывать в следующей форме:
+
+\begin{verbatim}
+       "/path/to/foo", в UNIX-системах, или:
+       "d:/path/to/foo", в системах Windows.
+\end{verbatim}
+
+\item ввод чисел по основанию 16 осуществляетс с помощью следующего синтаксиса:
+
+\begin{verbatim}
+       #xdeadbeef
+\end{verbatim}
+
+\item словный доступ к памяти осуществляется следующим образом: 
+
+\begin{verbatim}
+       (setf (interface:interface-bus-word *interface* #x0) #xdeadbeef) -- запись #xdeadbeef по физическому адресу 0
+       (interface:interface-bus-word *interface* #x0)  -- чтение физического адреса 0
+\end{verbatim}
+
+
+        в качестве замечания:
+
+\begin{verbatim}
+       (setf (interface:interface-bus-word *interface* #x0) #xdeadbeef
+             (interface:interface-bus-word *interface* #x4) #xdeadbeef
+             (interface:interface-bus-word *interface* #x8) #xdeadbeef)
+\end{verbatim}
+
+
+        .. более приятный синтаксис для группы записей.
+\item регистр не имеет значения нигде\footnote{Почти. В данном контексте пользователь вряд ли столкнётся с
+\end{itemize}
+\href{http://www.lispworks.com/documentation/HyperSpec/Body/02_b.htm#multiple_escape}{пунктом 6 статьи 2.2 спецификации ANSI Common Lisp}. } кроме строк:
+
+\begin{verbatim}
+       "/foo/bar" != "/Foo/Bar", однако BREAK == BreaK
+\end{verbatim}
+
+
+\begin{itemize}
+\item по умолчанию \texttt{*PRINT-BASE*}, переменная задающая основание определяющее печать
+      чисел, имеет значение равное 10; установить её значение в 16 можно следующим
+      образом:
+
+\begin{verbatim}
+       (setf *print-base* #x10)
+\end{verbatim}
+
+\item при возникновении исключительных ситуаций (в т.ч. ошибок) активируется отладчик CL,
+      в котором также можно исполнять команды, а также активировать т.н. \emph{рестарты} --
+      реакции заготовленные на случай возникновения ошибки в данном контексте. Активация
+      рестарта позволяет продолжить исполнение тем или иным образом. Выбор рестартов осуществляется
+      вводом соответствующего ему номера, либо сокращения его имени префиксированного `:'
+\end{itemize}
+\begin{verse}
+\emph{0-9} - выбрать соответствующий рестарт\\
+\emph{:a}  - выбрать самый верхний рестарт с именем начинающимся на A\\
+\end{verse}
+
+\begin{itemize}
+\item присутствует команда \textbf{help}, однако она не очень полезна на данный момент
+\item полезные команды:
+
+\begin{description}
+\item [apropos] \emph{пример: apropos `break} \\
+                   вывести перечень команд с именем содержащим `break'
+\item [describe] \emph{пример: describe #'hw-break} \\
+                    вывести информацию о команде `hw-break', включая возможную документацию
+\end{description}
+
+\end{itemize}
+
+\end{document}

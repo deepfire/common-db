@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+               "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+lang="en" xml:lang="en">
+<head>
+
+<title>Программа для прошивки флэш-памяти в системах использующих кристалл Мультикор</title>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+<meta name="generator" content="Org-mode"/>
+<meta name="generated" content="2009-10-27 23:45:25 MSK"/>
+<meta name="author" content="Samium Gromoff"/>
+<meta name="description" content=""/>
+<meta name="keywords" content=""/>
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  html { font-family: Times, serif; font-size: 12pt; }
+  .title  { text-align: center; }
+  .todo   { color: red; }
+  .done   { color: green; }
+  .tag    { background-color: #add8e6; font-weight:normal }
+  .target { }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  p.verse { margin-left: 3% }
+  pre {
+	border: 1pt solid #AEBDCC;
+	background-color: #F3F5F7;
+	padding: 5pt;
+	font-family: courier, monospace;
+        font-size: 90%;
+        overflow:auto;
+  }
+  table { border-collapse: collapse; }
+  td, th { vertical-align: top; }
+  dt { font-weight: bold; }
+  div.figure { padding: 0.5em; }
+  div.figure p { text-align: center; }
+  .linenr { font-size:smaller }
+  .code-highlighted {background-color:#ffff00;}
+  .org-info-js_info-navigation { border-style:none; }
+  #org-info-js_console-label { font-size:10px; font-weight:bold;
+                               white-space:nowrap; }
+  .org-info-js_search-highlight {background-color:#ffff00; color:#000000;
+                                 font-weight:bold; }
+  /*]]>*/-->
+</style>
+<link rel="stylesheet" type="text/css" href="style.css" />
+<script type="text/javascript">
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">Программа для прошивки флэш-памяти в системах использующих кристалл Мультикор</h1>
+
+
+<div style="text-align: center">
+<p>Сопроводительная документация <br/>
+<br/>
+October 27, 2009, 23:45
+</p>
+</div>
+
+
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#sec-1">1 Ограничения </a></li>
+<li><a href="#sec-2">2 Механизм работы программы и её интерфейс </a></li>
+<li><a href="#sec-3">3 Особенности установки драйверов адаптеров JTAG EPP и USB </a></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-1" class="outline-2">
+<h2 id="sec-1"><span class="section-number-2">1</span> Ограничения </h2>
+<div class="outline-text-2" id="text-1">
+
+
+<p>
+Программа для прошивки флэш-памяти (далее "флэшер") предназначена для записи
+информации в энергонезависимую флэш-память на платах построенных на платформе
+Elvees Multicore, используя управляющий отладочный интерфейс JTAG посредством
+интерфейсных адаптеров EPP и USB.
+</p>
+<p>
+Флэшер функционирует в средах Linux/x86 и win32/x86.
+</p>
+<p>
+Поддерживаются, потенциально, все типы флэш-памяти использующие наборы команд
+Intel и AMD, однако тестирование проводилось только с чипами следующих моделей:
+</p><ul>
+<li>
+SST38VF6401B (набор команд AMD/Spansion)
+</li>
+<li>
+MT28F640J3 (набор команд Intel)
+
+</li>
+</ul>
+
+<p>При указании имён файлов нельзя использовать знак двоеточия ':', что исключает
+возможность задания абсолютных путей на платформах win32.
+Также, исключены пробелы.
+</p>
+<p>
+При задании численных значений, необходимо использовать шестнадцатиричную форму,
+без каких-либо префиксов или суффиксов ("0x", "h" или же "#x").
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-2" class="outline-2">
+<h2 id="sec-2"><span class="section-number-2">2</span> Механизм работы программы и её интерфейс </h2>
+<div class="outline-text-2" id="text-2">
+
+
+<p>
+Полный прогон программы состоит из четырёх фаз:
+</p><ul>
+<li>
+фаза поиска групы флэш-чипов
+</li>
+<li>
+фаза записи
+</li>
+<li>
+фаза проверки
+</li>
+<li>
+фаза печати
+
+</li>
+</ul>
+
+<p>Активация фаз осуществляется ключём индивидуальным для каждой из них, кроме фазы
+поиска, осуществляемой автоматически при осуществлении записи.
+</p>
+<p>
+Фаза записи контролируется ключами <code>--raw-file</code> и <code>--elf-file</code>, осуществляющими
+задание записи "сырого" и ELF-файлов, соответственно. Каждый из этих ключей может
+быть указан единожды, причём ключ <code>--raw-file</code> требует добавочного ключа <code>--raw-base</code>,
+для задания базового адреса записи.
+</p>
+<p>
+Следует отметить, что ввиду того что, как было указано выше, фаза записи
+подразумевает фазу поиска флэш-памяти, необходимо задание добавочного параметра,
+указывающего базовый адрес самой флэш-памяти. Этот адрес задаётся с помощью ключа
+<code>--flash-base</code>, и имеет значение по умолчанию удобное для тестовых плат: #xbfc00000.
+</p>
+<p>
+Фаза проверки по умолчанию включена и выключается с помощью флага <code>--no-check</code>.
+</p>
+<p>
+Фаза печати активируется ключём <code>--dump-base</code> и требует добавочный ключ <code>--dump-size</code>.
+</p>
+<p>
+Ключ <code>--preserve-holes</code> контролирует сохранение информации в блоках стирания
+содержащих записываемые секциями.
+</p>
+<p>
+Ключ <code>--verbose</code> контролирует количество выдаваемой статусной информации.
+</p>
+<p>
+Флаг <code>--help</code> выдаёт справку на английском языке. Справка выдаётся, также, и при
+отсутствии ключей.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-3" class="outline-2">
+<h2 id="sec-3"><span class="section-number-2">3</span> Особенности установки драйверов адаптеров JTAG EPP и USB </h2>
+<div class="outline-text-2" id="text-3">
+
+
+<p>
+Для функционирования отладчика JTAG, предоставляющего инфраструктуру для флэшера,
+требуется установка драйвера адаптера устанавливающего связь с JTAG TAP.
+</p>
+<p>
+Драйвер EPP адаптера устанавливается отладчиком автоматически, причём требуется
+чтобы файл mcdbio.sys устанавливаемого драйвера находился в одной папке с
+исполняемым файлом флэшера.
+</p>
+<p>
+В случае с USB, драйвер необходимо устанавливать вручную, путём подключения
+адаптера и представления системе Windows необходимой информации о расположении
+inf-файла драйвера через всплывающее окно, автоматически появляющееся при
+подключении адаптера.
+</p></div>
+</div>
+<div id="postamble">
+<p class="author"> Author: Samium Gromoff
+<a href="mailto:_deepfire@feelingofgreen.ru">&lt;_deepfire@feelingofgreen.ru&gt;</a>
+</p>
+<p class="date"> Date: 2009-10-27 23:45:25 MSK</p>
+<p class="creator">HTML generated by org-mode 6.31a in emacs 23</p>
+</div>
+</div>
+</body>
+</html>

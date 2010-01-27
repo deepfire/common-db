@@ -1,0 +1,2907 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+               "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+lang="en" xml:lang="en">
+<head>
+<title>COMMON-DB: отладчик для кристаллов семейства Мультикор</title>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+<meta name="generator" content="Org-mode"/>
+<meta name="generated" content="2010-01-11 19:31:36 MSK"/>
+<meta name="author" content="Serge Kosyrev"/>
+<meta name="description" content=""/>
+<meta name="keywords" content=""/>
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  html { font-family: Times, serif; font-size: 12pt; }
+  .title  { text-align: center; }
+  .todo   { color: red; }
+  .done   { color: green; }
+  .tag    { background-color: #add8e6; font-weight:normal }
+  .target { }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  p.verse { margin-left: 3% }
+  pre {
+	border: 1pt solid #AEBDCC;
+	background-color: #F3F5F7;
+	padding: 5pt;
+	font-family: courier, monospace;
+        font-size: 90%;
+        overflow:auto;
+  }
+  table { border-collapse: collapse; }
+  td, th { vertical-align: top; }
+  dt { font-weight: bold; }
+  div.figure { padding: 0.5em; }
+  div.figure p { text-align: center; }
+  .linenr { font-size:smaller }
+  .code-highlighted {background-color:#ffff00;}
+  .org-info-js_info-navigation { border-style:none; }
+  #org-info-js_console-label { font-size:10px; font-weight:bold;
+                               white-space:nowrap; }
+  .org-info-js_search-highlight {background-color:#ffff00; color:#000000;
+                                 font-weight:bold; }
+  /*]]>*/-->
+</style>
+<link rel="stylesheet" type="text/css" href="style.css" />
+<script type="text/javascript">
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">COMMON-DB: отладчик для кристаллов семейства Мультикор</h1>
+
+
+<div style="text-align: center">
+<p>Документация пользователя <br/>
+<br/>
+January 11, 2010, 19:29
+</p>
+</div>
+
+
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#sec-1">1 Введение </a>
+<ul>
+<li><a href="#sec-1.1">1.1 Принятые обозначения </a></li>
+</ul>
+</li>
+<li><a href="#sec-2">2 Обзор </a>
+<ul>
+<li><a href="#sec-2.1">2.1 Новые возможности, специфичные для comdb </a></li>
+<li><a href="#sec-2.2">2.2 Дополнительные возможности программирования отладчика </a></li>
+</ul>
+</li>
+<li><a href="#sec-3">3 Установка отладчика </a>
+<ul>
+<li><a href="#sec-3.1">3.1 Замечания по настройке параллельного порта для работы с адаптером EPP </a></li>
+<li><a href="#sec-3.2">3.2 Замечания по установке драйвера USB-адаптера в ОС Windows </a></li>
+</ul>
+</li>
+<li><a href="#sec-4">4 Режимы работы </a>
+<ul>
+<li><a href="#sec-4.1">4.1 Общие замечания по синтаксису </a>
+<ul>
+<li><a href="#sec-4.1.1">4.1.1 Чувствительность к регистру символов </a></li>
+<li><a href="#sec-4.1.2">4.1.2 Основание используемое при печати/чтении чисел </a></li>
+<li><a href="#sec-4.1.3">4.1.3 Различия в способах указания путей к файлам в Linux и Windows </a></li>
+</ul>
+</li>
+<li><a href="#sec-4.2">4.2 Различие между синтаксисами интерактивного и пакетного режимов </a></li>
+<li><a href="#sec-4.3">4.3 Интерактивный режим </a></li>
+<li><a href="#sec-4.4">4.4 Режим пакетного исполнения </a></li>
+<li><a href="#sec-4.5">4.5 Отладчик отладчика </a></li>
+</ul>
+</li>
+<li><a href="#sec-5">5 Запуск отладчика </a>
+<ul>
+<li><a href="#sec-5.1">5.1 Параметры командной строки </a></li>
+</ul>
+</li>
+<li><a href="#sec-6">6 Интерфейс </a>
+<ul>
+<li><a href="#sec-6.1">6.1 Терминология специфичная для тематики связанной с передачей аргументов функциям в языке Common Lisp </a></li>
+<li><a href="#sec-6.2">6.2 Соглашение о передаче аргументов, лямбда-списки </a>
+<ul>
+<li><a href="#sec-6.2.1">6.2.1 Спецификаторы обязательных параметров </a></li>
+<li><a href="#sec-6.2.2">6.2.2 Спецификаторы опциональных параметров </a></li>
+<li><a href="#sec-6.2.3">6.2.3 Спецификатор остаточного параметра </a></li>
+<li><a href="#sec-6.2.4">6.2.4 Спецификатор ключевых параметров </a></li>
+<li><a href="#sec-6.2.5">6.2.5 Примеры обычных лямбда-списков </a></li>
+</ul>
+</li>
+<li><a href="#sec-6.3">6.3 Управляющие переменные </a></li>
+<li><a href="#sec-6.4">6.4 Документация </a></li>
+<li><a href="#sec-6.5">6.5 Устройства </a></li>
+<li><a href="#sec-6.6">6.6 Ввод/вывод </a></li>
+<li><a href="#sec-6.7">6.7 Управление состоянием </a></li>
+<li><a href="#sec-6.8">6.8 Ловушки </a></li>
+<li><a href="#sec-6.9">6.9 DSP </a></li>
+<li><a href="#sec-6.10">6.10 Адреса и символы </a></li>
+<li><a href="#sec-6.11">6.11 Анализ </a></li>
+<li><a href="#sec-6.12">6.12 Вмешательство </a></li>
+<li><a href="#sec-6.13">6.13 Трассировка </a></li>
+<li><a href="#sec-6.14">6.14 Прочее </a></li>
+<li><a href="#sec-6.15">6.15 Грубое управление </a></li>
+<li><a href="#sec-6.16">6.16 Тестирование </a></li>
+<li><a href="#sec-6.17">6.17 Команды отладчика MDB получившие новое название </a></li>
+</ul>
+</li>
+<li><a href="#sec-7">7 Описание ключевых операций </a>
+<ul>
+<li><a href="#sec-7.1">7.1 Инициализация </a>
+<ul>
+<li><a href="#sec-7.1.1">7.1.1 Первичная инициализация </a>
+<ul>
+<li><a href="#sec-7.1.1.1">7.1.1.1 Поиск адаптеров </a></li>
+<li><a href="#sec-7.1.1.2">7.1.1.2 Анализ OnCD подключенного целевого устройства </a></li>
+<li><a href="#sec-7.1.1.3">7.1.1.3 Определение типа платформы целевого устройства </a></li>
+<li><a href="#sec-7.1.1.4">7.1.1.4 Инициализацию компонентов платформы целевого устройства </a></li>
+</ul>
+</li>
+<li><a href="#sec-7.1.2">7.1.2 Повторная инициализация </a>
+<ul>
+<li><a href="#sec-7.1.2.1">7.1.2.1 Определение текущего значения делителя частоты кристалла. </a></li>
+<li><a href="#sec-7.1.2.2">7.1.2.2 Сброс кристалла в первоначальное состояние </a></li>
+<li><a href="#sec-7.1.2.3">7.1.2.3 Установка глубины режима отладки </a></li>
+</ul></li>
+</ul></li>
+</ul>
+</li>
+<li><a href="#sec-8">8 Существенные недостатки </a></li>
+<li><a href="#sec-9">9 Словарь </a></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-1" class="outline-2">
+<h2 id="sec-1"><span class="section-number-2">1</span> Введение </h2>
+<div class="outline-text-2" id="text-1">
+
+
+<p>
+Отладчик COMMON-DB (сокращённо "comdb") – программируемая среда
+обеспечивающая доступ к базовым аппаратным средствам отладки (OnCD)
+процессоров семейства Elvees Multicore.  Доступ к OnCD осуществляется
+через внешний порт соответствующий стандарту JTAG (IEEE 1149.1).
+В свою очередь, доступ к порту JTAG осуществляется с помощью двух
+вариантов адаптера, сообщающихся с PC посредством EPP (параллельного
+порта) или USB.
+</p>
+<p>
+Отладчик предоставляет ограниченную совместимость с основным множеством
+команд отладчика MDB.
+</p>
+<p>
+Программируемость отладчика достигается ввиду его реализации на
+ЯВУ (языке высокого уровня) ANSI Common Lisp (ANSI INCITS 226-1994),
+позволяющему органичное расширение уже скомпилированных приложений,
+а также включающему богатую, динамичную среду исполнения, и открытой
+архитектуре, позволяющей осуществлять доступ и модификацию на любом уровне.
+</p>
+<p>
+Данный документ является руководством пользователя по применению отладчика
+по основному назначению.
+</p>
+<p>
+Ошибки можно сообщать либо непосредственно автору: <code>&lt;_deepfire@feelingofgreen.ru&gt;</code>,
+либо через анонимный багтрекер: <a href="http://www.feelingofgreen.ru:3000/projects/common-db/issues/new">http://www.feelingofgreen.ru:3000/projects/common-db/issues/new</a>
+</p>
+
+</div>
+
+<div id="outline-container-1.1" class="outline-3">
+<h3 id="sec-1.1"><span class="section-number-3">1.1</span> Принятые обозначения </h3>
+<div class="outline-text-3" id="text-1.1">
+
+
+<p>
+В документе применяются следующие обозначения:
+</p>
+<ul>
+<li>
+шестнадцатеричные значения начинаются с префикса '#x', если префикс '#x'
+отсутствует, то значение считается десятичным;
+
+</li>
+</ul>
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-2" class="outline-2">
+<h2 id="sec-2"><span class="section-number-2">2</span> Обзор </h2>
+<div class="outline-text-2" id="text-2">
+
+
+<p>
+Отладчик может работать в следующих режимах:
+</p>
+<ul>
+<li>
+режим чтения команд из файла (режим пакетного исполнения);
+</li>
+<li>
+интерактивный режим;
+
+</li>
+</ul>
+
+<p>Синтаксисы режимов имеют <a href="#sec-4.2">поверхностное различие</a>.
+</p>
+<p>
+В обоих режимах пользователь имеет полный доступ как к основной
+функциональности отладчика, так и к средствам расширения предоставляемым
+средой языка Common Lisp на котором построен отладчик.
+</p>
+<p>
+Таким образом, с точки зрения пользователя привыкшего к отладчику
+MDB, помимо привычной функциональности, а также добавочных возможностей
+специфичных для comdb, появляется принципиально новая возможность
+программировать отладчик в самом отладчике, как в интерактивном,
+так и в пакетном режиме.
+</p>
+
+</div>
+
+<div id="outline-container-2.1" class="outline-3">
+<h3 id="sec-2.1"><span class="section-number-3">2.1</span> Новые возможности, специфичные для comdb </h3>
+<div class="outline-text-3" id="text-2.1">
+
+
+<ul>
+<li>
+Сохранение/восстановление частичного слепка состояния, включающего
+регистры общего назначения, Cop0, TLB.  Слепки можно записывать и
+читать с диска.
+</li>
+<li>
+Встроенный ассемблер/дизассемблер MIPS ISA.
+</li>
+<li>
+Запись во флэш-память
+<ul>
+<li>
+SST38VF6401B (набор команд AMD/Spansion)
+</li>
+<li>
+MT28F640J3 (набор команд Intel)
+</li>
+</ul>
+</li>
+<li>
+Расширенные возможности трассировки и пошагового исполнения,
+обусловленные программируемостью отладчик.
+</li>
+<li>
+Богатая и достаточно точная информация о устройствах и регистрах
+спектра кристаллов платформы Мультикор (этой информацией,
+в частности, пользуется среда программирования MCStudio).
+</li>
+<li>
+Богатая информация о структуре регистров &ndash; регистровых полях.
+</li>
+<li>
+Хороший набор тестов для плат основанных на Мультикор.
+
+</li>
+</ul>
+</div>
+
+</div>
+
+<div id="outline-container-2.2" class="outline-3">
+<h3 id="sec-2.2"><span class="section-number-3">2.2</span> Дополнительные возможности программирования отладчика </h3>
+<div class="outline-text-3" id="text-2.2">
+
+
+<p>
+Коротко можно перечислить подмножество дополнительных возможностей:
+</p>
+<ul>
+<li>
+условные выражения;
+</li>
+<li>
+циклы;
+</li>
+<li>
+динамическая типизация значений переменных;
+</li>
+<li>
+использование списков, хэш-таблиц, массивов и других структур данных;
+</li>
+<li>
+доступ к богатой библиотеке функций манипулирующей обобщёнными
+последовательностями;
+</li>
+<li>
+определение функций;
+</li>
+<li>
+определение макросов оперирующих исходным кодом на уровне
+абстрактного синтаксического дерева и обладающих доступом
+ко всему языку во время расширения;
+</li>
+<li>
+определение классов (с множественным наследованием);
+</li>
+<li>
+богатая, основанная на классах, система исключительных ситуаций,
+дополненная механизмом как программируемого, так и интерактивного
+выбора варианта продолжения исполнения (т.н. restarts);
+</li>
+<li>
+определение обобщённых функций с множественной диспетчеризацией;
+</li>
+<li>
+функции ввода/вывода;
+</li>
+<li>
+полноценный, интегрированный отладчик времения исполнения;
+</li>
+<li>
+вызов внешних исполняемых файлов;
+</li>
+<li>
+вызов внешних библиотек на языке C (не С++);
+
+</li>
+</ul>
+
+<p>Вся эта функциональность дополняется компилятором генерирующим
+высокоэффективный native-код процессора.
+</p>
+<p>
+При этом, ничто из этой функциональности не является обязательным для
+использования - пользователь желающий пользоваться <i>только</i> командами
+из привычной среды MDB будет чувствовать себя вполне как дома.
+</p>
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-3" class="outline-2">
+<h2 id="sec-3"><span class="section-number-2">3</span> Установка отладчика </h2>
+<div class="outline-text-2" id="text-3">
+
+
+<p>
+Предоставляются отдельные версии отладчика для операционных систем Linux и
+Windows (начиная с Windows 2000).
+</p>
+<p>
+При работе как в OC Linux, так и в ОС Windows, отладчик требует
+административный уровень доступа к системе.
+</p>
+
+</div>
+
+<div id="outline-container-3.1" class="outline-3">
+<h3 id="sec-3.1"><span class="section-number-3">3.1</span> Замечания по настройке параллельного порта для работы с адаптером EPP </h3>
+<div class="outline-text-3" id="text-3.1">
+
+
+<p>
+Параллельный порт компьютера должен быть сконфигурирован в BIOS следующим
+образом:
+</p>
+<ul>
+<li>
+BASE ADDRESS: 0x378;
+</li>
+<li>
+MODE: EPP or EPP/ECP;
+</li>
+<li>
+EPP version: 1.9.
+
+</li>
+</ul>
+
+<p>Для осуществления доступа к параллельному порту в ОС Windows, отладчик
+автоматически устанавливает драйвер mcdbio.sys.  Перед запуском,
+необходимо убедиться в том что драйвер находится в той же папке что и
+исполняемый файл отладчика.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-3.2" class="outline-3">
+<h3 id="sec-3.2"><span class="section-number-3">3.2</span> Замечания по установке драйвера USB-адаптера в ОС Windows </h3>
+<div class="outline-text-3" id="text-3.2">
+
+
+<p>
+Для использования отладчика с USB-адаптером в ОС Windows, соответствующий
+драйвер (ezusb.sys) необходимо устанавливать вручную, путём подключения
+адаптера и представления системе Windows необходимой информации о расположении
+inf-файла драйвера через всплывающее окно, автоматически появляющееся при
+подключении адаптера.  Появляющееся сообщение об отсутствии сертификации
+драйвера следует проигнорировать.
+</p>
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-4" class="outline-2">
+<h2 id="sec-4"><span class="section-number-2">4</span> Режимы работы </h2>
+<div class="outline-text-2" id="text-4">
+
+
+<p>
+Как уже было отмечено выше, comdb предлагает два режима работы,
+интерактивный и режим пакетного исполнения (могущий, при возникновении
+исключительных ситуаций, перейти в интерактивный).
+</p>
+
+</div>
+
+<div id="outline-container-4.1" class="outline-3">
+<h3 id="sec-4.1"><span class="section-number-3">4.1</span> Общие замечания по синтаксису </h3>
+<div class="outline-text-3" id="text-4.1">
+
+
+</div>
+
+<div id="outline-container-4.1.1" class="outline-4">
+<h4 id="sec-4.1.1"><span class="section-number-4">4.1.1</span> Чувствительность к регистру символов </h4>
+<div class="outline-text-4" id="text-4.1.1">
+
+
+<p>
+В общем, за исключением строчных значений, отладчик нечувствителен
+к разряду символов<sup><a class="footref" name="fnr.1" href="#fn.1">1</a></sup>.  Эстетика языка Common Lisp, однако,
+предполагает использование нижнего разряда во всех случаях где разряд
+не имеет значения.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-4.1.2" class="outline-4">
+<h4 id="sec-4.1.2"><span class="section-number-4">4.1.2</span> Основание используемое при печати/чтении чисел </h4>
+<div class="outline-text-4" id="text-4.1.2">
+
+
+<p>
+По умолчанию <code>*PRINT-BASE*</code>, переменная задающая основание используемое для печати чисел,
+имеет значение равное 16; установитьеё значение в 10 можно следующим образом:
+</p>
+<pre class="example">
+setf *print-base* #xa
+</pre>
+
+
+<p>
+По умолчанию <code>*READ-BASE*</code>, переменная задающая основание используемое для чтения вводимых чисел,
+имеет значение равное 10; установить её значение в 16 можно следующим образом:
+</p>
+<pre class="example">
+setf *read-base* #x10
+</pre>
+
+
+<p>
+или,
+</p>
+<pre class="example">
+expert
+</pre>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-4.1.3" class="outline-4">
+<h4 id="sec-4.1.3"><span class="section-number-4">4.1.3</span> Различия в способах указания путей к файлам в Linux и Windows </h4>
+<div class="outline-text-4" id="text-4.1.3">
+
+
+<p>
+В среде Linux пути указываются каноническим для UNIX-систем образом:
+</p>
+<pre class="example">
+"/path/to/foo"
+</pre>
+
+
+<p>
+однако в Windows, обычные для разделителей компонентов пути в этой системе
+обратные слэши заменены на прямые:
+</p>
+<pre class="example">
+"d:/path/to/foo"
+</pre>
+
+
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-4.2" class="outline-3">
+<h3 id="sec-4.2"><span class="section-number-3">4.2</span> Различие между синтаксисами интерактивного и пакетного режимов </h3>
+<div class="outline-text-3" id="text-4.2">
+
+
+<p>
+Синтаксисы интерактивного и пакетного режимов имеют различие обусловленное
+стремлением упростить работу в интерактивном режиме.  Корень различия
+заключается в необходимости заключения всех вызовов функций и макросов
+в круглые скобки, связанной с требованиями языка Лисп.
+</p>
+<p>
+Очевидно что в интерактивном режиме это требование крайне неудобно,
+т.к. требует ручного ввода двух, строго говоря необязательных, символов
+в каждой команде.  Более того, абсолютная необходимость в скобках привела
+бы к невозможности реализации режима ограниченной совместимости с набором
+команд отладчика MDB.
+</p>
+<p>
+В связи с этим, в интерактивном режиме реализована возможность опускать
+внешний уровень скобок.
+</p>
+<p>
+Пакетный режим в данный момент не предоставляет такой возможности<sup><a class="footref" name="fnr.2" href="#fn.2">2</a></sup>.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-4.3" class="outline-3">
+<h3 id="sec-4.3"><span class="section-number-3">4.3</span> Интерактивный режим </h3>
+<div class="outline-text-3" id="text-4.3">
+
+</div>
+
+</div>
+
+<div id="outline-container-4.4" class="outline-3">
+<h3 id="sec-4.4"><span class="section-number-3">4.4</span> Режим пакетного исполнения </h3>
+<div class="outline-text-3" id="text-4.4">
+
+<p>Отладчик позволяет выполнять команды из файлов, при этом файлы команд могут
+содержать комментарии, пустые строки и команды исполнения других файлов.
+</p>
+<p>
+Комментарии бывают двух видов:
+</p>
+<ul>
+<li>
+строчно ориентированные: начинаются с символа ';' и продолжаются до конца строки;
+</li>
+<li>
+блочно-ориентированные: начинаются с подстроки "#|" и заканчиваются подстрокой "|#".
+
+</li>
+</ul>
+
+<p>В связи с тем что, как уже было отмечено выше, пакетный режим накладывает необходимость
+окружения каждой отдельной команды скобками, в одной строке файла могут находиться несколько команд.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-4.5" class="outline-3">
+<h3 id="sec-4.5"><span class="section-number-3">4.5</span> Отладчик отладчика </h3>
+<div class="outline-text-3" id="text-4.5">
+
+
+<p>
+При возникновении исключительных ситуаций (в т.ч. ошибок) в обоих
+режимах исполнения активируется отладчик среды Common Lisp, в котором
+также можно исполнять команды comdb, а также активировать т.н. <i>рестарты</i> -
+реакции заготовленные на случаи возникновения исключительных ситуаций
+в данном контексте.
+</p>
+<p>
+Активация рестарта позволяет продолжить исполнение тем или иным образом.
+Выбор рестартов осуществляется вводом либо соответствующего ему номера,
+либо сокращения от его имени, префиксированного ':'
+</p>
+
+<p class="verse">
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <i>0-9</i> - выбрать соответствующий рестарт<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <i>:a</i>  - выбрать самый верхний рестарт с именем начинающимся на A<br/>
+</p>
+
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-5" class="outline-2">
+<h2 id="sec-5"><span class="section-number-2">5</span> Запуск отладчика </h2>
+<div class="outline-text-2" id="text-5">
+
+
+</div>
+
+<div id="outline-container-5.1" class="outline-3">
+<h3 id="sec-5.1"><span class="section-number-3">5.1</span> Параметры командной строки </h3>
+<div class="outline-text-3" id="text-5.1">
+
+
+<p>
+/bin/bash: ./comdb-ru: No such file or directory
+</p>
+
+<ul>
+<li>
+<a href="#параметр">параметр</a> <code>--core-multiplier</code> интерпретируется как десятичное целое, в других случаях
+всё что похоже на целое число, воспринимается как шестнадцатиричное<sup><a class="footref" name="fnr.3" href="#fn.3">3</a></sup>;
+</li>
+<li>
+<a href="#параметр">параметр</a> <code>--load</code> интерпретируется как строка;
+</li>
+<li>
+иначе объект воспринимается как Лисп-выражение
+
+</li>
+</ul>
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-6" class="outline-2">
+<h2 id="sec-6"><span class="section-number-2">6</span> Интерфейс </h2>
+<div class="outline-text-2" id="text-6">
+
+<p>Ниже следуют описание глобальных переменных и команд, представляющих
+собой часть пользовательского интерфейса.  Команды реализованы в виде обычных
+функций языка Common Lisp, и, как следствие, соглашение передачи аргументов
+соответствует соглашению принятому в Common Lisp.  Первый раздел данной главы
+описывает этот механизм.
+</p>
+
+</div>
+
+<div id="outline-container-6.1" class="outline-3">
+<h3 id="sec-6.1"><span class="section-number-3">6.1</span> Терминология специфичная для тематики связанной с передачей аргументов функциям в языке Common Lisp </h3>
+<div class="outline-text-3" id="text-6.1">
+
+<dl>
+<dt><a name="лямбда-список" class="target">лямбда-список</a></dt><dd>
+
+<p>
+Список задающий набор параметров и протокол получения значений для этих параметров.
+</p></dd>
+<dt><a name="аргумент" class="target">аргумент</a></dt><dd>
+
+<p>
+Объект представляемый в качестве входных данных функции, в момент её вызова.
+</p></dd>
+<dt><a name="параметр" class="target">параметр</a></dt><dd>
+
+<p>
+Переменная в определении функции, принимающая значение соответствующего аргумента (или списка соответствующих аргументов)
+данной функции в момент её вызова, или, в некоторых случаях, получающая значение по умолчанию, потому что соответствующего
+аргумента нет.
+</p></dd>
+<dt><a name="спецификатор==параметра" class="target">спецификатор параметра</a></dt><dd>
+
+<p>
+Выражение, являющееся частью лямбда-списка, представляющее собой <a href="#символ">символ</a> или список, используемое для задания параметра,
+и интерпретируемое в контексте
+</p><ul>
+<li>
+ключевых слов лямбда-списка, и
+</li>
+<li>
+параметров заданных указанными ранее спецификаторами параметров.
+
+</li>
+</ul>
+</dd>
+</dl>
+</div>
+
+</div>
+
+<div id="outline-container-6.2" class="outline-3">
+<h3 id="sec-6.2"><span class="section-number-3">6.2</span> Соглашение о передаче аргументов, лямбда-списки </h3>
+<div class="outline-text-3" id="text-6.2">
+
+<p><a href="#Лямбда-список">Лямбда-список</a> это список задающий набор параметров (иногда называемых лямбда-переменными),
+и протокол принятия этих параметров.  В данном контексте используется только один тип
+лямбда-списков &ndash; т.н. <a href="#sec-6.2">обычный лямбда-список</a>.
+</p>
+<p>
+<a href="#sec-6.2">Обычный лямбда-список</a> может содержать следующие <a href="#ключевые==слова==лямбда-списка">ключевые слова лямбда-списка</a><sup><a class="footref" name="fnr.4" href="#fn.4">4</a></sup>:
+</p>
+<ul>
+<li>
+&amp;allow-other-keys
+</li>
+<li>
+&amp;key
+</li>
+<li>
+&amp;optional
+</li>
+<li>
+&amp;rest
+
+</li>
+</ul>
+
+<p>Каждый элемент лямбда-списка является либо спецификатором параметра, либо ключевым словом
+лямбда-списка.  Упрощённый синтаксис обычного лямбда-списка таков<sup><a class="footref" name="fnr.5" href="#fn.5">5</a></sup>:
+</p>
+<pre class="example">
+lambda-list::= (var*
+                [&amp;optional {var | (var [init-form])}*]
+                [&amp;rest var]
+                [&amp;key {var | (var [init-form])}* [&amp;allow-other-keys]])
+</pre>
+
+
+<p>
+Инициализационные формы INIT-FORM могут представлять собой любые формы.
+<a href="#sec-6.2">Обычный лямбда-список</a> имеет четыре интересующих нас части, любая, или каждая из которых может быть пустой.
+</p>
+
+</div>
+
+<div id="outline-container-6.2.1" class="outline-4">
+<h4 id="sec-6.2.1"><span class="section-number-4">6.2.1</span> Спецификаторы обязательных параметров </h4>
+<div class="outline-text-4" id="text-6.2.1">
+
+<p>Это все спецификаторы параметров до первого ключевого слова лямбда-списка; если <a href="#ключевые==слова==лямбда-списка">ключевые слова лямбда-списка</a> отсутствуют,
+тогда все спецификаторы задают обязательные параметры.
+</p>
+<p>
+Если присутствуют N обязательных параметров (N может быть равно нулю), то должно быть передано как минимум N аргументов,
+и переменные обязательных параметров привязываются к первым N из переданных аргументов.  Остальные параметры, затем,
+обрабатываются с использованием каких-либо оставшихся аргументов.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-6.2.2" class="outline-4">
+<h4 id="sec-6.2.2"><span class="section-number-4">6.2.2</span> Спецификаторы опциональных параметров </h4>
+<div class="outline-text-4" id="text-6.2.2">
+
+<p>Если присутствует &amp;optional, то спецификаторами опциональных параметров являются те что следуют за &amp;optional, и до следующего
+ключевого слова лямбда-списка, либо конца списка.  Если опциональные параметры заданы, тогда каждый из них обрабатывается следующим
+образом.  Если остаются необработанные аргументы, тогда переменная параметра привязывается к следующему аргументу, также как
+и в случае с обязательными параметрами.  Если, однако, аргументов более не осталось, тогда вычисляется INIT-FORM и переменная
+параметра привязывается к полученному значению (или nil, если INIT-FORM не указана в спецификаторе параметра).
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-6.2.3" class="outline-4">
+<h4 id="sec-6.2.3"><span class="section-number-4">6.2.3</span> Спецификатор остаточного параметра </h4>
+<div class="outline-text-4" id="text-6.2.3">
+
+<p>&amp;rest, когда оно присутствует, должно быть сопровождено следующим за ним едиственным спецификатором остаточного параметра, за которым,
+в свою очередь, должно следовать либо другое <a href="#ключевое==слово">ключевое слово</a> лямбда-списка, либо окончание лямбда-списка.  После того как были
+обработаны спецификаторы всех опциональных параметров, может присутствовать, а может и не присутствовать <a href="#sec-6.2.3">остаточный параметр</a>.
+Если <a href="#sec-6.2.3">остаточный параметр</a> присутствует, он привязывается к списку всех необработанных к данному моменту аргументов.
+Если необработанных аргументов не осталось, <a href="#sec-6.2.3">остаточный параметр</a> привязывается к пустому списку.  Если <a href="#sec-6.2.3">остаточный параметр</a> отстутствует,
+и нет ключевых параметров, тогда, при наличии необработанных аргументов, должна сигнализироваться ошибка.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-6.2.4" class="outline-4">
+<h4 id="sec-6.2.4"><span class="section-number-4">6.2.4</span> Спецификатор ключевых параметров </h4>
+<div class="outline-text-4" id="text-6.2.4">
+
+<p>Если &amp;key присутствует, все спецификаторы до следующего ключевого слова лямбда-списка, либо до конца лямбда-списка являются
+спецификаторами ключевых параметров.  При обработке ключевых параметров, обрабатываются те же аргументы что попали бы в список
+остаточного параметра.  Разрешено указывать вместе &amp;rest и &amp;key.  В этом случае, остающиеся аргументы используются для обоих целей;
+то есть, все остающиеся аргументы собираются в список для остаточного параметра, и, одновременно обрабатываются в качестве
+параметров &amp;key.  Если &amp;key указан, то должно оставаться чётное количество аргументов.  Эти аргументы рассматриваются как пары,
+причём первый элемент в каждой паре интерпретируется в качестве имени, а второй в качестве соответствующего значения.  Первый объект
+в каждой паре должен быть символом.  Спецификаторы ключевых параметров могут опционально сопровождаться ключевым словом лямбда-списка
+&amp;allow-other-keys.
+</p>
+<p>
+Каждый спецификатор ключевого параметра должен содержать имя переменной параметра.  Имя ключевого слова используемое для совмещения
+аргументов и параметров является символом в пакете KEYWORD (чья печатная форма, стало быть, префиксируется двоеточием), чьё имя равно
+имени переменной параметра.
+</p>
+<p>
+Спецификаторы ключевых параметров, как и все спецификаторы параметров, фактически обрабатываются слева-направо.  Для каждого
+спецификатора ключевого параметра, при наличии пары аргументов чей именной компонент совпадает с именем спецификатора,
+производится привязывание переменной параметра ко второму элементу (значению) этой пары аргументов.  Если более чем одна
+пара аргументов подходит, то используется самая левая из них.  Если ни одна пара аргументов не подходит, то вычисляется INIT-FORM
+данного спецификатора параметра, и переменная параметра привязывается к полученному значению (или к nil, если INIT-FORM не указана).
+Если проверка ключевых аргументов не отключена, то пары аргументов должны содержать имена соответствующие именам спецификаторов
+параметров.
+</p>
+<p>
+Если проверка ключевых аргументов отключена, тогда парам аргументов разрешается не совпадать ни с каким из спецификаторов
+параметров, и тогда такие пары игнорируются, оставаясь, однако, доступными через <a href="#sec-6.2.3">остаточный параметр</a>, если таковой был указан.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-6.2.5" class="outline-4">
+<h4 id="sec-6.2.5"><span class="section-number-4">6.2.5</span> Примеры обычных лямбда-списков </h4>
+<div class="outline-text-4" id="text-6.2.5">
+
+<p>Вот несколько примеров использующих опциональные и остаточные параметра:
+</p>
+
+
+
+<pre class="src src-emacs-lisp">
+  ((<span style="color: #00ffff;">lambda</span> (a b)
+     (+ a (* b 3)))
+   4 5)
+ =&gt;  19
+</pre>
+
+
+
+
+
+<pre class="src src-emacs-lisp">
+  ((<span style="color: #00ffff;">lambda</span> (a <span style="color: #98fb98;">&amp;optional</span> (b 2))
+     (+ a (* b 3)))
+   4 5)
+ =&gt;  19
+</pre>
+
+
+
+
+
+<pre class="src src-emacs-lisp">
+  ((<span style="color: #00ffff;">lambda</span> (a <span style="color: #98fb98;">&amp;optional</span> (b 2))
+     (+ a (* b 3)))
+   4)
+ =&gt;  10
+</pre>
+
+
+
+
+<p>
+Вот несколько примеров использующих ключевые параметры:
+</p>
+
+
+
+<pre class="src src-emacs-lisp">
+  ((<span style="color: #00ffff;">lambda</span> (a b <span style="color: #98fb98;">&amp;key</span> c d)
+     (list a b c d))
+   1 2)
+ =&gt;  (1 2 NIL NIL)
+</pre>
+
+
+
+
+
+<pre class="src src-emacs-lisp">
+  ((<span style="color: #00ffff;">lambda</span> (a b <span style="color: #98fb98;">&amp;key</span> c d)
+     (list a b c d))
+   1 2 <span style="color: #b0c4de;">:c</span> 6)
+ =&gt;  (1 2 6 NIL)
+</pre>
+
+
+
+
+
+<pre class="src src-emacs-lisp">
+  ((<span style="color: #00ffff;">lambda</span> (a b <span style="color: #98fb98;">&amp;key</span> c d)
+     (list a b c d))
+   1 2 <span style="color: #b0c4de;">:d</span> 8)
+ =&gt;  (1 2 NIL 8)
+</pre>
+
+
+
+
+
+<pre class="src src-emacs-lisp">
+  ((<span style="color: #00ffff;">lambda</span> (a b <span style="color: #98fb98;">&amp;key</span> c d)
+     (list a b c d))
+   1 2 <span style="color: #b0c4de;">:c</span> 6 <span style="color: #b0c4de;">:d</span> 8)
+ =&gt;  (1 2 6 8)
+</pre>
+
+
+
+
+
+<pre class="src src-emacs-lisp">
+  ((<span style="color: #00ffff;">lambda</span> (a b <span style="color: #98fb98;">&amp;key</span> c d)
+     (list a b c d))
+   1 2 <span style="color: #b0c4de;">:d</span> 8 <span style="color: #b0c4de;">:c</span> 6)
+ =&gt;  (1 2 6 8)
+</pre>
+
+
+
+
+
+<pre class="src src-emacs-lisp">
+  ((<span style="color: #00ffff;">lambda</span> (a b <span style="color: #98fb98;">&amp;key</span> c d)
+     (list a b c d))
+   <span style="color: #b0c4de;">:a</span> 1 <span style="color: #b0c4de;">:d</span> 8 <span style="color: #b0c4de;">:c</span> 6)
+ =&gt;  (<span style="color: #b0c4de;">:a</span> 1 6 8)
+</pre>
+
+
+
+
+
+<pre class="src src-emacs-lisp">
+  ((<span style="color: #00ffff;">lambda</span> (a b <span style="color: #98fb98;">&amp;key</span> c d)
+     (list a b c d))
+   <span style="color: #b0c4de;">:a</span> <span style="color: #b0c4de;">:b</span> <span style="color: #b0c4de;">:c</span> <span style="color: #b0c4de;">:d</span>)
+ =&gt;  (<span style="color: #b0c4de;">:a</span> <span style="color: #b0c4de;">:b</span> <span style="color: #b0c4de;">:d</span> NIL)
+</pre>
+
+
+
+
+<p>
+Вот несколько примеров использующих опциональные, остаточные и ключевые параметры вместе:
+</p>
+
+
+
+<pre class="src src-emacs-lisp">
+  ((<span style="color: #00ffff;">lambda</span> (a <span style="color: #98fb98;">&amp;optional</span> (b 3) <span style="color: #98fb98;">&amp;rest</span> x <span style="color: #98fb98;">&amp;key</span> c (d a))
+     (list a b c d x))
+   1)
+ =&gt;  (1 3 NIL 1 ())
+</pre>
+
+
+
+
+
+<pre class="src src-emacs-lisp">
+  ((<span style="color: #00ffff;">lambda</span> (a <span style="color: #98fb98;">&amp;optional</span> (b 3) <span style="color: #98fb98;">&amp;rest</span> x <span style="color: #98fb98;">&amp;key</span> c (d a))
+     (list a b c d x))
+   1 2)
+ =&gt;  (1 2 NIL 1 ())
+</pre>
+
+
+
+
+
+<pre class="src src-emacs-lisp">
+  ((<span style="color: #00ffff;">lambda</span> (a <span style="color: #98fb98;">&amp;optional</span> (b 3) <span style="color: #98fb98;">&amp;rest</span> x <span style="color: #98fb98;">&amp;key</span> c (d a))
+     (list a b c d x))
+   <span style="color: #b0c4de;">:c</span> 7)
+ =&gt;  (<span style="color: #b0c4de;">:c</span> 7 NIL <span style="color: #b0c4de;">:c</span> ())
+</pre>
+
+
+
+
+
+<pre class="src src-emacs-lisp">
+  ((<span style="color: #00ffff;">lambda</span> (a <span style="color: #98fb98;">&amp;optional</span> (b 3) <span style="color: #98fb98;">&amp;rest</span> x <span style="color: #98fb98;">&amp;key</span> c (d a))
+     (list a b c d x))
+   1 6 <span style="color: #b0c4de;">:c</span> 7)
+ =&gt;  (1 6 7 1 (<span style="color: #b0c4de;">:c</span> 7))
+</pre>
+
+
+
+
+
+<pre class="src src-emacs-lisp">
+  ((<span style="color: #00ffff;">lambda</span> (a <span style="color: #98fb98;">&amp;optional</span> (b 3) <span style="color: #98fb98;">&amp;rest</span> x <span style="color: #98fb98;">&amp;key</span> c (d a))
+     (list a b c d x))
+   1 6 <span style="color: #b0c4de;">:d</span> 8)
+ =&gt;  (1 6 NIL 8 (<span style="color: #b0c4de;">:d</span> 8))
+</pre>
+
+
+
+
+
+<pre class="src src-emacs-lisp">
+  ((<span style="color: #00ffff;">lambda</span> (a <span style="color: #98fb98;">&amp;optional</span> (b 3) <span style="color: #98fb98;">&amp;rest</span> x <span style="color: #98fb98;">&amp;key</span> c (d a))
+     (list a b c d x))
+   1 6 <span style="color: #b0c4de;">:d</span> 8 <span style="color: #b0c4de;">:c</span> 9 <span style="color: #b0c4de;">:d</span> 10)
+ =&gt;  (1 6 9 8 (<span style="color: #b0c4de;">:d</span> 8 <span style="color: #b0c4de;">:c</span> 9 <span style="color: #b0c4de;">:d</span> 10))
+</pre>
+
+
+
+
+
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-6.3" class="outline-3">
+<h3 id="sec-6.3"><span class="section-number-3">6.3</span> Управляющие переменные </h3>
+<div class="outline-text-3" id="text-6.3">
+
+<dl>
+<dt><code>*disable-usb*</code></dt><dd>
+
+
+</dd>
+<dt><code>*display*</code></dt><dd>
+
+
+</dd>
+<dt><code>*examine-tlb*</code></dt><dd>
+
+
+</dd>
+<dt><code>*explain*</code></dt><dd>
+
+
+</dd>
+<dt><code>*force-memory-detection*</code></dt><dd>
+
+
+</dd>
+<dt><code>*forced-platform*</code></dt><dd>
+
+
+</dd>
+<dt><code>*inhibit-memory-detection*</code></dt><dd>
+
+
+</dd>
+<dt><code>*keep-target-intact*</code></dt><dd>
+
+
+</dd>
+<dt><code>*log-bus-events*</code></dt><dd>
+
+
+</dd>
+<dt><code>*log-core-pipeline-crit*</code></dt><dd>
+
+
+</dd>
+<dt><code>*log-graft-access*</code></dt><dd>
+
+
+</dd>
+<dt><code>*log-interface-bus-discovery*</code></dt><dd>
+
+
+</dd>
+<dt><code>*log-loadable-processing*</code></dt><dd>
+
+
+</dd>
+<dt><code>*log-platform-processing*</code></dt><dd>
+
+
+</dd>
+<dt><code>*log-state-changes*</code></dt><dd>
+
+
+</dd>
+<dt><code>*log-stream*</code></dt><dd>
+
+<p>
+Global log stream for the whole debugger.
+</p>
+</dd>
+<dt><code>*log-system-configuration*</code></dt><dd>
+
+
+</dd>
+<dt><code>*log-tap-register-access*</code></dt><dd>
+
+
+</dd>
+<dt><code>*map-to-zeroth-page*</code></dt><dd>
+
+
+</dd>
+<dt><code>*memory-detection-threshold*</code></dt><dd>
+
+
+</dd>
+<dt><code>*orgify*</code></dt><dd>
+
+
+</dd>
+<dt><code>*print-backtrace-on-errors*</code></dt><dd>
+
+
+</dd>
+<dt><code>*verbose-interface-init*</code></dt><dd>
+
+
+</dd>
+<dt><code>*watch*</code></dt><dd>
+
+
+</dd>
+<dt><code>*watch-fn*</code></dt><dd>
+
+
+</dd>
+</dl>
+</div>
+
+</div>
+
+<div id="outline-container-6.4" class="outline-3">
+<h3 id="sec-6.4"><span class="section-number-3">6.4</span> Документация </h3>
+<div class="outline-text-3" id="text-6.4">
+
+<dl>
+<dt>? what</dt><dd>
+
+<p>
+Вывести справку по связанной с символом WHAT командой или категорией команд.
+</p>
+</dd>
+<dt>help &amp;optional what</dt><dd>
+
+<p>
+Вывести справку по связанной с символом WHAT командой или категорией команд, 
+если он задан.  Если WHAT не указан, вывести перечень категорий.
+</p>
+</dd>
+<dt>apropos string-designator &amp;optional package external-only</dt><dd>
+
+<p>
+Коротко описать все символы содержащие указанную STRING.
+Если указан PACKAGE, то описать лишь символы присутствующие в этом пакете.  
+Если указан EXTERNAL-ONLY, тогда описывать только символы эскпортируемые данным пакетом.
+</p>
+</dd>
+<dt>describe object &amp;optional (stream-designator <code>*standard-output*</code>)</dt><dd>
+
+<p>
+Вывести описание OBJECT.
+</p>
+</dd>
+</dl>
+</div>
+
+</div>
+
+<div id="outline-container-6.5" class="outline-3">
+<h3 id="sec-6.5"><span class="section-number-3">6.5</span> Устройства </h3>
+<div class="outline-text-3" id="text-6.5">
+
+<dl>
+<dt>scan &amp;optional force-rescan</dt><dd>
+
+<p>
+Функция производит следующие операции:
+</p>
+<ul>
+<li>
+поиск адаптеров подключенных к EPP и USB,
+</li>
+<li>
+для каждого подключенного адаптера:
+<ul>
+<li>
+анализ OnCD подключенного к адаптеру целевого устройства,
+</li>
+<li>
+определение типа платформы целевого устройства,
+</li>
+<li>
+инициализацию компонентов платформы целевого устройства.
+
+</li>
+</ul>
+</li>
+</ul>
+
+<p>Если функции первым параметром передан не-NIL, то производится повторный анализ
+уже найденных к данному моменту адаптеров с подключенными к ним целевыми устройствами.
+</p>
+<p>
+При нескольких подключенных устройствах, активным становится последнее найденное.
+При этом, следует отметить что шина USB сканируется после портов EPP, что, как следствие,
+придаёт адаптерам на шине USB определённый приоритет.
+</p>
+</dd>
+<dt>compile-memconfig name</dt><dd>
+
+<p>
+Вывести список пар адрес-значение соответствующих названной конфигурации памяти.
+</p>
+</dd>
+<dt>list-memconfigs</dt><dd>
+
+<p>
+Вывести список имён конфигураций памяти потенциально применимых
+к текущему целевому устройству.
+</p>
+</dd>
+<dt>set-memconfig name &amp;key test (test-size 10000) remember</dt><dd>
+
+<p>
+Применить конфигурацию памяти с именем NAME.
+</p>
+<p>
+Принимаются следующие ключевые аргументы:
+</p><dl>
+<dt>TEST</dt><dd>
+
+<p>
+По применении конфигурации проверить её работоспособность,
+произведя тест памяти.
+</p></dd>
+<dt>TEST-SIZE</dt><dd>
+
+<p>
+Задать размер тестирования.
+</p></dd>
+<dt>REMEMBER</dt><dd>
+
+<p>
+Запомнить данную конфигурацию для активного целевого устройства,
+что приведёт к её использованию во время перенастройки при сбросе.
+</p>
+</dd>
+</dl>
+</dd>
+<dt>explain-memconfig &amp;optional name</dt><dd>
+
+<p>
+Детально, по битовым полям, разобрать структуру конфигурации памяти
+с именем NAME.  Если имя не указано, разобрать текущую настройку.
+</p>
+</dd>
+<dt>list-contexts</dt><dd>
+
+<p>
+Вывести список контекстов обнаруженных целевых устройств.
+</p>
+</dd>
+<dt>ctx &amp;optional id</dt><dd>
+
+<p>
+При отсутствии параметров, вывести список целевых контекстов,
+содержащийся в переменной <code>*TARGET-CONTEXTS*</code>.
+При наличии параметра, интерпретировать его как номер контекста,
+если это число, либо идентификатор контекста, если это список,
+который следует сделать теукщим.
+</p>
+</dd>
+</dl>
+</div>
+
+</div>
+
+<div id="outline-container-6.6" class="outline-3">
+<h3 id="sec-6.6"><span class="section-number-3">6.6</span> Ввод/вывод </h3>
+<div class="outline-text-3" id="text-6.6">
+
+<dl>
+<dt>clearmem address length &amp;optional (value 0)</dt><dd>
+
+<p>
+Установить диапазон ячеек памяти начиная с ADDRESS и длиной LENGTH
+байт в значение параметра VALUE (0-255).
+</p>
+</dd>
+<dt>loadelf filename &amp;key check</dt><dd>
+
+<p>
+Загрузить содержимое FILENAME в формате ELF в память устройства
+и установить точку входа.
+</p>
+<p>
+Принимаются следующие ключевые аргументы:
+</p><dl>
+<dt>CHECK</dt><dd>
+
+<p>
+включить проверку целостности записи.
+</p>
+</dd>
+</dl>
+</dd>
+<dt>loadbin filename address &amp;key check</dt><dd>
+
+<p>
+Загрузить сырые байты из FILENAME по ADDRESS.
+</p>
+<p>
+Принимаются следующие ключевые аргументы:
+</p><dl>
+<dt>CHECK</dt><dd>
+
+<p>
+включить проверку целостности записи.
+</p>
+</dd>
+</dl>
+</dd>
+<dt>savebin filename address length</dt><dd>
+
+<p>
+Сохранить содержимое диапазона ячеек памяти начиная с ADDRESS
+и длиной LENGTH байт в FILENAME, в сыром виде.
+</p>
+</dd>
+<dt>loadeltext filename &amp;key (entry-point bfc00000) check</dt><dd>
+
+<p>
+Загрузить содержимое FILENAME в текстовом формате 'eltext' в память
+устройства и установить точку входа.
+</p>
+<p>
+Принимаются следующие ключевые аргументы:
+</p><dl>
+<dt>CHECK</dt><dd>
+
+<p>
+включить проверку целостности записи.
+</p>
+</dd>
+<dt>ENTRY-POINT</dt><dd>
+
+<p>
+установить точку входа.
+</p>
+</dd>
+</dl>
+</dd>
+<dt>saveeltext filename address length</dt><dd>
+
+<p>
+Сохранить содержимое диапазона ячеек памяти начиная с ADDRESS и
+длиной LENGTH байт в FILENAME, в формате 'eltext'.
+</p>
+<p>
+ADDRESS и LENGTH должны быть выровнены по 16.
+</p>
+</dd>
+<dt>loadldr filename &amp;key check</dt><dd>
+
+<p>
+Загрузить содержимое FILENAME в формате LDR-MCS в память устройства
+и установить точку входа.
+</p>
+<p>
+Принимаются следующие ключевые аргументы:
+</p><dl>
+<dt>CHECK</dt><dd>
+
+<p>
+включить проверку целостности записи.
+</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</div>
+
+</div>
+
+<div id="outline-container-6.7" class="outline-3">
+<h3 id="sec-6.7"><span class="section-number-3">6.7</span> Управление состоянием </h3>
+<div class="outline-text-3" id="text-6.7">
+
+<dl>
+<dt>reset &amp;rest platform-args &amp;key (core <code>*core*</code>) (state <code>*depth*</code>) &amp;allow-other-keys</dt><dd>
+
+<p>
+Функция сбрасывает и перенастраивает <a href="#целевое==устройство">целевое устройство</a> содержащее ядро CORE
+(по умолчанию выбирается являющееся активным в данный момент), с учётом ключевых аргументов PLATFORM-ARGS.
+Производятся следующие действия:
+</p>
+<ul>
+<li>
+осуществляется попытка выяснения текущие значения делителей частоты;
+</li>
+<li>
+кристалл сбрасывается в первоначальное состояние;
+</li>
+<li>
+системные компоненты перенастраиваются с использованием либо сохранённых значений
+делителей частоты, либо значений по умолчанию для данной платформы.
+</li>
+<li>
+устанавливается соответствующая текущим настройкам глубина режима отладки (по умолчанию – :DEBUG).
+
+</li>
+</ul>
+</dd>
+<dt>dive</dt><dd>
+
+<p>
+Войти в более глубокий режим отладки, или остановить <a href="#целевое==устройство">целевое устройство</a>.
+Схема состояний: :FREE -&gt; :STEP -&gt; :DEBUG.
+</p>
+</dd>
+<dt>rise</dt><dd>
+
+<p>
+Войти в более лёгкий режим отладки, или запустить <a href="#целевое==устройство">целевое устройство</a>.
+Схема состояний :DEBUG -&gt; :STEP -&gt; :FREE.
+</p>
+</dd>
+<dt>run &amp;rest params &amp;key (core <code>*core*</code>) (explain <code>*explain*</code>) (display <code>*display*</code>) (watch <code>*watch*</code>) (watch-fn <code>*watch-fn*</code>) (iteration-period 989680) (watch-period 64) &amp;allow-other-keys</dt><dd>
+
+<p>
+Вывести ядро CORE из режима отладки, запустить его, дождаться его останова
+и войти в режим отладки.
+</p>
+<p>
+Принимаются следующие ключевые аргументы:
+</p><dl>
+<dt>ADDRESS</dt><dd>
+
+<p>
+заместить содержимое регистра адреса выбираемой инструкции,
+и как следствие, перевести поток исполнения на заданный адрес.
+</p>
+</dd>
+</dl>
+</dd>
+<dt>run-async &amp;rest params &amp;key address state-determined (core <code>*core*</code>) &amp;allow-other-keys</dt><dd>
+
+<p>
+Вывести <a href="#целевое==устройство">целевое устройство</a> из режима отладки и запустить его асинхронно,
+не дожидаясь.
+</p>
+<p>
+Принимаются следующие ключевые аргументы:
+</p><dl>
+<dt>ADDRESS</dt><dd>
+
+<p>
+заместить содержимое регистра адреса выбираемой инструкции,
+и как следствие, перевести поток исполнения на заданный адрес.
+</p>
+</dd>
+</dl>
+</dd>
+<dt>run-until-stopped-by reason &amp;rest run-params &amp;key (otherwise :report-and-continue) &amp;allow-other-keys</dt><dd>
+
+<p>
+Запустить кристалл, дождаться останова, анализируя затем его причину и
+возвращая успех при совпадении причины со значением параметра REASON.
+Реакция на несовпадение определяется значением ключевого параметра OTHERWISE,
+интерпретируемого следующим образом:
+</p><dl>
+<dt>:RETURN</dt><dd>
+
+<p>
+вернуть ложный статус,
+</p></dd>
+<dt>:CONTINUE</dt><dd>
+
+<p>
+продолжить цикл,
+</p></dd>
+<dt>:REPORT-AND-CONTINUE</dt><dd>
+
+<p>
+продолжить цикл, отобразив причину останова.
+</p>
+</dd>
+</dl>
+
+<p>Остаточные параметры (за исключением OTHERWISE) передаются команде RUN.
+</p>
+</dd>
+<dt>run-while-boring &amp;rest boring-syms</dt><dd>
+
+<p>
+Запустить <a href="#целевое==устройство">целевое устройство</a>, продолжая затем запускать его, при остановах,
+до тех пор пока при очередном останове на конвейере не появятся адреса не покрытые
+символами из остаточного списка параметров.
+</p>
+</dd>
+<dt>run-while-step-in address &amp;optional (nsteps 1) verbose &amp;key (explain <code>*explain*</code>) (display <code>*display*</code>)</dt><dd>
+
+<p>
+Запустить <a href="#целевое==устройство">целевое устройство</a>, осуществляя NSTEPS шагов при остановах и
+проводя сравнение регистра адреса выбираемой инструкции со значением параметра
+ADDRESS, запуская кристалл дальше, в цикле, если сравнение успешно, и выходя
+из цикла в обратном случае.
+</p>
+</dd>
+<dt>step count &amp;key (display <code>*display*</code>)</dt><dd>
+
+<p>
+Произвести COUNT шагов.
+</p>
+</dd>
+<dt>trace count &amp;rest run-params</dt><dd>
+
+<p>
+Исполнить COUNT инструкций и остановиться.
+</p>
+<p>
+Остаточные параметры передаются команде RUN.
+</p>
+</dd>
+<dt>dspreset dsp-core-or-id</dt><dd>
+
+<p>
+Произвести аппаратный сброс DSP-ядра заданного через <a href="#спецификатор==DSP-ядра">спецификатор DSP-ядра</a> DSP-CORE-OR-ID.
+</p>
+<p>
+Примеры:
+</p><pre class="example">
+(dspreset (dsp 0))
+(dspreset 0)
+</pre>
+
+
+</dd>
+<dt>dsprun dsp-core-or-id &amp;optional address</dt><dd>
+
+<p>
+Запустить DSP-ядро заданное через <a href="#спецификатор==DSP-ядра">спецификатор DSP-ядра</a> DSP-CORE-OR-ID с ADDRESS, 
+если он указан, либо просто продолжить поток исполнения, не вмешиваясь в конвейер,
+если ADDRESS не указан.  В любом случае, дождаться останова DSP-ядра.
+</p>
+<p>
+Примеры:
+</p><pre class="example">
+(dsprun (dsp 0) #x1010)
+(dsprun 0 #x1010)
+</pre>
+
+
+</dd>
+<dt>dspstep dsp-core-or-id &amp;optional (count 1)</dt><dd>
+
+<p>
+Произвести COUNT шагов в DSP-ядре заданном через <a href="#спецификатор==DSP-ядра">спецификатор DSP-ядра</a> DSP-CORE-OR-ID.
+</p>
+<p>
+Примеры:
+</p><pre class="example">
+(dspstep (dsp 0))
+</pre>
+
+
+</dd>
+<dt>dspstop dsp-core-or-id</dt><dd>
+
+<p>
+Ввести DSP-ядро заданное через <a href="#спецификатор==DSP-ядра">спецификатор DSP-ядра</a> DSP-CORE-OR-ID в режим останова.
+</p>
+<p>
+Примеры:
+</p><pre class="example">
+(dspstop (dsp 0))
+</pre>
+
+
+</dd>
+<dt>explain &amp;optional (core <code>*core*</code>)</dt><dd>
+
+<p>
+Отобразить причину останова ядра CORE.
+По умолчанию используется ядро текущего активного устройства.
+</p>
+</dd>
+<dt>leave-frame &amp;rest run-params</dt><dd>
+
+<p>
+Установить точку останова в значение регистра R31, предположительно
+содержащий актуальный адрес возврата и выполнить команду RUN.
+</p>
+<p>
+Остаточные параметры передаются команде RUN.
+</p>
+</dd>
+</dl>
+</div>
+
+</div>
+
+<div id="outline-container-6.8" class="outline-3">
+<h3 id="sec-6.8"><span class="section-number-3">6.8</span> Ловушки </h3>
+<div class="outline-text-3" id="text-6.8">
+
+<dl>
+<dt>hw-break break-or-id address &amp;optional (skipcount 0) &amp;key bound</dt><dd>
+
+<p>
+Установить аппаратную точку останова заданную через <a href="#спецификатор==аппаратной==точки==останова">спецификатор аппаратной точки останова</a> BREAK-OR-ID на адрес заданный через <a href="#спецификатор==адреса">спецификатор адреса</a> ADDRESS. <a href="#sec-6.8">Опциональный параметр</a> SKIPCOUNT задаёт количество пропусков
+срабатывания.
+</p>
+</dd>
+<dt>sw-break address-or-symbol</dt><dd>
+
+<p>
+Установить программную точку останова на адрес заданный через
+<a href="#спецификатор==адреса">спецификатор адреса</a> ADDRESS-OR-SYMBOL.
+</p>
+</dd>
+<dt>watch break-or-id address &amp;optional (skipcount 0) &amp;key (read t) write bound</dt><dd>
+
+<p>
+Установить адресную ловушку точку заданную через <a href="#спецификатор==аппаратной==точки==останова">спецификатор аппаратной точки останова</a> BREAK-OR-ID на адрес заданный через <a href="#спецификатор==адреса">спецификатор адреса</a> ADDRESS. <a href="#sec-6.8">Опциональный параметр</a> SKIPCOUNT задаёт количество пропусков
+срабатывания.
+</p>
+</dd>
+<dt>catch &amp;rest catches</dt><dd>
+
+<p>
+Проинтерпретировать остаточный список параметров как набор спецификаторов
+векторных ловушек, и установить их. Интерпретация осуществляется следующим образом:
+</p>
+<ul>
+<li>
+#xbfc00000, #xbfc, :bfc  -&gt;  #xbfc00000
+</li>
+<li>
+#x80000000, #x800, :800  -&gt;  #x80000000
+</li>
+<li>
+#x80000180, #x180, :180  -&gt;  #x80000180
+</li>
+<li>
+#x80000200, #x200, :200  -&gt;  #x80000200
+</li>
+<li>
+#xbfc00200  -&gt;  #xbfc00200
+</li>
+<li>
+#xbfc00380, #x380, :380  -&gt;  #xbfc00380
+</li>
+<li>
+#xbfc00400, #x400, :400  -&gt;  #xbfc00400
+
+</li>
+</ul>
+</dd>
+<dt>trace count &amp;rest run-params</dt><dd>
+
+<p>
+Исполнить COUNT инструкций и остановиться.
+</p>
+<p>
+Остаточные параметры передаются команде RUN.
+</p>
+</dd>
+<dt>settrace count</dt><dd>
+
+<p>
+Установить ограничитель количества исполняемых инструкций в COUNT.
+</p>
+</dd>
+<dt>clear-break address</dt><dd>
+
+<p>
+Удалить точку останова, будь то программную или аппаратную, установленную
+на ADDRESS.
+</p>
+</dd>
+<dt>clear-sw-breaks</dt><dd>
+
+<p>
+Удалить все программные точки останова.
+</p>
+</dd>
+<dt>disable-breaks</dt><dd>
+
+<p>
+Отключить все точки останова.
+</p>
+</dd>
+<dt>describe-breaks</dt><dd>
+
+<p>
+Описать все активные точки останова.
+</p>
+</dd>
+<dt>dspbreak dsp-core-or-id n address</dt><dd>
+
+<p>
+Установить N-ную точку останова DSP-ядра заданного через <a href="#спецификатор==DSP-ядра">спецификатор DSP-ядра</a>
+DSP-CORE-OR-ID в ADDRESS, если последний не-NIL.  В противном случае, отключить её.
+</p>
+<p>
+Примеры:
+</p><pre class="example">
+(dspbreak (dsp 0) 3 #x1010)
+(dspbreak 0 3 #x1010)
+</pre>
+
+
+</dd>
+</dl>
+</div>
+
+</div>
+
+<div id="outline-container-6.9" class="outline-3">
+<h3 id="sec-6.9"><span class="section-number-3">6.9</span> DSP </h3>
+<div class="outline-text-3" id="text-6.9">
+
+<dl>
+<dt>dsp n</dt><dd>
+
+<p>
+Вернуть объект представляющий N-ное DSP-ядро.
+</p>
+</dd>
+<dt>dspbreak dsp-core-or-id n address</dt><dd>
+
+<p>
+Установить N-ную точку останова DSP-ядра заданного через <a href="#спецификатор==DSP-ядра">спецификатор DSP-ядра</a>
+DSP-CORE-OR-ID в ADDRESS, если последний не-NIL.  В противном случае, отключить её.
+</p>
+<p>
+Примеры:
+</p><pre class="example">
+(dspbreak (dsp 0) 3 #x1010)
+(dspbreak 0 3 #x1010)
+</pre>
+
+
+</dd>
+<dt>dspreset dsp-core-or-id</dt><dd>
+
+<p>
+Произвести аппаратный сброс DSP-ядра заданного через <a href="#спецификатор==DSP-ядра">спецификатор DSP-ядра</a> DSP-CORE-OR-ID.
+</p>
+<p>
+Примеры:
+</p><pre class="example">
+(dspreset (dsp 0))
+(dspreset 0)
+</pre>
+
+
+</dd>
+<dt>dsprun dsp-core-or-id &amp;optional address</dt><dd>
+
+<p>
+Запустить DSP-ядро заданное через <a href="#спецификатор==DSP-ядра">спецификатор DSP-ядра</a> DSP-CORE-OR-ID с ADDRESS, 
+если он указан, либо просто продолжить поток исполнения, не вмешиваясь в конвейер,
+если ADDRESS не указан.  В любом случае, дождаться останова DSP-ядра.
+</p>
+<p>
+Примеры:
+</p><pre class="example">
+(dsprun (dsp 0) #x1010)
+(dsprun 0 #x1010)
+</pre>
+
+
+</dd>
+<dt>dspstep dsp-core-or-id &amp;optional (count 1)</dt><dd>
+
+<p>
+Произвести COUNT шагов в DSP-ядре заданном через <a href="#спецификатор==DSP-ядра">спецификатор DSP-ядра</a> DSP-CORE-OR-ID.
+</p>
+<p>
+Примеры:
+</p><pre class="example">
+(dspstep (dsp 0))
+</pre>
+
+
+</dd>
+<dt>dspstop dsp-core-or-id</dt><dd>
+
+<p>
+Ввести DSP-ядро заданное через <a href="#спецификатор==DSP-ядра">спецификатор DSP-ядра</a> DSP-CORE-OR-ID в режим останова.
+</p>
+<p>
+Примеры:
+</p><pre class="example">
+(dspstop (dsp 0))
+</pre>
+
+
+</dd>
+</dl>
+</div>
+
+</div>
+
+<div id="outline-container-6.10" class="outline-3">
+<h3 id="sec-6.10"><span class="section-number-3">6.10</span> Адреса и символы </h3>
+<div class="outline-text-3" id="text-6.10">
+
+<dl>
+<dt>addr address-or-symbol</dt><dd>
+
+<p>
+Проанализировать адрес заданный через <a href="#спецификатор==адреса">спецификатор адреса</a> ADDRESS-OR-SYMBOL,
+и выдать детальную информацию.
+</p>
+</dd>
+<dt>addrsym address</dt><dd>
+
+<p>
+Вернуть <a href="#символ">символ</a> с наименьшим адресом, большим или равным ADDRESS.
+</p>
+</dd>
+<dt>nextaddr address</dt><dd>
+
+<p>
+Вернуть адрес символа следующего за ADDRESS в активной таблице символов.
+</p>
+</dd>
+<dt>nextsym symbol</dt><dd>
+
+<p>
+Вернуть <a href="#символ">символ</a> следующий в активной таблице символов за SYMBOL.
+</p>
+</dd>
+<dt>prevaddr address</dt><dd>
+
+<p>
+Вернуть адрес символа предшедствующего ADDRESS в активной таблице символов.
+</p>
+</dd>
+<dt>symaddr symbol</dt><dd>
+
+<p>
+Вернуть адрес соответствующий SYMBOL.
+</p>
+</dd>
+<dt>symlength symbol</dt><dd>
+
+<p>
+Вернуть разницу между адресами SYMBOL и символа следующего за ним
+в активной таблице символов.
+</p>
+</dd>
+<dt>loadsyms pathname &amp;key (type :system-map)</dt><dd>
+
+<p>
+Загрузить таблицу символов в формате TYPE из файла PATHNAME,
+и сделать эту таблицу активной.
+</p>
+</dd>
+<dt>register-address register</dt><dd>
+
+<p>
+Найти адрес регистра соответствующего спецификатору регистра REGISTER,
+в том случае если он соответствует регистру отображённому в память.
+</p>
+</dd>
+</dl>
+</div>
+
+</div>
+
+<div id="outline-container-6.11" class="outline-3">
+<h3 id="sec-6.11"><span class="section-number-3">6.11</span> Анализ </h3>
+<div class="outline-text-3" id="text-6.11">
+
+<dl>
+<dt>disasm &amp;optional address-or-symbol length line-pre-annotate-fn annotations</dt><dd>
+
+<p>
+Дизассемблировать содержимое диапазона ячеек памяти начиная с
+ADDRESS-OR-SYMBOL и длиной LENGTH.
+</p>
+<p>
+Значение параметра ADDRESS-OR-SYMBOL по умолчанию равно содержимому
+регистра адреса выборки конвейера уменьшенному на #x10.
+</p>
+<p>
+Значение параметра LENGTH по умолчанию равно либо #x20, если ADDRESS-OR-SYMBOL представляет собой целое,
+либо разнице между адресами символов ADDRESS-OR-SYMBOL и следующего за ним.
+</p>
+</dd>
+<dt>displash address &amp;optional (splash-size 10) annotations</dt><dd>
+
+<p>
+Дизассемблирование адресов в коридоре вокруг ADDRESS.
+Величина коридора задаётся параметром SPLASH-SIZE.
+</p>
+</dd>
+<dt>dispack &amp;optional (name :pipeline)</dt><dd>
+
+<p>
+Напечатать значения регистров из заготовленной пачки с именем NAME.
+</p>
+</dd>
+<dt>dump address-or-symbol &amp;optional (length 100)</dt><dd>
+
+<p>
+Напечатать содержимое диапазона ячеек памяти начиная с ADDRESS-OR-SYMBOL
+и длиной LENGTH.
+</p>
+</dd>
+<dt>print-memory address length</dt><dd>
+
+<p>
+Напечатать содержимое диапазона ячеек памяти начиная с ADDRESS и
+длиной LENGTH, как текст.
+</p>
+</dd>
+<dt>print-tlb &amp;optional (page-size 4000)</dt><dd>
+
+<p>
+Распечатать содержимое TLB.  Размер отображаемый страницей принимается
+равным PAGE-SIZE.
+</p>
+</dd>
+<dt>display &amp;rest new-items</dt><dd>
+
+<p>
+Печатать значения регистров чьи имена находятся в <i>месте</i>
+(DISPLAY-LIST).  Когда команде передаются параметры, они замещают
+старое значение (DISPLAY-LIST).
+</p>
+</dd>
+<dt>edisplay</dt><dd>
+
+<p>
+Как DISPLAY, с добавлением типично востребованной информации:
+cop0.count, cop0.epc, cop0.badvaddr, cop0.cause и дизассемблированием
+адресов вокруг pcfetch и cop0.epc.
+</p>
+</dd>
+<dt>display-list</dt><dd>
+
+<p>
+<i>Место</i> предоставляющее доступ к текущему списку отображения.
+</p>
+</dd>
+<dt>explain &amp;optional (core <code>*core*</code>)</dt><dd>
+
+<p>
+Отобразить причину останова ядра CORE.
+По умолчанию используется ядро текущего активного устройства.
+</p>
+</dd>
+<dt>get name-or-address</dt><dd>
+
+<p>
+Получить регистр или ячейку памяти заданный/-ую через <a href="#спецификатор==адреса">спецификатор адреса</a>
+NAME-OR-ADDRESS, представляющем собой либо <a href="#ключевое==слово">ключевое слово</a>.
+</p>
+</dd>
+<dt>set name-or-address value</dt><dd>
+
+<p>
+Установить регистр или ячейку памяти заданный/-ую через <a href="#спецификатор==адреса">спецификатор адреса</a>
+NAME-OR-ADDRESS.  Также доступен синтаксис (setf (get NAME-OR-ADDRESS) VALUE).
+</p>
+</dd>
+<dt>peek address-or-symbol &amp;optional verbose</dt><dd>
+
+<p>
+Напечатать содержимое ячейки по адресу ADDRESS-OR-SYMBOL, опционально,
+при указанном не-NIL значении параметра VERBOSE, расшифровывая значение
+ADDRESS-OR-SYMBOL в контексте активной таблицы символов.
+</p>
+</dd>
+<dt>show name-or-address</dt><dd>
+
+<p>
+Получить регистр или ячейку памяти заданный/-ую через <a href="#спецификатор==адреса">спецификатор адреса</a>
+NAME-OR-ADDRESS.  В том случае если указано имя регистра имеющего структуру,
+полученное значение разобирается по полям, и возвращается как второе значение
+функции.
+</p>
+</dd>
+<dt>pipeline</dt><dd>
+
+<p>
+Как DISPLAY, но анализирует лишь адреса на конвейере.
+</p>
+</dd>
+<dt>pipesyms</dt><dd>
+
+<p>
+Вернуть список имён функций соответствующих адресам на конвейере,
+используя активную таблицу символов.
+</p>
+</dd>
+</dl>
+</div>
+
+</div>
+
+<div id="outline-container-6.12" class="outline-3">
+<h3 id="sec-6.12"><span class="section-number-3">6.12</span> Вмешательство </h3>
+<div class="outline-text-3" id="text-6.12">
+
+<dl>
+<dt>set name-or-address value</dt><dd>
+
+<p>
+Установить регистр или ячейку памяти заданный/-ую через <a href="#спецификатор==адреса">спецификатор адреса</a>
+NAME-OR-ADDRESS.  Также доступен синтаксис (setf (get NAME-OR-ADDRESS) VALUE).
+</p>
+</dd>
+</dl>
+</div>
+
+</div>
+
+<div id="outline-container-6.13" class="outline-3">
+<h3 id="sec-6.13"><span class="section-number-3">6.13</span> Трассировка </h3>
+<div class="outline-text-3" id="text-6.13">
+
+<dl>
+<dt>trace count &amp;rest run-params</dt><dd>
+
+<p>
+Исполнить COUNT инструкций и остановиться.
+</p>
+<p>
+Остаточные параметры передаются команде RUN.
+</p>
+</dd>
+<dt>block-trace size &amp;optional count &amp;rest run-args &amp;key (state :stop) &amp;allow-other-keys</dt><dd>
+
+<p>
+Произвести трассировку блоками, по SIZE инструкций в блоке.
+Если задан <a href="#параметр">параметр</a> COUNT не равный NIL, выйти после указанного им количества блоков.
+</p>
+<p>
+Остаточные параметры при каждом пуске передаются команде RUN.
+</p>
+</dd>
+<dt>count-trace addr-or-sym &amp;rest run-args</dt><dd>
+
+<p>
+Установить аппаратную точку останова в адрес заданный через 
+<a href="#спецификатор==адреса">спецификатор адреса</a> ADDR-OR-SYM, и запускать <a href="#целевое==устройство">целевое устройство</a>, 
+выводя на экран счётчик остановов.
+</p>
+<p>
+Остаточные параметры при каждом пуске передаются команде RUN.
+</p>
+</dd>
+<dt>insn-trace size &amp;key check (addr 0) (mask 7fffffff) (mode :trace) (print-syms t) full-pipeline</dt><dd>
+
+<p>
+Произвести пошаговую трассировку, длиной SIZE шагов, снимая значения регистров
+конвейера на каждом шагу.
+</p>
+<p>
+Принимаются следующие ключевые аргументы:
+</p><dl>
+<dt>CHECK</dt><dd>
+
+<p>
+на каждом шагу проверять соответствие фактически декодируемого значения инструкции
+содержимому памяти по адресу указываемому соответствующим регистром конвейера (PCdec),
+</p>
+</dd>
+<dt>ADDR, MASK</dt><dd>
+
+<p>
+при осуществлении вышеуказанной проверки, осуществлять отображение регистра PCdec,
+путём замены битов не указанных в MASK соответствующими битами из ADDR,
+</p>
+</dd>
+<dt>MODE</dt><dd>
+
+<p>
+выбор механизма осуществления шага &ndash; :STEP или :TRACE,
+</p>
+</dd>
+<dt>PRINT-SYMS</dt><dd>
+
+<p>
+разрешать значения адресов в регистре PCdec в символьные имена, используя активную таблицу символов,
+</p>
+</dd>
+<dt>FULL-PIPELINE</dt><dd>
+
+<p>
+снимать все регистры конвейера, а не только PCdec и IRdec.
+</p>
+</dd>
+</dl>
+</dd>
+<dt>staircase-trace callspecs &amp;rest run-args</dt><dd>
+
+<p>
+Произвести т.н. "лестничную трассировку", состоящую из ступеней, задаваемых
+параметром CALLSPECS, каждая из которых содержит <a href="#спецификатор==адреса">спецификатор адреса</a> точки останова
+и количество пропусков данной точки для перехода к следующей ступени.
+</p>
+<p>
+Остаточные параметры при каждом пуске передаются команде RUN.
+</p>
+</dd>
+</dl>
+</div>
+
+</div>
+
+<div id="outline-container-6.14" class="outline-3">
+<h3 id="sec-6.14"><span class="section-number-3">6.14</span> Прочее </h3>
+<div class="outline-text-3" id="text-6.14">
+
+<dl>
+<dt>sleep seconds</dt><dd>
+
+<p>
+Эта функция приостанавливает исполнение на SECONDS.  
+SECONDS могут быть любым неотрицательным реальным числом.
+</p>
+</dd>
+<dt>write-completions filename &amp;optional (packages <code>*tui-completable-packages*</code>) qualified-packages</dt><dd>
+
+<p>
+Записать информацию для автодополнений символов из списка пакетов PACKAGES,
+в формате GNU Readline в FILENAME.  Имена символов из пакетов в списке
+QUALIFIED-PACKAGES дополняются префиксом из короткого имени пакета и
+символа двоеточия.
+</p>
+</dd>
+<dt>list-platforms</dt><dd>
+
+<p>
+Вывести список всех известных платформ.
+</p>
+</dd>
+<dt>version</dt><dd>
+
+<p>
+Вывести версию отладчика.
+Команда различает релизные версии и версии в разработке.
+</p>
+</dd>
+</dl>
+</div>
+
+</div>
+
+<div id="outline-container-6.15" class="outline-3">
+<h3 id="sec-6.15"><span class="section-number-3">6.15</span> Грубое управление </h3>
+<div class="outline-text-3" id="text-6.15">
+
+<dl>
+<dt>load pathspec &amp;key (verbose <code>*load-verbose*</code>) (print <code>*load-print*</code>) (if-does-not-exist t) (external-format :default)</dt><dd>
+
+<p>
+Загрузить файл указанный с помощью PATHSPEC, последовательно считывая
+и исполняя содержащиеся в нём формы.
+</p>
+</dd>
+<dt>quit &amp;optional (status 0)</dt><dd>
+
+<p>
+Выйти из отладчика, не меняя состояние целевого устройства.
+</p>
+</dd>
+</dl>
+</div>
+
+</div>
+
+<div id="outline-container-6.16" class="outline-3">
+<h3 id="sec-6.16"><span class="section-number-3">6.16</span> Тестирование </h3>
+<div class="outline-text-3" id="text-6.16">
+
+<dl>
+<dt>run-tests &amp;optional all-contexts &amp;rest test-suites</dt><dd>
+
+<p>
+Выполнить серию тестов из тестовых наборов, с названиями в остаточном списке
+параметров, на всех доступных устройствах.  По умолчанию используются тестовые наборы
+:INTERFACE и :TARGET.
+</p>
+</dd>
+<dt>testir</dt><dd>
+
+<p>
+Бесконечный цикл записи команды DEBUG REQUEST в регистр TAP IR,
+с печатью возвращаемого значения.
+</p>
+</dd>
+<dt>testmem &amp;optional (address 0) (length 10000)</dt><dd>
+
+<p>
+Протестировать диапазон ячеек памяти длиной в LENGTH байт,
+начиная с ADDRESS.
+</p>
+
+</dd>
+</dl>
+</div>
+
+</div>
+
+<div id="outline-container-6.17" class="outline-3">
+<h3 id="sec-6.17"><span class="section-number-3">6.17</span> Команды отладчика MDB получившие новое название </h3>
+<div class="outline-text-3" id="text-6.17">
+
+<dl>
+<dt>source <a href="/home/deepfire/source/mdb/src/cmd.c">.</a> =&gt; load</dt><dd>
+
+</dd>
+<dt>load <a href="/home/deepfire/source/mdb/src/cmd.c">.</a> =&gt; loadeltext</dt><dd>
+
+</dd>
+<dt>save <a href="/home/deepfire/source/mdb/src/cmd.c">.</a> =&gt; saveeltext</dt><dd>
+
+</dd>
+<dt>dump-raw <a href="/home/deepfire/source/mdb/src/cmd.c">.</a> =&gt; dump</dt><dd>
+
+</dd>
+<dt>leave <a href="/home/deepfire/source/mdb/src/cmd.c">.</a> =&gt; leave-frame</dt><dd>
+
+</dd>
+<dt>tlb <a href="/home/deepfire/source/mdb/src/cmd.c">.</a> =&gt; print-tlb</dt><dd>
+
+
+</dd>
+<dt>version <a href="/home/deepfire/source/mdb/src/cmd.c">.</a></dt><dd>
+
+</dd>
+<dt>conf <a href="/home/deepfire/source/mdb/src/cmd.c">.</a></dt><dd>
+
+
+</dd>
+<dt>epp <a href="/home/deepfire/source/mdb/src/cmd.c">.</a> =&gt; set-epp</dt><dd>
+
+</dd>
+<dt>jtag <a href="/home/deepfire/source/mdb/src/cmd.c">.</a> =&gt; set-jtag</dt><dd>
+
+
+</dd>
+<dt>sbp <a href="/home/deepfire/source/mdb/src/cmd.c">.</a> =&gt; sw-break</dt><dd>
+
+</dd>
+<dt>bp <a href="/home/deepfire/source/mdb/src/cmd.c">.</a> =&gt; hw-break</dt><dd>
+
+</dd>
+<dt>wp <a href="/home/deepfire/source/mdb/src/cmd.c">.</a> =&gt; watch</dt><dd>
+
+
+</dd>
+<dt>drun <a href="/home/deepfire/source/mdb/src/cmd.c">.</a> =&gt; dsprun</dt><dd>
+
+</dd>
+<dt>dstep <a href="/home/deepfire/source/mdb/src/cmd.c">.</a> =&gt; dspstep</dt><dd>
+
+</dd>
+<dt>dbp <a href="/home/deepfire/source/mdb/src/cmd.c">.</a> =&gt; dspbreak</dt><dd>
+
+</dd>
+<dt>dspbp <a href="/home/deepfire/source/mdb/src/cmd.c">.</a> =&gt; dspbreak (sort of)</dt><dd>
+
+
+</dd>
+<dt>expert <a href="/home/deepfire/source/mdb/src/cmd.c">.</a></dt><dd>
+
+</dd>
+<dt>eset <a href="/home/deepfire/source/mdb/src/cmd.c">.</a></dt><dd>
+
+</dd>
+<dt>eshow <a href="/home/deepfire/source/mdb/src/cmd.c">.</a></dt><dd>
+
+</dd>
+<dt>estep <a href="/home/deepfire/source/mdb/src/cmd.c">.</a></dt><dd>
+
+</dd>
+<dt>erun <a href="/home/deepfire/source/mdb/src/cmd.c">.</a></dt><dd>
+
+</dd>
+<dt>eruntrace <a href="/home/deepfire/source/mdb/src/cmd.c">.</a></dt><dd>
+
+</dd>
+<dt>etrace <a href="/home/deepfire/source/mdb/src/cmd.c">.</a></dt><dd>
+
+
+</dd>
+<dt>halt <a href="/home/deepfire/source/mdb/src/cmd.c">.</a></dt><dd>
+
+</dd>
+<dt>runonly <a href="/home/deepfire/source/mdb/src/cmd.c">.</a></dt><dd>
+
+</dd>
+<dt>runloop <a href="/home/deepfire/source/mdb/src/cmd.c">.</a></dt><dd>
+
+</dd>
+<dt>wait <a href="/home/deepfire/source/mdb/src/cmd.c">.</a></dt><dd>
+
+</dd>
+<dt>exit <a href="/home/deepfire/source/mdb/src/cmd.c">.</a></dt><dd>
+
+
+</dd>
+<dt>testoncd <a href="/home/deepfire/source/mdb/src/cmd.c">.</a></dt><dd>
+
+
+</dd>
+</dl>
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-7" class="outline-2">
+<h2 id="sec-7"><span class="section-number-2">7</span> Описание ключевых операций </h2>
+<div class="outline-text-2" id="text-7">
+
+
+</div>
+
+<div id="outline-container-7.1" class="outline-3">
+<h3 id="sec-7.1"><span class="section-number-3">7.1</span> Инициализация </h3>
+<div class="outline-text-3" id="text-7.1">
+
+<p>Инициализация бывает двух сортов:
+</p><ul>
+<li>
+первичная, включающая процессы поиска и анализа подключенных целевых устройств;
+инициализирует все найденные новоподключенные устройства.
+</li>
+<li>
+повторная, без поиска устройств;
+инициализирует текущее активное устройство.
+
+</li>
+</ul>
+
+</div>
+
+<div id="outline-container-7.1.1" class="outline-4">
+<h4 id="sec-7.1.1"><span class="section-number-4">7.1.1</span> Первичная инициализация </h4>
+<div class="outline-text-4" id="text-7.1.1">
+
+<dl>
+<dt>scan &amp;optional force-rescan =&gt; &lt;нет значений&gt;</dt><dd>
+
+
+<p>
+Функция производит следующие операции:
+</p><ul>
+<li>
+поиск адаптеров подключенных к EPP и USB,
+</li>
+<li>
+для каждого подключенного адаптера:
+<ul>
+<li>
+анализ OnCD подключенного к адаптеру целевого устройства,
+</li>
+<li>
+определение типа платформы целевого устройства,
+</li>
+<li>
+инициализацию компонентов платформы целевого устройства.
+
+</li>
+</ul>
+</li>
+</ul>
+
+<p>Если функции первым параметром передан не-NIL, то производится повторный
+анализ уже найденных к данному моменту адаптеров с подключенными к ним
+целевыми устройствами.
+</p>
+<p>
+При нескольких подключенных устройствах, активным становится последнее найденное.
+При этом, следует отметить что шина USB сканируется после портов EPP, что, как следствие,
+придаёт адаптерам на шине USB некоторый "приоритет".
+</p>
+</dd>
+</dl>
+
+</div>
+
+<div id="outline-container-7.1.1.1" class="outline-5">
+<h5 id="sec-7.1.1.1"><span class="section-number-5">7.1.1.1</span> Поиск адаптеров </h5>
+<div class="outline-text-5" id="text-7.1.1.1">
+
+<ul>
+<li id="sec-7.1.1.1.1">EPP <br/>
+Производится запрос на получение привилегий доступа к портам EPP.  На UNIX-системах это осуществляется
+путём вызова системной функции iopl().  В Windows используется внешний, поставляемый с отладчиком сервис
+mcdbio.sys.
+
+<dl>
+<dt>bus-probe-address (o parport-bus) address =&gt; &lt;булево значение&gt;</dt><dd>
+
+<p>
+Младшие три бита статусного регистра портов с адресами #x378, #x279, #xbc0 и #xb80 проверяются
+на значения 1 и 2, интерпретируемые в качестве версии адаптера.
+</p>
+</dd>
+</dl>
+</li>
+<li id="sec-7.1.1.1.2">USB <br/>
+<dl>
+<dt>В UNIX: bus-occupied-addresses (o ezusb-bus) =&gt; &lt;список адресов&gt;</dt><dd>
+
+</dd>
+<dt>В Windows: bus-probe-address (o ezusb-bus) address =&gt; &lt;булево значение&gt;</dt><dd>
+
+
+<p>
+Производится серия запросов к ОС, осуществляющих поиск устрйств с USB ID #x0547:#x1002.  На UNIX-системах это
+осуществляется напрямую через системные интерфейсы sysfs и usbfs.  В Windows используется специальный драйвер
+ezusb.sys.
+</p>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+
+</div>
+
+<div id="outline-container-7.1.1.2" class="outline-5">
+<h5 id="sec-7.1.1.2"><span class="section-number-5">7.1.1.2</span> Анализ OnCD подключенного целевого устройства </h5>
+<div class="outline-text-5" id="text-7.1.1.2">
+
+<dl>
+<dt>bus-populate-address (o ezusb-bus) address =&gt; &lt;интерфейс&gt;</dt><dd>
+
+</dd>
+<dt>bus-populate-address (o parport-bus) address =&gt; &lt;интерфейс&gt;</dt><dd>
+
+
+<p>
+Производится сброс адаптера, затем TAP. Одновременно с этим выполняется команда TAP IDCODE.
+</p>
+</dd>
+<dt>find-target-class-for-interface interface &amp;optional (if-does-not-exist :error) =&gt; &lt;тип OnCD&gt;</dt><dd>
+
+
+<p>
+Возвращённое командой TAP IDCODE значение интерпретируется как идентификатор целевого устройства.
+Текущий набор распознаваемых идентификаторов &ndash; 2 и 3, соответствующие механизмам OnCD до NVCom,
+и начиная с него.
+</p>
+</dd>
+</dl>
+</div>
+
+</div>
+
+<div id="outline-container-7.1.1.3" class="outline-5">
+<h5 id="sec-7.1.1.3"><span class="section-number-5">7.1.1.3</span> Определение типа платформы целевого устройства </h5>
+<div class="outline-text-5" id="text-7.1.1.3">
+
+<dl>
+<dt>detect-target-platform target &amp;optional (if-does-not-exist :error) =&gt; &lt;платформа&gt;</dt><dd>
+
+
+<p>
+Функция производит считывание ячейки памяти по физическому адресу #x18480108,
+что соответствует адресу идентификационного регистра первого DSP (когда он присутствует
+на целевом устройстве), интерпретирует полученное значение как версию DSP и использует её
+для выбора платформы.
+</p>
+<p>
+Этот механизм имеет слабые стороны:
+</p><ul>
+<li>
+не все платформы имеют DSP, и как следствие идентификационный регистр,
+</li>
+<li>
+некоторые платформы имеют DSP с одинаковыми идентификационными регистрами.
+
+</li>
+</ul>
+</dd>
+</dl>
+</div>
+
+</div>
+
+<div id="outline-container-7.1.1.4" class="outline-5">
+<h5 id="sec-7.1.1.4"><span class="section-number-5">7.1.1.4</span> Инициализацию компонентов платформы целевого устройства </h5>
+<div class="outline-text-5" id="text-7.1.1.4">
+
+<p>В рамках этого этапа производятся следующие три шага:
+</p>
+<ul>
+<li id="sec-7.1.1.4.1">Определение набора компонентов целевого устройства <br/>
+<dl>
+<dt>populate-target (o target) =&gt; &lt;нет значений&gt;</dt><dd>
+
+
+<p>
+Определение набора компонентов целевого устройства, исходя из предопределённого списка
+компонентов соответствующей платформы.
+</p>
+<p>
+Именно в данный момент определяются типы RISC- и DSP- ядер, механизмов системного
+управления и диапазоны платформенной памяти (за исключением CRAM).
+</p>
+</dd>
+</dl>
+</li>
+<li id="sec-7.1.1.4.2">Первичная инициализация платформенных устройств <br/>
+<dl>
+<dt>init-target-platform (o target) (p multicore-platform) =&gt; &lt;нет значений&gt;</dt><dd>
+
+
+<p>
+Первичная инициализация платформенных устройств, в рамках которой производится определение
+фактического размера памяти CRAM.  Для получения этого значения не используется
+предопределённый список платформенных устройств, т.к. последний составляется людьми,
+и, как следствие, может содержать ошибки &ndash; при том что точный размер CRAM является важным
+для функционирования некоторых компонентов отладчика.
+</p>
+</dd>
+</dl>
+</li>
+<li id="sec-7.1.1.4.3">Настройка системных компонентов платформы целевого устройства <br/>
+<dl>
+<dt>configure-target-platform (o target) (p platform) &amp;key prereset-core-multiplier core-multiplier inhibit-memory-detection force-memory-detection (error-on-failed-detection t) =&gt; &lt;булево значение&gt;</dt><dd>
+
+
+<p>
+Эта функция, в свою очередь, опирается на нижеследующие, причём
+определение и настройка основной памяти является опциональной.
+</p>
+</dd>
+</dl>
+<ul>
+<li id="sec-7.1.1.4.3.1">Настройка делителей частоты и системы управления питанием <br/>
+<dl>
+<dt>configure-platform-system (p platform) (s system) &amp;key core-multiplier =&gt; &lt;нет значений&gt;</dt><dd>
+
+
+<p>
+Производится настройка делителей частоты кристалла и системы управления питанием.
+</p>
+</dd>
+</dl>
+</li>
+<li id="sec-7.1.1.4.3.2">Определение и настройка основной памяти <br/>
+<dl>
+<dt>configure-target-memory target &amp;optional force-detection (error-on-failed-detection t) =&gt; &lt;нет значений&gt;</dt><dd>
+
+
+<p>
+Среди набора известных значений настройки ChipSelect-ов и контроллера SDRAM производится поиск
+работающих для данной платы целевого устройства, в том случае если таковой не был найден ранее.
+</p>
+<p>
+При указанном ключе FORCE-DETECTION подбор производится несмотря на наличие уже найденного набора.
+</p>
+</dd>
+</dl>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-7.1.2" class="outline-4">
+<h4 id="sec-7.1.2"><span class="section-number-4">7.1.2</span> Повторная инициализация </h4>
+<div class="outline-text-4" id="text-7.1.2">
+
+<dl>
+<dt>reset &amp;rest platform-args &amp;key (core <code>*core*</code>) (state <code>*depth*</code>) &amp;allow-other-keys =&gt; &lt;нет значений&gt;</dt><dd>
+
+
+<p>
+Функция сбрасывает и перенастраивает <a href="#целевое==устройство">целевое устройство</a> содержащее ядро CORE (по умолчанию выбирается являющееся активным в данный момент), 
+с учётом ключевых аргументов PLATFORM-ARGS.
+Производятся следующие действия:
+</p><ul>
+<li>
+осуществляется попытка выяснить текущие значения делителей частоты;
+</li>
+<li>
+кристалл сбрасывается в первоначальное состояние;
+</li>
+<li>
+системные компоненты перенастраиваются с использованием либо сохранённых значений делителей частоты,
+либо значений по умолчанию для данной платформы.
+</li>
+<li>
+устанавливается соответствующая текущим настройкам глубина режима отладки (по умолчанию &ndash; :DEBUG).
+
+</li>
+</ul>
+</dd>
+</dl>
+
+</div>
+
+<div id="outline-container-7.1.2.1" class="outline-5">
+<h5 id="sec-7.1.2.1"><span class="section-number-5">7.1.2.1</span> Определение текущего значения делителя частоты кристалла. </h5>
+<div class="outline-text-5" id="text-7.1.2.1">
+
+<dl>
+<dt>platform-core-frequency-multiplier platform system core =&gt; &lt;целое число&gt;</dt><dd>
+
+
+</dd>
+</dl>
+</div>
+
+</div>
+
+<div id="outline-container-7.1.2.2" class="outline-5">
+<h5 id="sec-7.1.2.2"><span class="section-number-5">7.1.2.2</span> Сброс кристалла в первоначальное состояние </h5>
+<div class="outline-text-5" id="text-7.1.2.2">
+
+<dl>
+<dt>reset-target-platform (o target) (p platform) &amp;rest platform-args &amp;key stop-cores-p &amp;allow-other-keys =&gt; &lt;нет значений&gt;</dt><dd>
+
+
+<p>
+Данная функция опирается на нижеследующие:
+</p>
+</dd>
+</dl>
+<ul>
+<li id="sec-7.1.2.2.1">Сброс целевого устройства стредствами TAP <br/>
+<dl>
+<dt>interface-reset-target (o parport-interface) stop-cores-p</dt><dd>
+
+</dd>
+<dt>interface-reset-target (o ezusb-interface) stop-cores-p</dt><dd>
+
+
+<p>
+Средствами адаптера осуществляется аппаратный сброс целевого устройства, после чего выполняются
+команды TAP DEBUG REQUEST и DEBUG ENABLE.
+</p>
+</dd>
+</dl>
+</li>
+<li id="sec-7.1.2.2.2">Инициализация состояния RISC-ядер <br/>
+<dl>
+<dt>reset-core (core mips-core)</dt><dd>
+
+
+<p>
+Эта функция убирает все активные точки останова и сбрасывает все ведомые ядра (т.е. DSP).
+</p>
+</dd>
+</dl>
+</li>
+<li id="sec-7.1.2.2.3">Настройка системных компонентов платформы целевого устройства <br/>
+Эта функция была описана выше, см. <a href="#sec-7.1.1.4.3">Настройка системных компонентов платформы целевого устройства</a>.
+
+</li>
+</ul>
+</div>
+
+</div>
+
+<div id="outline-container-7.1.2.3" class="outline-5">
+<h5 id="sec-7.1.2.3"><span class="section-number-5">7.1.2.3</span> Установка глубины режима отладки </h5>
+<div class="outline-text-5" id="text-7.1.2.3">
+
+<dl>
+<dt>(setf state) new-state core &amp;rest transition-args</dt><dd>
+
+
+<p>
+Управление состоянием отладки ядра CORE.
+</p>
+<p>
+<a href="#Параметр">Параметр</a> NEW-STATE может принимать одно из следующих состояний:
+</p><ul>
+<li>
+:DEBUG, для глубокого, инвазивного режима отладки, с полностью доступным функционалом отладчика;
+</li>
+<li>
+:STOP, для режима минимального вмешательства;
+</li>
+<li>
+:FREE, запуск ядра.
+
+</li>
+</ul>
+</dd>
+</dl>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-8" class="outline-2">
+<h2 id="sec-8"><span class="section-number-2">8</span> Существенные недостатки </h2>
+<div class="outline-text-2" id="text-8">
+
+<ul>
+<li>
+отсутствие поддержки отладки DSP-ядер семейства кристаллов до NVCom;
+</li>
+<li>
+отсутствие механизма автодополнения команд в интерактивном режиме в Windows,
+и сколько-либо приемлимого механизма редактирования строки в Linux вообще<sup><a class="footref" name="fnr.6" href="#fn.6">6</a></sup>;
+</li>
+<li>
+лишь частичная поддержка системы команд mdb;
+</li>
+<li>
+отсутствие поддержки сценариев в формате mdb;
+</li>
+<li>
+отсутствие механизма асинхронного запроса прерывания исполнения и выхода из режима отладки
+на платформе Windows.
+</li>
+</ul>
+</div>
+
+</div>
+
+<div id="outline-container-9" class="outline-2">
+<h2 id="sec-9"><span class="section-number-2">9</span> Словарь </h2>
+<div class="outline-text-2" id="text-9">
+
+<dl>
+<dt><a name="адаптер" class="target">адаптер</a></dt><dd>
+
+<p>
+Устройство посредством которого осуществляется сообщение между вычислительной системой разработчика и JTAG TAP на плате целевого устройства.
+Различаются адаптеры следующим образом: 1. по размещению &ndash; встроенные на плате и внешние, 2. по стандарту обмена данных &ndash; EPP и USB.
+</p></dd>
+<dt><a name="ключевое==слово" class="target">ключевое слово</a></dt><dd>
+
+<p>
+<a href="#Символ">Символ</a> из пакета KEYWORD.  Печатная форма символа префиксирована символом двоеточия.  Пример: :FOO.
+</p></dd>
+<dt>@&lt;a name="опциональный==<a href="#параметр">параметр</a>" class="target"&gt;опциональный <a href="#параметр">параметр</a></a></dt><dd>
+
+<p>
+<a href="#Параметр">Параметр</a> чей соответствующий позиционный <a href="#аргумент">аргумент</a> необязателен.
+Если <a href="#аргумент">аргумент</a> не задан используется значение по умолчанию.
+</p></dd>
+<dt>@&lt;a name="ключевой==<a href="#параметр">параметр</a>" class="target"&gt;ключевой <a href="#параметр">параметр</a></a></dt><dd>
+
+<p>
+<a href="#Параметр">Параметр</a> чей соответствующий ключевой <a href="#аргумент">аргумент</a> необязателен (обязательные ключевые аргументы не существуют).
+Если <a href="#аргумент">аргумент</a> не задан используется значение по умолчанию.
+</p></dd>
+<dt><a name="ключевые==слова==лямбда-списка" class="target">ключевые слова лямбда-списка</a></dt><dd>
+
+<p>
+Символы, чьи имена начинаются с амперсанда (символа '&amp;') и распознаются в лямбда-списках специальным образом.
+</p></dd>
+<dt>@&lt;a name="обычный==<a href="#лямбда-список">лямбда-список</a>" class="target"&gt;обычный <a href="#лямбда-список">лямбда-список</a></a></dt><dd>
+
+<p>
+<a href="#Лямбда-список">Лямбда-список</a> используемый для определения набора параметров функций и протокола их принятия ею в языке Common Lisp.
+</p></dd>
+<dt>@&lt;a name="остаточный==<a href="#параметр">параметр</a>" class="target"&gt;остаточный <a href="#параметр">параметр</a></a></dt><dd>
+
+<p>
+<a href="#Параметр">Параметр</a>, который был учреждён с помощью ключевого слова лямбда-списка &amp;rest.
+</p></dd>
+<dt><a name="символ" class="target">символ</a></dt><dd>
+
+<ol>
+<li>
+В контексте программы целевого устройства: идентификатор связанный при помощи таблицы символов с адресом.
+</li>
+<li>
+В контексте языка Common Lisp: объект типа <a href="#символ">символ</a>, использующийся для именования различных сущностей.
+</li>
+</ol>
+</dd>
+<dt><a name="спецификатор==адреса" class="target">спецификатор адреса</a></dt><dd>
+
+<p>
+Объект обозначающий адрес и являющийся одним из: <a href="#символ">символ</a> (обозначающий адрес связанный с данным символом в активной таблице символов),
+или неотрицательное целое (обозначающее адрес).
+</p></dd>
+<dt><a name="спецификатор==аппаратной==точки==останова" class="target">спецификатор аппаратной точки останова</a></dt><dd>
+
+<p>
+Объект обозначающий аппаратную точку останова и являющийся одним из: неотрицательное целое (обозначающий аппаратную точку останова
+с соответствующим номером), аппаратная точка останова (обозначающая саму себя).
+</p></dd>
+<dt><a name="спецификатор==программной==точки==останова" class="target">спецификатор программной точки останова</a></dt><dd>
+
+<p>
+Объект обозначающий программную точку останова и являющийся одним из: неотрицательное целое (обозначающий программную точку
+останова установленную на соответствующий адрес), программная точка останова (обозначающая саму себя).
+</p></dd>
+<dt><a name="спецификатор==DSP-ядра" class="target">спецификатор DSP-ядра</a></dt><dd>
+
+<p>
+Объект обозначающий DSP-ядро и являющийся одним из: неотрицательное целое (обозначающее соответствующее DSP-ядро активного целевого
+устройства), DSP-ядро (обозначающее само себя).
+</p></dd>
+<dt><a name="целевое==устройство" class="target">целевое устройство</a></dt><dd>
+
+<p>
+Аппаратный компонент предмета отладки.
+</p>
+
+</dd>
+</dl>
+
+
+
+
+
+
+
+</div>
+</div>
+<div id="footnotes">
+<h2 class="footnotes">Footnotes: </h2>
+<div id="text-footnotes">
+<p class="footnote"><sup><a class="footnum" name="fn.1" href="#fnr.1">1</a></sup> Почти. В данном контексте пользователь вряд ли столкнётся с
+<a href="http://www.lispworks.com/documentation/HyperSpec/Body/02_b.htm#multiple_escape">пунктом 6 статьи 2.2 спецификации ANSI Common Lisp</a>.
+</p>
+<p class="footnote"><sup><a class="footnum" name="fn.2" href="#fnr.2">2</a></sup> На данный момент.  Возможна реализация специального, строчно-
+ориентированного режима интерпретации файлов с расширением ".cmd",
+специально для удобства взаимодействия с имеющейся базой скриптов
+написанных для отладчика MDB.
+</p>
+<p class="footnote"><sup><a class="footnum" name="fn.3" href="#fnr.3">3</a></sup> Другими словами, значение переменной <code>*READ-BASE*</code> во время
+чтения параметров командной строки равно #x10.
+</p>
+<p class="footnote"><sup><a class="footnum" name="fn.4" href="#fnr.4">4</a></sup> На самом деле обычные лямбда-списки в Common Lisp определяют
+ещё и <a href="#ключевое==слово">ключевое слово</a> &amp;aux, но в данном контексте он не существенен.
+</p>
+<p class="footnote"><sup><a class="footnum" name="fn.5" href="#fnr.5">5</a></sup> Опущено <a href="#ключевое==слово">ключевое слово</a> &amp;aux, спецификатор указанности необязательных
+аргументов supplied-p и механизм переименовывания.
+См. главу 3.4.1 спецификации Common Lisp:
+<a href="http://www.lispworks.com/documentation/HyperSpec/Body/03_da.htm">http://www.lispworks.com/documentation/HyperSpec/Body/03<sub>da</sub>.htm</a>
+</p>
+<p class="footnote"><sup><a class="footnum" name="fn.6" href="#fnr.6">6</a></sup> Ввиду наличия в Linux программы rlwrap, прозрачно добавляющей отличный механизм
+редактирования строки и достаточно приемлимый механизм автодополнения, на этой платформе
+эта проблема стоит не так остро.  Впрочем, в Windows командная оболочка предоставляет
+консольным приложениям сервис редактирования строки, так что и там дела обстоят не совсем
+плохо.
+</p>
+</div>
+</div>
+<div id="postamble">
+<p class="author"> Author: Serge Kosyrev
+<a href="mailto:_deepfire@feelingofgreen.ru">&lt;_deepfire@feelingofgreen.ru&gt;</a>
+</p>
+<p class="date"> Date: 2010-01-11 19:31:36 MSK</p>
+<p class="creator">HTML generated by org-mode 6.27a in emacs 23</p>
+</div>
+</div>
+</body>
+</html>
