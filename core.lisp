@@ -102,7 +102,7 @@ to the concrete classes.")
   (:layouts
    (:control %pc (setf %pc))))
 
-(define-protocol-device-class general-purpose-core nil (core)
+(define-protocol-device-class general-purpose-core :core (core)
   ((moment :accessor saved-core-moment :initarg :moment)
    (moment-changed-p :accessor core-moment-changed-p :initarg :moment-changed-p)
    (trail :accessor saved-core-trail :initarg :trail)
@@ -119,7 +119,7 @@ to the concrete classes.")
    :slaves nil
    :executable nil))
 
-(define-protocol-device-class mmu-core nil (core)
+(define-protocol-device-class mmu-core :core (core)
   ((tlb-entries-nr :reader core-tlb-entries-nr :initarg :tlb-entries-nr)))
 
 (defmethod set-core-moment :after ((o general-purpose-core) moment)
