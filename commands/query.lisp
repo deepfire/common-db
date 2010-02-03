@@ -77,7 +77,7 @@ NAME-OR-ADDRESS, представляющем собой либо ключево
     (integer
      (memory-ref target name-or-address))
     (keyword
-     (reginstance-value (register-instance (target-enumpool target) name-or-address)))))
+     (target-reg target name-or-address))))
 
 (defun set (name-or-address value &aux
             (target *target*))
@@ -88,7 +88,7 @@ NAME-OR-ADDRESS.  Также доступен синтаксис (setf (get NAME
     (integer
      (setf (memory-ref target name-or-address) value))
     (keyword
-     (setf (reginstance-value (register-instance (target-enumpool target) name-or-address)) value))))
+     (setf (target-reg target name-or-address) value))))
 
 (defsetf get set)
 

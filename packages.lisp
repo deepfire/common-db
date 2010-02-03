@@ -297,8 +297,12 @@
    #:target-devices
    #:target-devices-by-type
    #:target-device
+   ;; enumeration & its fruit
    #:add-target-device
    #:remove-target-device
+   #:target-reg
+   #:set-target-reg
+   ;;
    #:make-target-device
    #:create-target-device-from-spec
    #:with-target-devices

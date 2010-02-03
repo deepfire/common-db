@@ -88,9 +88,9 @@
          (:error (error 'target-platform-detection-error :target o))
          (:continue)))))
 
-;;;
-;;; Initialisation
-;;;
+;;;;
+;;;; Target device enumeration, and its fruit
+;;;;
 (defgeneric add-target-device (target device)
   (:method ((targ target) (d device))
     (enumerate-device (target-enumpool targ) d)
@@ -105,6 +105,21 @@
       (purge-device-register-instances d)
       (enumpool-remove enumpool (enumclass enumpool (device-enumeration-class d)) d))))
 
+(defun target-reg (target name)
+  "Read a register from unified namespace of registers belonging
+to devices registered within TARGET."
+  (reginstance-value (register-instance (target-enumpool target) name)))
+
+(defun set-target-reg (target name value)
+  "Write a register within unified namespace of registers belonging
+to devices registered within TARGET."
+  (set-reginstance-value (register-instance (target-enumpool target) name) value))
+
+(defsetf target-reg set-target-reg)
+
+;;;;
+;;;; Target device creation
+;;;;
 (defun make-target-device (target type &rest initargs)
   "Create an instance of device TYPE, by providing it INITARGS,
 and attaching it to the TARGET."
