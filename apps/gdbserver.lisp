@@ -62,13 +62,13 @@
 (defvar *gdb-register-instance-vector*)
 
 (defmethod gdb-target-registers-as-vector ((o common-db-gdbserver))
-  (lret ((regvec (make-array (* 4 (length *gdb-register-instance-vector*)))))
+  (lret ((regvec (make-array (* 4 (length *gdb-register-instance-vector*)) :element-type '(unsigned-byte 8))))
     (iter (for ri in-vector *gdb-register-instance-vector*)
           (for offt from 0 by 4)
           (setf (u8-vector-word32le regvec offt) (reginstance-value ri)))))
 
 (defmethod gdb-set-target-registers-from-vector ((o common-db-gdbserver) vector)
-  (lret ((regvec (make-array (* 4 (length *gdb-register-instance-vector*)))))
+  (lret ((regvec (make-array (* 4 (length *gdb-register-instance-vector*)) :element-type '(unsigned-byte 8))))
     (iter (for ri in-vector *gdb-register-instance-vector*)
           (for offt from 0 by 4)
           (setf (reginstance-value ri) (u8-vector-word32le regvec offt)))))
