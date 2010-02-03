@@ -41,6 +41,9 @@
   "  GDB server options:
     --port <port-number>        Accept remote GDB connections on this port.")
 
+(defvar *poll-interval* (/ 20)
+  "How often to query target for its state.")
+
 ;;;;
 ;;;; Classes
 ;;;;
@@ -114,7 +117,6 @@
                             (core (ctx-core o)))
   (format *trace-output* "CONTINUE-AT ~X~%" addr)
   (run-core-asynchronous core addr)
-  (resume server)
   (loop
      ;; Poll for condition of remote target every now and then. Not
      ;; very pretty...
@@ -122,34 +124,21 @@
        (sleep *poll-interval*))
      ;; Check to see if GDB wants a break or if the target has hit a
      ;; breakpoint.
-     (let ((int? (check-interrupt server))
-           (db? (inside-debugger? c)))
+     (let ((int? (check-interrupt o))
+           (db? (not (core-running-p core))))
        (when (or int? db?)
-         (stop server)
+         (setf (state core) :debug)
          ;; If we are interrupted or inside the debugger return to
          ;; GDB.
-         (when db?
-           ;; A debug condition (via debug extensions or INT3)
-           ;; happened. If it was a INT3, decrement EIP.
-           (let ((eip (tss-eip (tss-of c))))
-             (when (find (1- eip) (soft-breakpoints-of server) :key #'address-of)
-               (decf (tss-eip (tss-of c))))))
-         (when (or int? db?)
-           (return-from gdb-continue-at
-             (return-code
-              (if db?
-                  +reason-trap+
-                  +reason-interrupt+)
-              (tss-eip (tss-of c)))))
-         ;; Otherwise continue the target.
-         (resume c)
-         )))  
+         (return-from gdb-continue-at
+           (format nil "T~2,'0X" (if db? +reason-trap+ +reason-interrupt+))))))  
   "S00")
 
 (defmethod gdb-single-step-at ((o common-db-gdbserver) addr &aux
                                (core (ctx-core o)))
   (set-core-insn-execution-limit core 1)
-  (gdb-continue-at o addr))
+  (let ((*poll-interval* 0))
+    (gdb-continue-at o addr)))
 
 ;;;;
 ;;;; Breakpoints
