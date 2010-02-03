@@ -50,7 +50,7 @@
 (defclass common-db-target (target-context gdbremote::target)
   ())
 
-(defclass common-db-gdbserver (common-db-target gdb-server)
+(defclass common-db-gdbserver (common-db-target gdb-extended-server)
   ())
 
 ;;;;
@@ -58,6 +58,12 @@
 ;;;;
 (defmethod gdb-describe-target ((o common-db-gdbserver))
   (gdb:describe-target (ctx-target o)))
+
+(defmethod gdb-describe-target-memory-map ((o common-db-gdbserver))
+  (gdb:describe-memory-map (ctx-core o)))
+
+(defmethod gdb-describe-target-spu ((o common-db-gdbserver))
+  (gdb:describe-spu (ctx-target o)))
 
 (defvar *gdb-register-instance-vector*)
 

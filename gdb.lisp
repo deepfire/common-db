@@ -41,7 +41,24 @@
 
 (defgeneric describe-register (device name bitsize regnum group)
   (:method ((o device) name bitsize regnum group)
-    (format nil "<reg name='~(~A~)' bitsize='~A'~:[~; regnum='~D'~] group='~(~A~)'/>~%"
+    (format nil "<reg name='~(~A~)' bitsize='~D'~:[~; regnum='~D'~] group='~(~A~)'/>~%"
             name bitsize #+nil regnum nil group)))
+
+(defgeneric describe-core-memory-region (core type start length)
+  (:method ((o core) type start length)
+    (format nil "<memory type='~(~A~)' start='0x~X' length='0x~X'/>"
+            type start length)))
+
+(defgeneric describe-memory-map (core)
+  (:method-combination most-specific-last)
+  (:method ((o core))
+    (with-html-output-to-string (s)
+      (:memory-map :version "1.0"
+                   (terpri s)
+                   (str (call-next-method))))))
+
+(defgeneric describe-spu (target)
+  (:method ((o target))
+    ""))
 
 (defgeneric core-register-order (core))

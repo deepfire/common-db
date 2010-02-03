@@ -507,6 +507,8 @@
   (:shadowing-import-from :isa #:disassemble)
   (:export
    #:describe-target
+   #:describe-memory-map
+   #:describe-spu
    #:core-register-order))
 
 (defpackage #:sysdev ;; needed by common-db

@@ -58,6 +58,17 @@
       (when (next-method-p)
         (call-next-method)))))
 
+(defmethod describe-memory-map ((o mips-core) &aux
+                                (target (backend o)))
+  (let ((extents (mapcar #'memory-region-extent
+                         (append (target-devices-by-type target 'ram)
+                                 (target-devices-by-type target 'internal-memory)))))
+    (with-output-to-string (str)
+      (dolist (seg (list mips:kuseg mips:kseg0 mips:kseg1))
+        (let ((extents (mapcar (curry #'mips:extent-to-seg32 seg) extents)))
+          (dolist (e extents)
+            (write-line (describe-core-memory-region o "ram" (base e) (size e)) str)))))))
+
 (defmethod core-register-order ((o mips-core))
   (list :r0 :r1 :r2 :r3 :r4 :r5 :r6 :r7 :r8 :r9 :r10 :r11 :r12 :r13 :r14 :r15 :r16 :r17 :r18 :r19 :r20 :r21 :r22 :r23 :r24 :r25 :r26 :r27 :r28 :r29 :r30 :r31
         :hi :lo :pc
