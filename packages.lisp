@@ -338,6 +338,8 @@
    #:core-trail
    #:set-core-trail
    #:make-neutral-trail
+   ;; pc
+   #:pc
    ;; core classes and accessors
    #:core
    #:core-isa

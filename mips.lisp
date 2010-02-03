@@ -23,8 +23,7 @@
 (in-package :mips)
 
 
-(define-namespace :core
-  (:documentation  "Resources of a target's core.")
+(extend-namespace :core
   (:register-formats
    (:entrylo ""
      (:global           1 0 "page global")

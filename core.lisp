@@ -58,10 +58,26 @@
 
 (defsetf core-trail set-core-trail)
 
+(defgeneric pc (core))
+(defgeneric (setf pc) (value core))
+
+(defun %pc (core selector)
+  (declare (ignore selector))
+  (pc core))
+
+(defun (setf %pc) (value core selector)
+  (declare (ignore selector))
+  (setf (pc core) value))
+
 ;;;;
 ;;;; Core
 ;;;;
-(define-protocol-device-class core nil (generic:memory-device)
+(define-namespace :core
+  (:layouts
+   ((:control   "Control")
+    (:pc        0))))
+
+(define-protocol-device-class core :core (generic:memory-device)
   (;; generic properties
    (isa :accessor core-isa :initarg :isa)
    (insn-execution-limit :accessor core-insn-execution-limit :initarg :insn-instruction-limit)
@@ -82,7 +98,9 @@ to the concrete classes.")
    :traps (make-hash-table)
    :hw-breakpoints (make-hash-table)
    :instruction-counter 0
-   :stop-reason nil))
+   :stop-reason nil)
+  (:layouts
+   (:control %pc (setf %pc))))
 
 (define-protocol-device-class general-purpose-core nil (core)
   ((moment :accessor saved-core-moment :initarg :moment)
