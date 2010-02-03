@@ -41,7 +41,7 @@
 
 (defgeneric describe-register (device name bitsize regnum group)
   (:method ((o device) name bitsize regnum group)
-    (format nil "<reg name='~(~A~)' bitsize='~A' regnum='~D' group='~(~A~)'/>~%"
-            name bitsize regnum group)))
+    (format nil "<reg name='~(~A~)' bitsize='~A'~:[~; regnum='~D'~] group='~(~A~)'/>~%"
+            name bitsize #+nil regnum nil group)))
 
 (defgeneric core-register-order (core))
