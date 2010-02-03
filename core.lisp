@@ -482,7 +482,8 @@ every WATCH-PERIOD such polls."
                                                           (when *log-state-changes*
                                                             (core-report o "changed state from ~S to ~S" from to)))))
   (unless (core-running-p o)
-    (setf (saved-core-moment o) (core-moment o)))
+    (setf (saved-core-moment o) (core-moment o)
+          (saved-core-trail o) (core-trail o)))
   (mapcar (curry #'apply #'state:set-transition-action (core-machine o)) *core-transitions*))
 
 (defmethod stop-to-free ((core general-purpose-core) &key address moment-changed (insn-execution-limit nil iel-specified) &allow-other-keys)
