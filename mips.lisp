@@ -168,7 +168,7 @@
     (:watchlo   18)
     (:watchhi   19)
     (:c0.rsvd1  20)
-    (:config1  21 :format :config1)
+    (:config1   21 :format :config1)
     (:c0.rsvd3  22)
     (:debug     23)
     (:debugepc  24)
