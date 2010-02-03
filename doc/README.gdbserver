@@ -1,0 +1,10 @@
+To use common-db's GDB server you will need a MIPS gdb with XML support.
+
+A proper gdb build thus requires texinfo, flex, bison and expat.
+
+For example, in Debian:
+
+	apt-get install texinfo bison flex libexpat1-dev
+        cd gdb
+        ./configure --prefix=/usr --target=mips --with-expat
+        make

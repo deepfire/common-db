@@ -499,6 +499,16 @@
    #:default-disassembly-line-printer
    ))
 
+(defpackage #:gdb
+  (:use :common-lisp :alexandria :pergamum :iterate :isa :isa-mips :assem :assem-mips :setc :bitmop :device-model
+        :options :portability :spaces :generic :platform :target :core :who)
+  (:shadow #:step)
+  (:shadowing-import-from :bitmop #:space)
+  (:shadowing-import-from :isa #:disassemble)
+  (:export
+   #:describe-target
+   #:core-register-order))
+
 (defpackage #:sysdev ;; needed by common-db
   (:use :common-lisp :alexandria :pergamum :iterate :discrimination :isa :isa-mips :assem :assem-mips :setc :bitmop :device-model
         :options :portability :spaces :generic :platform :interface :target)

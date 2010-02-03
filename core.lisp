@@ -374,7 +374,10 @@ icache-related anomalies.")
   (setf (core-instruction-counter o) 0))
 
 (defmethod add-sw-breakpoint ((o core) address)
-  (lret ((bp (make-instance (core-default-sw-breakpoint-type o) :core o :address address)))
+  (lret ((bp (or (let ((b (trap o address)))
+                   (when (typep b 'software-breakpoint)
+                     b))
+                 (make-instance (core-default-sw-breakpoint-type o) :core o :address address))))
     (setf (trap-enabled-p bp) t)))
 
 (defgeneric reset-platform (core &key &allow-other-keys)
