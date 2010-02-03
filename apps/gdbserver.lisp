@@ -208,8 +208,13 @@
 ;;;;
 ;;;; Test
 ;;;;
-(defun test (&optional (target-context *current*) (port 9000))
+(defun test (&optional (target-context *current*) (port 9000) &aux
+             (core (ctx-core target-context)))
   (change-class target-context 'common-db-gdbserver)
-  ;; XXX: wtf?
-  (setf (slot-value target-context 'gdbremote::no-ack-mode) nil)
+  (let ((ri-names (gdb:core-register-order core)))
+    (setf *gdb-register-instance-vector*
+          (make-array (length ri-names)
+                      :initial-contents (mapcar (curry #'device-register-instance core) ri-names))
+          ;; XXX: wtf?
+          (slot-value target-context 'gdbremote::no-ack-mode) nil))
   (accept-gdb-connection target-context port))
