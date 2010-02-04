@@ -119,8 +119,11 @@ to the concrete classes.")
    :slaves nil
    :executable nil))
 
+(define-protocol-device-class little-endian-core :core (core) ())
+(define-protocol-device-class big-endian-core :core (core) ())
+
 (define-protocol-device-class mmu-core :core (core)
-  ((tlb-entries-nr :reader core-tlb-entries-nr :initarg :tlb-entries-nr)))
+    ((tlb-entries-nr :reader core-tlb-entries-nr :initarg :tlb-entries-nr)))
 
 (defmethod set-core-moment :after ((o general-purpose-core) moment)
   (setf (core-moment-changed-p o) t

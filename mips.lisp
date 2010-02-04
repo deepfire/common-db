@@ -261,6 +261,9 @@
    :continuation-address #xbfc00000
    :stop-address #xbfc00000))
 
+(define-protocol-device-class mipsel :core (little-endian-core mips-core) ())
+(define-protocol-device-class mipseb :core (big-endian-core mips-core) ())
+
 (define-protocol-device-class mips-mmu-core :core (mmu-core) ())
 
 (defstruct mips-bank

@@ -50,8 +50,12 @@
    #:system
    ;; cores
    #:general-purpose-core
+   #:little-endian-core
+   #:big-endian-core
    #:mmu-core
    #:mips-core
+   #:mipsel
+   #:mipseb
    #:mips-mmu-core
    #:torn-pipeline-mips-core
    ;; memory
