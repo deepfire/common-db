@@ -200,6 +200,14 @@
       "OK"
       "E00"))
 
+(defmethod gdb-monitor ((o common-db-gdbserver) command &rest args)
+  (declare (ignore args))
+  "Command not supported.")
+
+(defmethod gdb-monitor ((o common-db-gdbserver) (command (eql :eval)) rest-arg)
+  (princ-to-string (eval (let ((*package* (find-package :common-db)))
+                           (read-from-string rest-arg)))))
+
 ;;;;
 ;;;; Test
 ;;;;
