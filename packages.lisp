@@ -551,6 +551,7 @@
    #:mips-hardware-breakpoint
    ;; address space
    #:kuseg
+   ;; sane 32 bit
    #:kseg0
    #:kseg1
    #:kseg2
@@ -569,6 +570,22 @@
    #:remap-to-kseg2
    #:remap-to-kseg3
    #:extent-to-seg32
+   ;; sign-extended 32 bit
+   #:x32kseg0
+   #:x32kseg1
+   #:x32kseg2
+   #:x32kseg3
+   #:x32seg32p
+   #:x32kseg0p
+   #:x32kseg1p
+   #:x32kseg2p
+   #:x32kseg3p
+   #:remap-to-x32seg32
+   #:remap-to-x32kseg0
+   #:remap-to-x32kseg1
+   #:remap-to-x32kseg2
+   #:remap-to-x32kseg3
+   #:extent-to-x32seg32
    ;; execution
    #:exec
    ;; unsorted

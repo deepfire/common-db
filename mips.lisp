@@ -288,9 +288,15 @@ such kind of thing.")
 (defconstant kseg1 #b101)
 (defconstant kseg2 #b110)
 (defconstant kseg3 #b111)
+(defconstant x32kseg0 #b1111111111111111111111111111111111111111111111111111111111111111100)
+(defconstant x32kseg1 #b1111111111111111111111111111111111111111111111111111111111111111101)
+(defconstant x32kseg2 #b1111111111111111111111111111111111111111111111111111111111111111110)
+(defconstant x32kseg3 #b1111111111111111111111111111111111111111111111111111111111111111111)
 
 (defun seg32p (seg x)
   (= seg (ldb (byte 3 29) x)))
+(defun x32seg32p (seg x)
+  (= seg (ldb (byte 35 29) x)))
 
 (defun ksegp (x) (ldb-test (byte 1 31) x))
 (defun kusegp (x) (not (ksegp x)))
@@ -298,19 +304,33 @@ such kind of thing.")
 (defun kseg1p (x) (seg32p kseg1 x))
 (defun kseg2p (x) (seg32p kseg2 x))
 (defun kseg3p (x) (seg32p kseg3 x))
+(defun x32kseg0p (x) (x32seg32p x32kseg0 x))
+(defun x32kseg1p (x) (x32seg32p x32kseg1 x))
+(defun x32kseg2p (x) (x32seg32p x32kseg2 x))
+(defun x32kseg3p (x) (x32seg32p x32kseg3 x))
 
 (defun remap-to-seg32 (seg x)
   (dpb seg (byte 3 29) x))
+(defun remap-to-x32seg32 (seg x)
+  (dpb seg (byte 35 29) x))
 
 (defun remap-to-kuseg (x) (remap-to-seg32 kuseg x))
 (defun remap-to-kseg0 (x) (remap-to-seg32 kseg0 x))
 (defun remap-to-kseg1 (x) (remap-to-seg32 kseg1 x))
 (defun remap-to-kseg2 (x) (remap-to-seg32 kseg2 x))
 (defun remap-to-kseg3 (x) (remap-to-seg32 kseg3 x))
+(defun remap-to-x32kseg0 (x) (remap-to-x32seg32 x32kseg0 x))
+(defun remap-to-x32kseg1 (x) (remap-to-x32seg32 x32kseg1 x))
+(defun remap-to-x32kseg2 (x) (remap-to-x32seg32 x32kseg2 x))
+(defun remap-to-x32kseg3 (x) (remap-to-x32seg32 x32kseg3 x))
 
 (defun extent-to-seg32 (seg extent)
   (etypecase extent
     (cons (cons (remap-to-seg32 seg (car extent)) (cdr extent)))))
+
+(defun extent-to-x32seg32 (seg extent)
+  (etypecase extent
+    (cons (cons (remap-to-x32seg32 seg (car extent)) (cdr extent)))))
 
 ;;;;
 ;;;; Core API implementation
