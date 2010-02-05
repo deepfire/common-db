@@ -23,16 +23,19 @@
 (in-package :gdb)
 
 
-(defgeneric describe-target (target)
-  (:method ((o target))
-    (with-html-output-to-string (s)
-      (:target :version "1.0"
-               (terpri s)
-               (str (describe-core (target-device o '(general-purpose-core 0))))))))
+(defgeneric describe-target (target reginstance-cb)
+  (:method ((o target) reginstance-cb &aux gdb-id-to-register-instance-map)
+    (values (with-html-output-to-string (s)
+              (:target :version "1.0"
+                       (terpri s)
+                       (multiple-value-bind (core-desc ri-map) (describe-core (target-device o '(general-purpose-core 0)) reginstance-cb)
+                         (setf gdb-id-to-register-instance-map ri-map)
+                         (str core-desc))))
+            gdb-id-to-register-instance-map)))
 
-(defgeneric describe-core (core)
+(defgeneric describe-core (core reginstance-cb)
   (:method-combination most-specific-last)
-  (:method ((o core))
+  (:method ((o core) reginstance-cb)
     (concatenate 'string
                  (with-html-output-to-string (s)
                    (:architecture (str (string-downcase (string (isa-name (core-isa o))))))

@@ -30,8 +30,7 @@
   (:shadowing-import-from :bitmop #:space #:*space*)
   (:shadowing-import-from :common-db #:catch #:step #:get #:set #:trace)
   (:export
-   #:test
-   ))
+   #:test))
 
 (in-package :common-db-gdbserver)
 
@@ -53,19 +52,24 @@
 (defclass common-db-gdbserver (common-db-target gdb-extended-server)
   ())
 
+(defvar *gdb-register-instance-vector*)
+(defvar *gdb-id-to-register-instance-map*)
+
+(define-root-container *gdb-id-to-register-instance-map* gdb-reginstance :type register-instance :if-exists :continue)
+
 ;;;;
 ;;;; GDB-SERVER methods
 ;;;;
 (defmethod gdb-describe-target ((o common-db-gdbserver))
-  (gdb:describe-target (ctx-target o)))
+  (gdb:describe-target (ctx-target o)
+                       (lambda (ri register-nr)
+                         (setf (gdb-reginstance register-nr) ri))))
 
 (defmethod gdb-describe-target-memory-map ((o common-db-gdbserver))
   (gdb:describe-memory-map (ctx-core o)))
 
 (defmethod gdb-describe-target-spu ((o common-db-gdbserver))
   (gdb:describe-spu (ctx-target o)))
-
-(defvar *gdb-register-instance-vector*)
 
 (defmethod gdb-target-registers-as-vector ((o common-db-gdbserver))
   (lret ((regvec (make-array (* 4 (length *gdb-register-instance-vector*)) :element-type '(unsigned-byte 8))))
@@ -78,6 +82,24 @@
     (iter (for ri in-vector *gdb-register-instance-vector*)
           (for offt from 0 by 4)
           (setf (reginstance-value ri) (u8-vector-word32le regvec offt)))))
+
+(defmethod gdb-read-target-register ((o common-db-gdbserver) register-nr)
+  (gdb-read-target-register (ctx-core o) register-nr))
+
+(defmethod gdb-write-target-register ((o common-db-gdbserver) register-nr value)
+  (gdb-write-target-register (ctx-core o) register-nr value))
+
+(defmethod gdb-read-target-register ((o little-endian-core) register-nr)
+  (swap-word32 (reginstance-value (gdb-reginstance register-nr))))
+
+(defmethod gdb-read-target-register ((o big-endian-core) register-nr)
+  (reginstance-value (gdb-reginstance register-nr)))
+
+(defmethod gdb-write-target-register ((o little-endian-core) register-nr value)
+  (setf (reginstance-value (gdb-reginstance register-nr)) (swap-word32 value)))
+
+(defmethod gdb-write-target-register ((o big-endian-core) register-nr value)
+  (setf (reginstance-value (gdb-reginstance register-nr)) value))
 
 (defmethod gdb-read-memory ((o common-db-gdbserver) addr size &aux
                             (c (ctx-core o)))
@@ -100,16 +122,17 @@
 ;;;;
 ;;;; Execution control
 ;;;;
+(defun encode-gdb-stop-reason (trapped &key core-id watchpoint-address)
+  (format nil "T~2,'0X~:[~;core:~:*~D~]~:[~;watch:~:*~X~]"
+          (if trapped +reason-trap+ +reason-interrupt+)
+          core-id
+          watchpoint-address))
+
 (defmethod running? ((o common-db-gdbserver))
-  (lret ((result (core-running-p (ctx-core o))))
-    #+nil (format *trace-output* "RUNNING? ~S~%" result)))
+  (core-running-p (ctx-core o)))
 
 (defmethod gdb-why-stop ((o common-db-gdbserver))
-  (format *trace-output* "GDB-WHY-STOP~%")
-  (let ((code (typecase (core-stop-reason (ctx-core o))
-                (trap gdbremote:+reason-trap+)
-                (t gdbremote:+reason-interrupt+))))
-    (format nil "T~2,'0X" code)))
+  (encode-gdb-stop-reason (typep (core-stop-reason (ctx-core o)) 'trap)))
 
 (defmethod gdb-interrupt ((o common-db-gdbserver) &aux
                           (core (ctx-core o)))
@@ -121,7 +144,6 @@
 
 (defmethod gdb-continue-at ((o common-db-gdbserver) addr &aux
                             (core (ctx-core o)))
-  (format *trace-output* "CONTINUE-AT ~X~%" addr)
   (run-core-asynchronous core addr)
   (loop
      ;; Poll for condition of remote target every now and then. Not
@@ -137,7 +159,7 @@
          ;; If we are interrupted or inside the debugger return to
          ;; GDB.
          (return-from gdb-continue-at
-           (format nil "T~2,'0X" (if db? +reason-trap+ +reason-interrupt+))))))  
+           (encode-gdb-stop-reason db?)))))  
   "S00")
 
 (defmethod gdb-single-step-at ((o common-db-gdbserver) addr &aux
@@ -145,6 +167,18 @@
   (set-core-insn-execution-limit core 1)
   (let ((*poll-interval* 0))
     (gdb-continue-at o addr)))
+
+(defmethod gdb-extended-query ((o common-db-gdbserver) (c (eql :cont)) arguments)
+  "vCont;cs")
+
+(defmethod gdb-extended-command ((o common-db-gdbserver) (c (eql :cont)) arguments)
+  "Use the first action and completely ignore all thread IDs."
+  (if (plusp (length arguments))
+      (case (char arguments 0)
+        (#\c (gdb-continue-at o nil))
+        (#\s (gdb-single-step-at o nil))
+        (t ""))
+      ""))
 
 ;;;;
 ;;;; Breakpoints
@@ -166,7 +200,7 @@
 (defmethod gdb-remove-breakpoint ((o common-db-gdbserver) type address length &aux
                                   (core (ctx-core o)))
   (declare (ignore type length))
-  (when-let ((b (core-trap core address)))
+  (when-let ((b (trap core address)))
     (disable-trap b))
   "OK")
 
@@ -194,13 +228,12 @@
 ;;;; Stubs
 ;;;;
 (defmethod gdb-set-thread ((o common-db-gdbserver) domain thread)
-  (format *trace-output* "GDB-SET-THREAD ~S ~S~%" domain thread)
   (if (or (= thread -1)
           (= thread 0))
       "OK"
       "E00"))
 
-(defmethod gdb-monitor ((o common-db-gdbserver) command &rest args)
+(defmethod gdb-monitor ((o common-db-gdbserver) command rest-arg)
   (declare (ignore args))
   "Command not supported.")
 
@@ -211,13 +244,15 @@
 ;;;;
 ;;;; Test
 ;;;;
-(defun test (&optional (target-context *current*) (port 9000) &aux
+(defun test (&optional (target-context *current*) (address "127.0.0.1") (port 9000) &aux
              (core (ctx-core target-context)))
   (change-class target-context 'common-db-gdbserver)
   (let ((ri-names (gdb:core-register-order core)))
     (setf *gdb-register-instance-vector*
           (make-array (length ri-names)
                       :initial-contents (mapcar (curry #'device-register-instance core) ri-names))
+          *gdb-id-to-register-instance-map*
+          (make-hash-table)
           ;; XXX: wtf?
           (slot-value target-context 'gdbremote::no-ack-mode) nil))
-  (accept-gdb-connection target-context port))
+  (accept-gdb-connection target-context port address))

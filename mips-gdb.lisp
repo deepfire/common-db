@@ -22,9 +22,9 @@
 
 (in-package :gdb)
 
-
-(defmethod describe-core ((o mips-core) &aux
-                          (space (space :core)))
+(defmethod describe-core ((o mips-core) reginstance-cb &aux
+                          (space (space :core))
+                          (register-id 0))
   (with-html-output-to-string (s)
     (flet ((export-layout (name group prefer-aliases &rest layouts-or-registers)
              (htm (:feature :name name (terpri s)
@@ -44,12 +44,14 @@
                                                           (and prefer-aliases
                                                                (first (reginstance-aliases ri)))
                                                           (name ri))))
+                                            (funcall reginstance-cb ri register-id)
+                                            (incf register-id)
                                             (str (describe-register o name 32 (reginstance-id ri) group))))))))))
              (terpri s)))
       (export-layout "org.gnu.gdb.mips.cpu" :general t
                      (layout space :gpr)
                      (list (layout space :hilo) :hi :lo)
-                     (list nil `(,(device-register-instance (backend (backend o)) :pcdec) :pc)))
+                     (layout space :control))
       (export-layout "org.gnu.gdb.mips.fpu" :general nil
                      (layout space :fpr)
                      (layout space :cop1))
