@@ -419,7 +419,33 @@ such kind of thing.")
                                             more-bindings))
           (set-gpr-by-name o (evaluate-mips-gpr reg-name) value))))
 
-(defmethod trans-funcall ((o mips-core) (cenv compilation-environment) address-space function-name args &key trace &allow-other-keys)
+(defun disasm-trans-zone (core cenv &optional print-bbnet-instead-of-raw)
+  (with-compilation-environment cenv
+    (let ((*segment* (first (cenv-segments cenv)))
+          (tags (mapcar #'cdr (env:env-mapping (env-global-frame *tag-domain*)))))
+      (labels ((tag-by-address (address)
+                 (find address tags :key (compose #'remap-to-kuseg #'tag-address)))
+               (decorated-node-parameter-extractor (disivec)
+                 (values (unturing::bb-leaf-p *mips-isa* disivec)
+                         (size disivec)
+                         (lambda (i)
+                           (format nil "~8,'0X " (ash (+ (base disivec) i) 2)))
+                         (lambda (i)
+                           (format nil "~{~S ~}" (cddr (aref (extent-data disivec) i))))
+                         (lambda (i)
+                           (if-let ((tag (tag-by-address (ash (+ (base disivec) i) 2))))
+                             (format nil " ; ~A" (envobject-name tag))
+                             "")))))
+        (if print-bbnet-instead-of-raw
+            (let ((bbnet (unturing:insn-vector-to-basic-blocks *mips-isa* (make-extent 'extent #x18000000 (segment-active-vector *segment*)))))
+              (unturing:pprint-node-graph-linear bbnet :node-parameters-fn #'decorated-node-parameter-extractor))
+            (core-disassemble core #x18000000 (length (segment-active-vector *segment*))
+                              :line-pre-annotate-fn 
+                              (lambda (stream base-address)
+                                (when-let ((tag (tag-by-address base-address)))
+                                  (format stream "~&~10T~S~%" (envobject-name tag))))))))))
+
+(defmethod trans-funcall ((o mips-core) (cenv compilation-environment) address-space function-name args &key trace disasm unturing &allow-other-keys)
   (with-mips-gpr-environment
     (prepare-trans-args o (base (as-stack address-space)) args)
     (with-traps (#xbfc00380 #xbfc00400)
@@ -430,7 +456,11 @@ such kind of thing.")
                                             (declare (ignorable core))
                                             #+(or) (watch-mips-core core (base (as-stack address-space)) cenv)))
         (emit-nops 8)
-        (apply #'emit-long-function-call function-name args)))))
+        (apply #'emit-long-function-call function-name args)
+        (when disasm
+          (disasm-trans-zone o cenv nil))
+        (when unturing
+          (disasm-trans-zone o cenv t))))))
 
 (defmethod handle-execution-error ((o mips-core) (type (eql 'unexpected-stop-reason)) args)
   (let ((epc (with-temporary-state (o :debug)

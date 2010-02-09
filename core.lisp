@@ -250,6 +250,10 @@ ITERATION-LIMIT Optionally soft-limits the time spent sleeping."))
   "Whether the trans calls should be traced for correspondence between code in memory
 and code actually hitting the target core pipeline.  This is useful for tracking
 icache-related anomalies.")
+(defvar *disasm-trans-calls* nil
+  "Whether to print disassembly of whole trans call zone before doing the call.")
+(defvar *unturing-trans-calls* nil
+  "Whether to print basic block graph of whole trans call zone before doing the call.")
 
 (define-execute-with-bound-variable *trace-trans-calls*
   (:binding traced-trans-calls t :define-with-maybe-macro t))
@@ -798,13 +802,17 @@ with optional nanosecond-granular ITERATION-LIMIT and WATCH-FN."
   `(invoke-with-execution-of-emitted-segment (lambda () ,@body) ,core ,address :trace ,trace :report ,report
                                              :iteration-period ,iteration-period :iteration-limit ,iteration-limit :watch-fn ,watch-fn :watch-period ,watch-period))
 
-(defmethod trans-funcall :around ((o core) (cenv compilation-environment) (as address-space) function-name args &key trace &allow-other-keys)
-  (declare (ignore trace))
+(defmethod trans-funcall :around ((o core) (cenv compilation-environment) (as address-space) function-name args
+                                  &key (disasm *disasm-trans-calls*) (unturing *unturing-trans-calls*) (trace *trace-trans-calls*) &allow-other-keys)
+  (declare (ignore trace disasm unturing))
   (with-compilation-environment cenv
     (call-next-method)))
 
 (defun trans-funcall* (core cenv as function-name &rest args)
-  (trans-funcall core cenv as function-name args :trace *trace-trans-calls*))
+  (trans-funcall core cenv as function-name args
+                 :trace *trace-trans-calls*
+                 :disasm *disasm-trans-calls*
+                 :unturing *unturing-trans-calls*))
 
 (defun invoke-with-trans-funcallability (emission-fn fn address-space &key adjust-data-segment (dataseg-alignment #x10) (entry-length #x80))
   (with-slots (extent code data stack) address-space
