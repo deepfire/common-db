@@ -86,7 +86,9 @@
         (when (eq (type-of f) 'standard-flash) 
           (error "~@<Unable to find a flash at #x~8,'0X~:@>" flash-base))
         (setf (flash-code-seg f) fcode)
-        (when verbose (format t "~@<Found flash: ~S.~:@>~%" f))
+        (if verbose
+            (format t "~@<Found flash: ~S~:@>~%" f)
+            (format t "~@<Flash base: ~8,'0X~:@>~%" (flash-base f)))
         (dolist (l loadables)
           (when verbose (format t "~@<Uploading loadable ~S.~:@>~%" l))
           (unless dry-run
