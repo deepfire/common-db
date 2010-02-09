@@ -175,7 +175,7 @@
                                   early-break-on-signals break-on-signals help help-en orgify version
                                   ;; customisable
                                   (disable-usb disable-usb)
-                                  (no-memory-detection no-memory-detection)
+                                  (no-memory-detection (unless run-tests no-memory-detection))
                                   (memory-detection-threshold memory-detection-threshold)
                                   (disable-debugger disable-debugger)
                                   (print-backtrace-on-errors print-backtrace-on-errors)
