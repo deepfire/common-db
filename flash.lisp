@@ -413,10 +413,11 @@ otherwise."
           (trans-funcall* core (flash-compilation-environment o) (flash-as o)
                           :program-region flash-address (base dataseg) (ash iolen -2) `(:flash-base . ,(flash-base o)))
           (when compute-csums
-            (let ((iovec (make-array iolen :element-type '(unsigned-byte 8))))
+            (let ((iovec (make-array iolen :element-type '(unsigned-byte 8)))
+                  (w-csum (ironclad:digest-sequence :md5 (extent-data extent) :start piece-offset :end (+ piece-offset iolen))))
+              (flash-write o 0 :read-array)
               (read-block target flash-address iovec)
-              (let* ((w-csum (ironclad:digest-sequence :md5 (extent-data extent) :start piece-offset :end (+ piece-offset iolen)))
-                     (r-csum (ironclad:digest-sequence :md5 iovec))
+              (let* ((r-csum (ironclad:digest-sequence :md5 iovec))
                      (mismatch (not (equalp w-csum r-csum))))
                 (when (or print-csums mismatch)
                   (format t "~&~5,' X @ ~8,'0X: w ~A, r ~A, ~:[OK~;FAIL~]~%"
