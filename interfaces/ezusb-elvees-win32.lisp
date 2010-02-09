@@ -190,6 +190,5 @@
 
 (defmethod bus-probe-address ((o ezusb-bus) address)
   (when-let ((handle (ezusb-do-open address)))
-    (format t "opening ~A/~A => ~S~%" address (bus-address-filename address) handle)
     (close-handle handle)
     t))
