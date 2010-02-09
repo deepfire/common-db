@@ -374,7 +374,7 @@ icache-related anomalies.")
   (setf (core-instruction-counter o) 0))
 
 (defmethod add-sw-breakpoint ((o core) address)
-  (lret ((bp (or (let ((b (trap o address)))
+  (lret ((bp (or (let ((b (trap o address :if-does-not-exist :continue)))
                    (when (typep b 'software-breakpoint)
                      b))
                  (make-instance (core-default-sw-breakpoint-type o) :core o :address address))))
