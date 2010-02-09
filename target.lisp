@@ -243,11 +243,20 @@ potential SLAVES."
       (interface-bus-io interface vector (+ physaddr head) (- size head tail) dir head)))
   (merge-u8-extremity-32 interface vector physaddr size nil (eq dir :write)))
 
+;;; XXX: inefficient
 (defmethod read-block ((o 32bit-bus-target) base vector &optional start end)
-  (bus-extent vector (fixmap-address o base) (- end start) :read o))
+  (if (or start end)
+      (let* ((iolen (- end start))
+             (iovec (make-array iolen :element-type '(unsigned-byte 8))))
+        (bus-extent iovec (fixmap-address o base) iolen :read o)
+        (setf (subseq vector start end) iovec))
+      (bus-extent vector (fixmap-address o base) (length vector) :read o)))
 
+;;; XXX: inefficient
 (defmethod write-block ((o 32bit-bus-target) base vector &optional start end)
-  (bus-extent vector (fixmap-address o base) (- end start) :write o))
+  (if (or start end)
+      (bus-extent (subseq vector start end) (fixmap-address o base) (- end start) :write o)
+      (bus-extent vector (fixmap-address o base) (length vector) :write o)))
 
 #+sbcl
 (define-device-class busmem :target (sequence device)
