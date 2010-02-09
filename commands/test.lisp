@@ -40,9 +40,9 @@
   #+help-ru
   "Выполнить серию тестов из тестовых наборов, с названиями в остаточном списке
 параметров, на всех доступных устройствах.  По умолчанию используются тестовые наборы
-:INTERFACE и :TARGET."
+:INTERFACE, :TARGET и :MIPS."
   #-help-ru
-  "Run a set of test suites. Defaults to :INTERFACE and :TARGET."
+  "Run a set of TEST-SUITES. Defaults to test suites :INTERFACE, :TARGET and :MIPS."
   (lret ((*log-state-changes* nil)
          (test-suites (or test-suites '(:interface :target :mips)))
          (current-ctx *current*)
