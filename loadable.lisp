@@ -65,7 +65,7 @@ custom FILENAME and ENTRY-POINT."
   "Print an one-line summary of SECTION into STREAM."
   (format stream "~A~26,1T~8,'.X at ~8,'0X~%" (elf:section-name section) (size section) (base section)))
 
-(defun upload-loadable (bioable loadable &key section-before-fn address-remap-fn check preserve-holes)
+(defun upload-loadable (bioable loadable &rest write-u8-extents-args &key section-before-fn address-remap-fn check &allow-other-keys)
   "Upload LOADABLE into BIOABLE, with section base addresses optionally 
 remapped by ADDRESS-REMAP-FN, and optionally performed integrity checking,
 which is governed by the CHECK keyword.
@@ -73,7 +73,8 @@ SECTION-BEFORE-FN, when non-NIL, is called before each section upload
 with two arguments: the output stream and section."
   (let ((final-sections (xform address-remap-fn (curry #'nrebase address-remap-fn) (loadable-sections loadable))))
     (with-measured-time-lapse (seconds)
-        (restart-case (write-u8-extents bioable (loadable-sections loadable) :before-fn section-before-fn :preserve-holes preserve-holes)
+        (restart-case (apply #'write-u8-extents bioable (loadable-sections loadable) :before-fn section-before-fn
+                             (remove-from-plist write-u8-extents-args :section-before-fn :address-remap-fn :check))
           (abort (&rest foo)
             :test (lambda (c) (typep c #+sbcl 'sb-sys:interactive-interrupt #-sbcl 'error))
             :report (lambda (stream) (format stream "~@<Abort upload ~A into ~A.~:@>" loadable bioable))
