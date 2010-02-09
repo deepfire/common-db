@@ -37,6 +37,7 @@
     --dump-size <bytes>         Specify the amount of memory to print. 
                                   Defaults to #x100.
     --no-check                  Don't check integrity of uploaded data.
+    --print-checksums           Print write/read checksums.
     --dry-run                   Don't do anything, besides printing.")
 
 (defvar *flash*)
@@ -47,7 +48,7 @@
   (comdb::comdb-toplevel-wrapper #'flasher-toplevel
                                  '((:raw-file :string) :raw-base (:elf-file :string) :flash-base :dump-base :dump-size
                                    (:fcode :binary))
-                                 '(:erase-chip :preserve-holes :no-check :dry-run)
+                                 '(:erase-chip :preserve-holes :no-check :print-checksums :dry-run)
                                  :disable-debugger t
                                  :no-memory-detection t
                                  :help-needed-discriminator
@@ -59,7 +60,7 @@
                          raw-file raw-base
                          elf-file
                          dump-base (dump-size #x100)
-                         erase-chip preserve-holes no-check dry-run)
+                         erase-chip preserve-holes no-check print-checksums dry-run)
   (let (loadables)
     (when erase-chip
       (error "~@<Whole-chip erasing not implemented.~:@>~%"))
@@ -90,10 +91,11 @@
             (format t "~@<Found flash: ~S~:@>~%" f)
             (format t "~@<Flash base: ~8,'0X~:@>~%" (flash-base f)))
         (dolist (l loadables)
-          (when verbose (format t "~@<Uploading loadable ~S.~:@>~%" l))
+          (when verbose (format t "~@<Uploading loadable ~S~:@>~%" l))
           (unless dry-run
             (loadable:upload-loadable f l :section-before-fn #'loadable:report-section :check (not no-check)
-                                      :preserve-holes preserve-holes)))
+                                      :preserve-holes preserve-holes
+                                      :compute-csums print-checksums :print-csums print-checksums)))
         (format t "~@<All done.~:@>~%")))
     (when dump-base
       (dump dump-base dump-size))))

@@ -203,7 +203,7 @@ MEMORY-DEVICE protocol.")
 (defgeneric erase-chip (flash))
 (defgeneric program-sector (flash address vector))
 (defgeneric program-block (flash address vector))
-(defgeneric program-aligned-u8-extent (flash extent))
+(defgeneric program-aligned-u8-extent (flash extent &optional compute-csums print-csums))
 (defgeneric program-unaligned-u8-extent (flash spec extent block-size))
 ;;;
 ;;; Transprogrammed flashes
@@ -400,7 +400,7 @@ otherwise."
           (flash-as o) as
           (flash-compilation-environment o) cenv)))
 
-(defmethod program-aligned-u8-extent ((o transprogrammed-flash) extent &aux
+(defmethod program-aligned-u8-extent ((o transprogrammed-flash) extent &optional compute-csums print-csums &aux
                                       (target (backend o))
                                       (core (target-device target '(general-purpose-core 0)))
                                       (dataseg (as-data (flash-as o))))
@@ -411,7 +411,18 @@ otherwise."
           (for iolen = (min io-chunk (- (size extent) piece-offset)))
           (write-block target (base dataseg) (extent-data extent) piece-offset (+ piece-offset iolen))
           (trans-funcall* core (flash-compilation-environment o) (flash-as o)
-                          :program-region flash-address (base dataseg) (ash iolen -2) `(:flash-base . ,(flash-base o))))))
+                          :program-region flash-address (base dataseg) (ash iolen -2) `(:flash-base . ,(flash-base o)))
+          (when compute-csums
+            (let ((iovec (make-array iolen :element-type '(unsigned-byte 8))))
+              (read-block target flash-address iovec)
+              (let* ((w-csum (ironclad:digest-sequence :md5 (extent-data extent) :start piece-offset :end (+ piece-offset iolen)))
+                     (r-csum (ironclad:digest-sequence :md5 iovec))
+                     (mismatch (not (equalp w-csum r-csum))))
+                (when (or print-csums mismatch)
+                  (format t "~&~5,' X @ ~8,'0X: w ~A, r ~A, ~:[OK~;FAIL~]~%"
+                          iolen flash-address
+                          (digest-as-string w-csum) (digest-as-string r-csum)
+                          mismatch))))))))
 
 (defmethod erase-block ((o transprogrammed-flash) address &aux
                         (target (backend o))
@@ -420,7 +431,8 @@ otherwise."
   (trans-funcall* core (flash-compilation-environment o) (flash-as o)
                   :erase-sector (+ (flash-base o) address) 0 0 `(:flash-base . ,(flash-base o))))
 
-(defmethod write-u8-extents ((f transprogrammed-flash) extents &key preserve-holes before-fn (stream t) &aux (before-fn (or before-fn #'values)))
+(defmethod write-u8-extents ((f transprogrammed-flash) extents &key preserve-holes before-fn (stream t) compute-csums print-csums
+                             &aux (before-fn (or before-fn #'values)))
   "Write a list of non-intersecting EXTENTS into transprogrammable flash F.
 When PRESERVE-HOLES is non-nil, the area around extents is preserved."
   (prepare f)
@@ -467,17 +479,17 @@ When PRESERVE-HOLES is non-nil, the area around extents is preserved."
                                                          (iter (for (hit . rest) on hits)
                                                                (collect (extent-data hit))
                                                                (let ((inter-spec (extent (end hit) (- (if-let ((next (first rest)))
-                                                                                                              (base next)
-                                                                                                              (+ granule-base granularity))
+                                                                                                        (base next)
+                                                                                                        (+ granule-base granularity))
                                                                                                       (end hit)))))
                                                                  (when (plusp (cdr inter-spec))
                                                                    (collect (extent-data (u8-extent f inter-spec)))))))))))
                           (erase-block f granule-base)
-                          (program-aligned-u8-extent f composite-extent))
+                          (program-aligned-u8-extent f composite-extent compute-csums print-csums))
                         (progn
                           (erase-block f granule-base)
                           (dolist (hit hits)
-                            (program-aligned-u8-extent f (align-extend-u8-extent 4 hit)))))))))))))
+                            (program-aligned-u8-extent f (align-extend-u8-extent 4 hit) compute-csums print-csums))))))))))))
 
 (defvar *poison-flash-writer-stack* t)
 
