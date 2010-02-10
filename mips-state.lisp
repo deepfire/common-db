@@ -113,7 +113,8 @@
                    :virtual-pages virtual-pages :phys-pages phys-pages :phys-cells (nreverse phys-cells))))
 
 (defun apply-core-state (core state)
-  (let ((target (backend core)))
+  (let ((space (device-space core))
+        (target (backend core)))
     (with-slots (pc gpr regs phys-cells page-size tlb virtual-pages phys-pages) state
       (iter (for (addr val) in phys-cells)
             (format t "Restoring memory cell at 0x~8,'0X.~%" addr)
@@ -126,7 +127,7 @@
             (get-tlb core) tlb)
       (format t "Restoring Cop0.~%")
       (iter (for (reg val) in regs)
-            (setf (device-register core (register-id reg)) val))
+            (setf (device-register core (register-id space reg)) val))
       (format t "Restoring GPR.~%")
       (iter (for val in gpr) (for i below 32) 
             (set-gpr core i val))

@@ -341,7 +341,7 @@ such kind of thing.")
     (capture-instruction-counters slave)))
 
 (defmethod reset-instruction-counters ((o mips-core))
-  (setf (devreg o :count) 0)
+  (setc (devreg o :count) 0)
   (dolist (slave (core-slaves o))
     (reset-instruction-counters slave)))
 
@@ -483,7 +483,7 @@ such kind of thing.")
   (lo1 0 :type (unsigned-byte 32)))
 
 (defmethod tlb-entry ((o mips-core) (i integer))
-  (setf (devreg o :index) i)
+  (setc (devreg o :index) i)
   (exec o
     (:tlbr)
     (:nop))
@@ -492,7 +492,7 @@ such kind of thing.")
         (devreg o :entrylo1)))
 
 (defmethod set-tlb-entry ((o mips-core) (i integer) (entry mips-tlb-entry))
-  (setf (devreg o :index) i
+  (setc (devreg o :index) i
         (devreg o :entryhi) (mips-tlb-entry-hi entry)
         (devreg o :entrylo0) (mips-tlb-entry-lo0 entry)
         (devreg o :entrylo1) (mips-tlb-entry-lo1 entry))

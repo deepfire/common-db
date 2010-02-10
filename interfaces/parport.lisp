@@ -284,7 +284,7 @@
   (lret ((status (port base :spp-status)))
     (cond ((port-bit base :spp-status :epp-tmout)
            (error 'parport-operation-timeout-error :port base))
-          #+nil (setf (devreg port :spp-status) status) ;; clear timeout
+          #+nil (setc (devreg port :spp-status) status) ;; clear timeout
           ((not (port-bit base :spp-status :busy))
            (error 'parport-busy-error :port base))
           #+nil ((test-bits-set (spp-status nirq) status)
@@ -525,7 +525,7 @@ step-core-asynchronous and exec-raw."
 
 (defun oncd-functional-p (interface)
   "Sniff OnCD, so as to avoid excessive resetting."
-  (numberp (ignore-errors (= (setf (devreg interface :omar) #xf0add00d)
+  (numberp (ignore-errors (= (setc (devreg interface :omar) #xf0add00d)
                              (devreg interface :omar)))))
 
 (defmethod interface-stop-target ((o parport-interface))

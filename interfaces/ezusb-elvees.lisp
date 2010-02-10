@@ -346,7 +346,7 @@
                        (:write (setf (interface-bus-word o address) (u8-vector-word32le buffer bufofft)))))
                     ((plusp tail-chunk-words)
                      (perform-bulk inbase 1 tail-chunk-words)))
-              (setf (devreg o :oscr) saved-oscr))))))))
+              (setc (devreg o :oscr) saved-oscr))))))))
 
 (defmethod interface-close ((o ezusb-interface))
   (when (null (ezusb-interface-handle o))

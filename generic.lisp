@@ -98,4 +98,4 @@
 ;; Does not check whether the device has such a register.. produces a run-time error instead ;-)
 (defun mapped-device-register-address (device register-name)
   (+ (mapped-device-base device) (* (mapped-device-scale device)
-                                    (device-register-selector device (register-id register-name)))))
+                                    (device-register-selector device (register-id (device-space device) register-name)))))
