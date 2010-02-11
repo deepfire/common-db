@@ -442,6 +442,7 @@
    #:deduce-stop-reason
    #:breakpoint
    #:hardware-breakpoint
+   #:breakpoint-owned-p
    #:software-breakpoint
    #:software-breakpoint-saved-insn
    #:set-core-insn-execution-limit
@@ -453,6 +454,7 @@
    #:add-hw-breakpoint
    #:add-cell-watchpoint
    #:allocate-hardware-breakpoint
+   #:release-hardware-breakpoint
    #:invoke-with-maybe-free-hardware-breakpoints
    #:with-maybe-free-hardware-breakpoints
    #:with-free-hardware-breakpoints
