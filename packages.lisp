@@ -60,6 +60,7 @@
    #:torn-pipeline-mips-core
    ;; memory
    #:cache
+   #:memory
    #:internal-memory
    #:external-memory
    #:ram
@@ -183,7 +184,8 @@
    #:mapped-device-register-address
    ;; memory-region
    #:memory-region
-   #:memory-region-extent))
+   #:memory-region-extent
+   #:slave-memory-region))
 
 (defpackage #:address-map ;; needed-by mips, common-db
   (:use :common-lisp :pergamum

@@ -30,8 +30,10 @@
     a set of functions for doing I/O at specific device offsets
     with common granularities -- 8, 16, 32 and 64 bits."))
 
-(define-protocol-device-class memory-region nil (slave-device bioable)
+(define-protocol-device-class memory-region nil (bioable)
   ((extent :accessor memory-region-extent :initarg :extent)))
+(define-protocol-device-class slave-memory-region nil (slave-device memory-region)
+  ())
 
 (define-protocol-device-class 8bit-memory-device nil (memory-device) ())
 (define-protocol-device-class 16bit-memory-device nil (memory-device) ())

@@ -26,19 +26,22 @@
 (define-namespace :platform
   (:documentation "Platform devices"))
 
-(define-device-class cache :platform (platform-memory-region)
+(define-device-class cache :platform (platform-memory-region slave-memory-region)
     ()
   (:default-initargs :enumeration-class 'cache-memory))
 
-(define-device-class internal-memory :platform (mapped-platform-memory-region)
+(define-device-class memory :platform (mapped-platform-memory-region)
     ()
-  (:default-initargs :enumeration-class 'internal-memory))
+  (:default-initargs :enumeration-class 'memory))
 
-(define-device-class external-memory :platform (mapped-platform-memory-region)
-    ()
-  (:default-initargs :enumeration-class 'external-memory))
+(define-device-class internal-memory :platform (memory slave-memory-region)
+    ())
 
-(define-device-class ram :platform (external-memory) ())
+(define-device-class external-memory :platform (memory slave-memory-region)
+    ())
+
+(define-device-class ram :platform (external-memory) ()
+  (:default-initargs :enumeration-class 'ram))
 
 (define-device-class dcache :platform (cache) ())
 (define-device-class icache :platform (cache) ())

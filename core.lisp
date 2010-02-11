@@ -102,13 +102,12 @@ to the concrete classes.")
   (:layouts
    (:control %pc (setf %pc))))
 
-(define-protocol-device-class general-purpose-core :core (core)
+(define-protocol-device-class general-purpose-core :core (master-device core)
   ((moment :accessor saved-core-moment :initarg :moment)
    (moment-changed-p :accessor core-moment-changed-p :initarg :moment-changed-p)
    (trail :accessor saved-core-trail :initarg :trail)
    (trail-important-p :accessor core-trail-important-p :initarg :trail-important-p)
    (machine :accessor core-machine :initarg :machine)
-   (slaves :accessor core-slaves :type list :initarg :slaves)
    (executable :accessor core-executable :initarg :executable))
   (:documentation "Cores which define GPR/(SETF GPR)")
   (:default-initargs
@@ -118,6 +117,10 @@ to the concrete classes.")
    :trail-important-p nil
    :slaves nil
    :executable nil))
+
+(defgeneric core-slaves (core)
+  (:method ((o general-purpose-core))
+    (remove-if-not (of-type 'core) (master-device-slaves o))))
 
 (define-protocol-device-class little-endian-core :core (core) ())
 (define-protocol-device-class big-endian-core :core (core) ())

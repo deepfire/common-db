@@ -209,7 +209,7 @@
 ;;;;
 (defmethod gdb-detach ((o common-db-gdbserver) &aux
                        (core (ctx-core o)))
-  (dolist (core (cons core (core-slaves core)))
+  (dolist (core (cons core (master-device-slaves core)))
     (do-core-traps (b core)
       (disable-breakpoint b)))
   ;; Call next method to really terminate the connection.
@@ -218,7 +218,7 @@
 (defmethod gdb-kill ((o common-db-gdbserver) &aux
                      (core (ctx-core o)))
   (format *trace-output* "Killing is not supported. Hit the reset button manually.~%")
-  (dolist (core (cons core (core-slaves core)))
+  (dolist (core (cons core (master-device-slaves core)))
     (do-core-traps (b core)
       (disable-breakpoint b)))
   ;; Call next method to really terminate the connection.

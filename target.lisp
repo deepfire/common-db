@@ -130,9 +130,11 @@ and attaching it to the TARGET."
                                        &allow-other-keys)
   "Create a device of TYPE in TARGET, with regard to DEVICE-INITARGS and
 potential SLAVES."
-  (let ((device (apply #'make-target-device target type (remove-from-plist device-initargs :slave :slaves))))
-    (iter (for (slave-type . slave-args) in slaves)
-          (apply #'create-target-device-from-spec target slave-type :master device slave-args))))
+  (lret ((device (apply #'make-target-device target type (remove-from-plist device-initargs :slave :slaves))))
+    (when-let ((slaves (iter (for (slave-type . slave-args) in slaves)
+                             (collect (apply #'create-target-device-from-spec target slave-type :master device slave-args)))))
+      (when (typep device 'master-device)
+        (setf (master-device-slaves device) slaves)))))
 
 (defgeneric configure-target-platform (target platform &key &allow-other-keys)
   (:method ((tg target) (p platform) &key
