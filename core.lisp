@@ -140,7 +140,7 @@ to the concrete classes.")
   (setf (core-trail-important-p o) t))
 
 (define-subcontainer trap :container-slot traps :type address-trap :iterator do-core-traps :remover remove-trap :if-exists :continue)
-(define-subcontainer hwbreak :container-slot hw-breakpoints :type hardware-breakpoint :iterator do-core-hwbreaks :if-exists :error)
+(define-subcontainer hwbreak :container-slot hw-breakpoints :type hardware-breakpoint :iterator do-core-hardware-breakpoints :if-exists :error)
 
 (defgeneric coerce-to-trap (trap-specifier))
 
@@ -226,8 +226,11 @@ ITERATION-LIMIT Optionally soft-limits the time spent sleeping."))
 (defgeneric setup-hw-breakpoint (breakpoint address skip-count &key &allow-other-keys))
 (defgeneric add-hw-breakpoint (core address &optional skip-count)
   (:method ((core core) address &optional (skipcount 0))
-    (when-let ((free-breakpoint (allocate-hardware-breakpoint core)))
-      (setup-hw-breakpoint free-breakpoint address skipcount))))
+    (if-let ((free-breakpoint (allocate-hardware-breakpoint core)))
+      (setup-hw-breakpoint free-breakpoint address skipcount)
+      (error "~@<No free breakpoints.  Used:~{ ~8,'0X~}~:@>"
+             (do-core-hardware-breakpoints (b core)
+               (trap-address b))))))
 (defgeneric add-cell-watchpoint (core address &optional skip-count))
 
 (defsetf trap-enabled-p set-trap-enabled)
@@ -623,9 +626,6 @@ every WATCH-PERIOD such polls."
 (defmacro do-core-vector-traps ((o core) &body body)
   `(do-core-traps (,o ,core)
      (when (typep ,o 'vector-trap) ,@body)))
-(defmacro do-core-hardware-breakpoints ((o core) &body body)
-  `(do-core-traps (,o ,core)
-     (when (typep ,o 'hardware-breakpoint) ,@body)))
 (defmacro do-core-software-breakpoints ((o core) &body body)
   `(do-core-traps (,o ,core)
      (when (typep ,o 'software-breakpoint) ,@body)))
@@ -643,7 +643,7 @@ every WATCH-PERIOD such polls."
     "~8,'0X insn: 0x~8,'0X" address saved-insn)
 
 (defmethod initialize-instance :after ((o core) &key &allow-other-keys)
-  (do-core-hwbreaks (b o)
+  (do-core-hardware-breakpoints (b o)
     (setf (trap-core b) o))
   (do-core-vector-traps (v o)
     (setf (trap-core v) o
@@ -680,7 +680,7 @@ every WATCH-PERIOD such polls."
   (setf (trap-enabled-p o) (not (null address))))
 
 (defun allocate-hardware-breakpoint (core)
-  (do-core-hwbreaks (b core)
+  (do-core-hardware-breakpoints (b core)
     (unless (breakpoint-owned-p b)
       (setf (breakpoint-owned-p b) t)
       (return b))))

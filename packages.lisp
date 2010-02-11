@@ -369,7 +369,6 @@
    #:coerce-to-trap
    #:hwbreak
    ; over the id-keyed pool
-   #:do-core-hwbreaks
    #:hw-breakpoint
    #:default-sw-breakpoint-type
    #:default-hw-breakpoint-type
