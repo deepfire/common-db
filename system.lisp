@@ -71,7 +71,9 @@
                :missing-device-types (unless core (list 'general-purpose-core))))
       (when-let* ((intmem (first (target-devices-by-type target 'internal-memory)))
                   (intmem-extent (memory-region-extent intmem)))
-        (setf (cdr intmem-extent) (detect-platform-memory-size o (car intmem-extent)))))))
+        (setf (cdr intmem-extent) (or (detect-platform-memory-size o (car intmem-extent))
+                                      (error "~@<During initialisation of platform ~A: couldn't detect size of internal memory ~8,'0X.~:@>"
+                                             (type-of o) (car intmem-extent))))))))
 
 ;;;;
 ;;;; Platform memory configuration
