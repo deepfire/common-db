@@ -644,7 +644,8 @@ every WATCH-PERIOD such polls."
 
 (defmethod initialize-instance :after ((o core) &key &allow-other-keys)
   (do-core-hardware-breakpoints (b o)
-    (setf (trap-core b) o))
+    (setf (trap-core b) o
+          (trap o (trap-address b)) b))
   (do-core-vector-traps (v o)
     (setf (trap-core v) o
           (trap o (trap-address v)) v)))
