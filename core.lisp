@@ -230,7 +230,7 @@ ITERATION-LIMIT Optionally soft-limits the time spent sleeping."))
       (setup-hw-breakpoint free-breakpoint address skipcount)
       (error "~@<No free breakpoints.  Used:~{ ~8,'0X~}~:@>"
              (do-core-hardware-breakpoints (b core)
-               (trap-address b))))))
+               (collect (trap-address b)))))))
 (defgeneric add-cell-watchpoint (core address &optional skip-count))
 
 (defsetf trap-enabled-p set-trap-enabled)
