@@ -406,6 +406,7 @@
    #:poll-core-interruptible
    #:analyse-core
    #:wait-core
+   #:interrupt-core
    #:prime-core-executable
    #:run-core-asynchronous
    #:run-core-synchronous

@@ -213,6 +213,8 @@ ITERATION-LIMIT Optionally soft-limits the time spent sleeping."))
   (:documentation "Collect necessary forensics just after the core stopped."))
 (defgeneric wait-core (core &optional watch-fn watch-period iteration-period iteration-limit)
   (:documentation "Poll core until it stops, then ANALYSE it."))
+(defgeneric interrupt-core (core)
+  (:documentation "Switch core to :STOP state and ANALYSE it."))
 ;;;;
 ;;;; Traps
 ;;;;
@@ -425,6 +427,11 @@ in which case it is NIL."
     (if (core-running-p o)
         :timeout
         (analyse-core o))))
+
+(defmethod interrupt-core ((o core))
+  (when (eq :free (state o))
+    (setf (state o) :stop)
+    (analyse-core o)))
 
 (defun prime-core-executable (core loadable &optional check)
   "Prepare LOADABLE to be executed on a properly configured general-purpose
