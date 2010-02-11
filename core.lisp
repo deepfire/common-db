@@ -412,17 +412,19 @@ in which case it is NIL."
                                     :watch-period watch-period :iteration-period iteration-period :run-time run-iteration-limit))
 
 
-(defmethod analyse-core :before ((core general-purpose-core))
-  (setf (saved-core-moment core) (core-moment core)
-        (saved-core-trail core) (core-trail core)))
+(defmethod analyse-core :before ((o general-purpose-core))
+  (setf (saved-core-moment o) (core-moment o)
+        (saved-core-trail o) (core-trail o)))
 
-(defmethod wait-core ((core core) &optional (watch-fn #'values) (watch-period 1) (iteration-period 10000000) iteration-limit)
-  (let ((execution-status (poll-core-interruptible core watch-fn watch-period iteration-period iteration-limit)))
-    (analyse-core core)
-    (ecase execution-status
-      (:timeout :timeout)
-      ((t)      (setf (core-stop-reason core) (deduce-stop-reason core)))
-      ((nil)    (setf (core-stop-reason core) (make-instance 'user-interruption :core core))))))
+(defmethod analyse-core :after ((o general-purpose-core))
+  (setf (core-stop-reason o) (or (deduce-stop-reason o)
+                                 (make-instance 'user-interruption :core o))))
+
+(defmethod wait-core ((o core) &optional (watch-fn #'values) (watch-period 1) (iteration-period 10000000) iteration-limit)
+  (let ((execution-status (poll-core-interruptible o watch-fn watch-period iteration-period iteration-limit)))
+    (if (core-running-p o)
+        :timeout
+        (analyse-core o))))
 
 (defun prime-core-executable (core loadable &optional check)
   "Prepare LOADABLE to be executed on a properly configured general-purpose
