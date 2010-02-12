@@ -334,6 +334,8 @@
    #:moment
    #:moment-fetch
    #:moment-opcode
+   #:fetch
+   #:opcode
    #:make-moment
    #:core-moment
    #:set-core-moment
