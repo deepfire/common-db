@@ -78,21 +78,26 @@
    (:file "core" :depends-on ("target"))
    (:file "system" :depends-on ("target"))
    ;;
+   (:file "context" :depends-on ("portability" "bus" "interface" "platform" "target" "core"))
    (:file "dsp" :depends-on ("address-map" "core"))
-   (:file "mips" :depends-on ("address-map" "core"))
    (:file "system-devices" :depends-on ("system"))
    ;;
    (:file "gdb" :depends-on ("core" "dsp"))
-   (:file "mips-state" :depends-on ("interfaces" "eltext" "mips"))
-   (:file "flash" :depends-on ("system" "mips"))
-   (:file "context" :depends-on ("portability"
-                                 "bus" "interface" "platform" "target" "core"))
    ;;
-   (:file "mips-gdb" :depends-on ("mips" "gdb"))
+   (:module "arch"
+            :depends-on ("address-map" "core" "eltext" "interfaces" "gdb")
+            :components
+            (:module "mips"
+                     :components
+                     ((:file "mips")
+                      (:file "state" :depends-on ("mips"))
+                      (:file "gdb" :depends-on ("mips")))))
+   ;;
+   (:file "flash" :depends-on ("system" "arch"))
    ;;
    ;; Tie it all together
    ;;
-   (:file "main" :depends-on ("mips-state" "flash" "mips" "dsp" "system" "system-devices" "context"))
+   (:file "main" :depends-on ("arch" "flash" "dsp" "system" "system-devices" "context"))
    ;;
    ;; UI
    ;;
