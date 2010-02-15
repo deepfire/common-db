@@ -600,7 +600,6 @@
    #:patch-core-interface-pipeline-reginstances
    #:save-registers
    #:restore-registers
-   #:print-mips-pipeline
    #:mips-core-entrance-oscr
    ;; TLB
    #:mips-tlb-entry
