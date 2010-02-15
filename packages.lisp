@@ -253,9 +253,11 @@
    #:interface-debug-quiescence-timeout
    #:make-interface-for-device-name
    #:interface-reset
-   #:interface-stop-target
    #:interface-attach-target
+   #:interface-stop-target
+   #:stop-target-using-interface
    #:interface-reset-target
+   #:reset-target-using-interface
    #:interface-close
    #:interface-bus-word
    #:interface-bus-io

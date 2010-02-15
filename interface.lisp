@@ -90,9 +90,11 @@ ERROR-RETURN-FORM."
              (format stream "~@<Error persisting after reset on ~S: ~A~:@>" (condition-interface condition) (interface-error-error condition)))))
 
 (defgeneric interface-reset (interface))
-(defgeneric interface-stop-target (interface))
 (defgeneric interface-attach-target (interface))
+(defgeneric interface-stop-target (interface))
+(defgeneric stop-target-using-interface (target interface))
 (defgeneric interface-reset-target (interface stop-cores-p))
+(defgeneric reset-target-using-interface (target interface))
 (defgeneric interface-bus-word (interface address)) 
 (defgeneric (setf interface-bus-word) (value interface address)) 
 (defgeneric interface-bus-io (interface buffer address size direction &optional offset))
