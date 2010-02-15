@@ -65,7 +65,7 @@
 (define-subcontainer bus-device :container-slot devices :if-exists :error :remover t :mapper t :iterator t)
 
 (define-print-object-method ((o bus) devices)
-    "~@<#<~;~A devices: ~S~;>~:@>" (type-of o) devices)
+    "~@<devices: ~S~:@>" devices)
 
 (define-condition bus-error (error)
   ((bus :accessor condition-bus :initarg :bus)))
