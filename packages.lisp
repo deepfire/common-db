@@ -597,7 +597,7 @@
    ;; execution
    #:exec
    ;; unsorted
-   #:patch-core-inteface-pipeline-reginstances
+   #:patch-core-interface-pipeline-reginstances
    #:save-registers
    #:restore-registers
    #:print-mips-pipeline
@@ -719,7 +719,7 @@
    #:*target*
    #:*core*
    #:*examine-test*
-   #:ctx-inteface
+   #:ctx-interface
    #:ctx-target
    #:ctx-core
    #:ctx-display-list
