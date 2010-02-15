@@ -39,6 +39,9 @@
 (define-protocol-device-class 16bit-memory-device nil (memory-device) ())
 (define-protocol-device-class 32bit-memory-device nil (memory-device) ())
 (define-protocol-device-class 64bit-memory-device nil (memory-device) ())
+(define-protocol-device-class little-endian-memory-device nil (memory-device) ())
+(define-protocol-device-class big-endian-memory-device nil (memory-device) ())
+(define-protocol-device-class bioable-memory-device nil (memory-device) ())
 
 (defgeneric memory-device-8bit-ref (memory-device offset))
 (defgeneric memory-device-8bit-set (memory-device offset val))
@@ -48,6 +51,12 @@
 (defgeneric memory-device-32bit-set (memory-device offset val))
 (defgeneric memory-device-64bit-ref (memory-device offset))
 (defgeneric memory-device-64bit-set (memory-device offset val))
+
+(defgeneric memory-device-byte-width (memory-device)
+  (:method ((o  8bit-memory-device)) 1)
+  (:method ((o 16bit-memory-device)) 2)
+  (:method ((o 32bit-memory-device)) 4)
+  (:method ((o 64bit-memory-device)) 8))
 
 (defgeneric memory-ref (memory-device offset)
   (:method ((o  8bit-memory-device) (offset integer)) (memory-device-8bit-ref o offset))

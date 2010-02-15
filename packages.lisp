@@ -158,10 +158,13 @@
   (:export
    ;; memory-device
    #:memory-device
+   #:little-endian-memory-device
+   #:big-endian-memory-device
    #:8bit-memory-device
    #:16bit-memory-device
    #:32bit-memory-device
    #:64bit-memory-device
+   #:memory-device-byte-width
    #:memory-device-8bit-ref
    #:memory-device-8bit-set
    #:memory-device-16bit-ref
