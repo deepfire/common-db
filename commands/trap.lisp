@@ -53,6 +53,29 @@
                          :read read :write write :bound bound :memory t))
   address)
 
+(defun catch (&rest addresses)
+  #+help-ru
+  "Проинтерпретировать остаточный список параметров как набор адресов
+векторных ловушек, и активировать их, сбросив неуказанные."
+  (let* ((core *core*)
+         (interface (backend (backend core)))
+         (catches (mapcar #'trap addresses)))
+    (iter (for addr in addresses)
+          (for catch in catches)
+          (unless catch (collect catch into missing))
+          (unless (typep catch 'vector-trap) (collect catch into uncatches))
+          (finally
+           (when (or missing uncatches)
+             (error "Invalid catches:~{ ~8,'0X~}.~%Valid catches are:~{ ~8,'0X~}~%"
+                    (append missing uncatches)
+                    (do-core-vector-traps (v core)
+                      (collect (trap-address v)))))))
+    (do-core-vector-traps (v core)
+      (if (member v catches)
+          (enable-trap v)
+          (disable-trap v))))
+  (values))
+
 (defun sw-break (address-or-symbol)
   #+help-ru
   "Установить программную точку останова на адрес заданный через

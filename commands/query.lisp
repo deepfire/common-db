@@ -1,8 +1,8 @@
 ;;; -*- Mode: LISP; Syntax: COMMON-LISP; Package: COMMON-DB; Base: 10; indent-tabs-mode: nil -*-
 ;;;
-;;;  (c) copyright 2007-2009, ГУП НПЦ "Элвис"
+;;;  (c) copyright 2007-2010, ГУП НПЦ "Элвис"
 ;;;
-;;;  (c) copyright 2007-2009 by
+;;;  (c) copyright 2007-2010 by
 ;;;           Samium Gromoff (_deepfire@feelingofgreen.ru)
 ;;;
 ;;; This library is free software; you can redistribute it and/or
@@ -175,3 +175,71 @@ NAME-OR-ADDRESS.  В том случае если указано имя реги
   #-help-ru
   "Return a list of symbols referred to by the pipeline."
   (remove-duplicates (mapcar #'addrsym (core-pipeline-addresses *core*))))
+
+(defun print-generic-register-and-value (name value &optional tail)
+  (format *log-stream* "~&~A:~12T~8,'0X~:[~; ~:*~A~]~%" name value tail))
+
+(defgeneric display-register-using-core (core name &key &allow-other-keys)
+  (:method ((o core) name &rest args)
+    (multiple-value-bind (value extended-value) (show name)
+      (print-generic-register-and-value name value extended-value))))
+
+(defgeneric display-register (name &key &allow-other-keys)
+  #+help-ru
+  (:documentation
+   "Интеллектуально отобразить регистр с именем NAME.")
+  (:method (name &rest args &aux
+            (*print-right-margin* 120)
+            (*print-escape* nil))
+    (apply #'display-register-using-core *core* name args)))
+
+(defun display (&rest new-items)
+  #+help-ru
+  "Печатать значения регистров чьи имена находятся в /месте/
+ (DISPLAY-LIST).  Когда команде передаются параметры, они замещают
+старое значение (DISPLAY-LIST)."
+  #-help-ru
+  "Print the values of registers whose names currently are in (DISPLAY-LIST).
+When NEW-ITEMS is non-NIL, change (DISPLAY-LIST) before printing."
+  (when new-items
+    (setf (display-list) new-items))
+  (mapc #'display-register (display-list))
+  (values))
+
+(defun dispack (&optional (name :pipeline))
+  #+help-ru
+  "Напечатать значения регистров из заготовленной пачки с именем NAME."
+  (if-let ((pack (assoc name *display-packs*)))
+    (mapc #'display-register (rest pack))
+    (error "~@<No display pack with name ~A.~:@>" name))
+  (values))
+
+(defun pipeline ()
+  #+help-ru
+  "Как DISPLAY, но анализирует лишь адреса на конвейере."
+  #-help-ru
+  "Pretty-print the pipeline."
+  (dispack :pipeline)
+  (values))
+
+(defgeneric edisplay-using-core (core)
+  (:method-combination most-specific-last)
+  (:method ((o mips-core))
+    (let* ((pc (moment-fetch (saved-core-moment o)))
+           (epc (show :epc))
+           (badvaddr (show :badvaddr)))
+      (display)
+      (format t "count: ~X~%" (show :count))
+      (format t "EPC:   ~8,'0X, ~S~%" epc (addrsym epc))
+      (format t "badvaddr: ~8,'0X, ~S~%" badvaddr (addrsym badvaddr))
+      (format t "cause:~{ ~A~}~%" (nth-value 1 (show :cause)))
+      (format t "code @ PC:~%")
+      (when (next-method-p)
+        (call-next-method)))))
+
+(defun edisplay ()
+  #+help-ru
+  "Как DISPLAY, с добавлением типично востребованной информации:
+cop0.count, cop0.epc, cop0.badvaddr, cop0.cause и дизассемблированием
+адресов вокруг pcfetch и cop0.epc."
+  (edisplay-using-core *core*))
