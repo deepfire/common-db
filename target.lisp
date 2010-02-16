@@ -30,6 +30,7 @@
 (defvar *keep-target-intact* nil)
 (defvar *force-memory-detection* nil)
 (defvar *inhibit-memory-detection* nil)
+(defvar *skip-platform-init* nil)
 
 ;;;
 ;;; Conditions
@@ -159,7 +160,7 @@ potential SLAVES."
 ;;;
 ;;; The :AFTER INITIALIZE-INSTANCE method for PLATFORM only can be described in terms of system.lisp
 ;;;
-(defmethod initialize-instance :after ((o target) &rest platform-initargs &key backend &allow-other-keys)
+(defmethod initialize-instance :after ((o target) &rest platform-initargs &key backend (skip-platform-init *skip-platform-init*) &allow-other-keys)
   (check-type backend interface)
   (add-target-device o backend)
   (push o (iface-targets backend))
@@ -171,7 +172,8 @@ potential SLAVES."
     (when *log-platform-processing*
       (format *log-stream* "~@<NOTE: ~@;initializing ~S with ~S.~:@>~%" o platform-type))
     (setf (target-platform o) (make-instance platform-type :target o))
-    (apply #'configure-target-platform o (target-platform o) (remove-from-plist platform-initargs :backend))))
+    (unless skip-platform-init
+      (apply #'configure-target-platform o (target-platform o) (remove-from-plist platform-initargs :backend)))))
 
 ;;;;
 ;;;; Queries

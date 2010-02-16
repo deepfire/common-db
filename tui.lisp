@@ -107,6 +107,11 @@
     --platform <platform-name>  Specify platform manually, instead of detection.
     --virtual                   Enable the virtual interface/target/core.
     --no-scan                   Don't scan interfaces.
+    --no-platform-init          Do not do platform-level initialisation.
+    --no-memory-detection       Don't try detecting and configuring memory.
+    --memory-detection-threshold  While detecting type of main memory
+                                  use that much memory for I/O correctness
+                                  testing.
     --list-contexts             After scanning interfaces, list contexts of 
                                   found target devices and quit.
     --context <context-id>      After scanning interfaces activate target device
@@ -119,10 +124,6 @@
     --load <filename>           Execute commands from file.
     --quit-after-load           Quit after file execution.
     --disable-usb               Don't user USB JTAG adapters.
-    --no-memory-detection       Don't try detecting and configuring memory.
-    --memory-detection-threshold  While detecting type of main memory
-                                  use that much memory for I/O correctness
-                                  testing.
     --verbose                   During operation print out MORE STATUS.
                                   Implies --print-backtrace-on-errors.
     --version                   Print version and quit.
@@ -145,7 +146,7 @@
     (write-string "#+END_EXAMPLE") (terpri)))
 
 (defvar *standard-parameters* '((:load :string) (:core-multiplier :decimal) :before-hook :context :platform :memory-detection-threshold))
-(defvar *standard-switches*   '(:no-rc :virtual :no-scan :list-contexts :list-platforms :help :help-en :version :disable-usb :no-memory-detection
+(defvar *standard-switches*   '(:no-rc :virtual :no-scan :no-platform-init :list-contexts :list-platforms :help :help-en :version :disable-usb :no-memory-detection
                                 :disable-debugger :print-backtrace-on-errors :early-break-on-signals :break-on-signals
                                 :run-tests :ignore-test-failure :quit-after-tests
                                 ;; not documented
@@ -157,7 +158,7 @@
                                (help-needed-discriminator (constantly nil))
                                (user-package :comdb)
                                ;; default option customisation
-                               no-rc disable-usb disable-debugger print-backtrace-on-errors
+                               no-rc no-platform-init disable-usb disable-debugger print-backtrace-on-errors
                                no-memory-detection memory-detection-threshold verbose)
   (declare (optimize debug))
   (portability:set-and-activate-repl-fun
@@ -168,7 +169,7 @@
      (with-quit-restart
        (destructuring-bind (&rest args &key (verbose verbose)
                                   (no-rc no-rc) before-hook
-                                  core-multiplier virtual no-scan
+                                  core-multiplier virtual no-scan (no-platform-init no-platform-init)
                                   load quit-after-load
                                   run-tests ignore-test-failures quit-after-tests
                                   log-pipeline-crit
@@ -194,6 +195,7 @@
                 (*orgify* orgify)
                 (*virtual-interface-enabled* virtual)
                 (*virtual-target-enabled* virtual)
+                (*skip-platform-init* no-platform-init)
                 (*disable-usb* disable-usb)
                 (*forced-platform* (when platform
                                      (or (find-symbol (string-upcase (string platform)) :platform-definitions)

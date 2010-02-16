@@ -22,8 +22,9 @@
    #:*verbose-interface-init*           ; interface
 
    #:*virtual-interface-enabled*        ; interface
-   #:*virtual-target-enabled*           ; targets/virtual
    #:*disable-usb*                      ; interface
+   #:*virtual-target-enabled*           ; targets/virtual
+   #:*skip-platform-init*               ; target
    #:*memory-detection-threshold*       ; platform-memory
    #:*orgify*                           ; common-db-tui
    #:*print-backtrace-on-errors*        ; common-db-tui
