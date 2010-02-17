@@ -1,5 +1,9 @@
 all: comdb
 
+ironclad := $(if $(with-ironclad),:ironclad)
+virtcore := $(if $(with-no-virtcore),,:virtcore)
+tests := $(if $(with-no-tests),,:tests)
+
 version := $(shell date +%y.%02W)$(if $(patchlevel),.$(patchlevel))
 date := $(shell date +%c)
 commit-id := $(shell git log | head -n1 | cut -d\  -f2- | head -c 8)
@@ -29,12 +33,12 @@ flasher:                           EXECUTABLE_NAME := flasher
 helpfn:                            EXECUTABLE_NAME := helpfn
 comdb comdb-ru comdb-debug:        SYSTEM_NAME := :common-db-opfr-toplevel
 flasher:                           SYSTEM_NAME := :common-db-flasher
-comdb comdb-ru comdb-debug:        FEATURES := :opfr-toplevel
+comdb comdb-ru comdb-debug:        FEATURES := :opfr-toplevel $(ironclad) $(virtcore) $(tests)
 comdb comdb-ru comdb-debug:        FUNCTION := comdb::opfr-toplevel
 comdb comdb-ru comdb-debug flasher helpfn: ADDITIONAL_SAVE_LISP_AND_DIE_ARGS := :save-runtime-options t
 comdb-ru:                          FEATURES += :help-ru
 comdb-debug:                       OPTIMIZATIONS := debug safety
-flasher:                           FEATURES := :flasher
+flasher:                           FEATURES := :flasher $(ironclad) $(virtif) $(tests)
 flasher:                           FUNCTION := comdb::flasher
 
 comdb-release flasher-release: export RELEASE-P := t

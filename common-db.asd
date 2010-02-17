@@ -34,7 +34,8 @@
           (error 'compile-error :component c :operation operation))))))
 
 (defsystem :common-db
-  :depends-on (alexandria iterate pergamum semi-precious custom-harness bitmop symtable executor assem bintype cl-io-elf cffi opfr ironclad
+  :depends-on (alexandria iterate pergamum semi-precious custom-harness bitmop symtable executor assem bintype cl-io-elf cffi opfr
+	       #+ironclad ironclad
                #+linux lh-usb
                #+sbcl sb-x86-portio)
   :components
@@ -64,6 +65,7 @@
             ((:file "packages")
              (:file "elvees")
              ;;
+	     #+virtcore
              (:file "virtif" :depends-on ("packages"))
              (:file "parport" :depends-on ("packages" "elvees"))
              #+linux
@@ -121,6 +123,7 @@
              (:file "final" :depends-on ("address" "trap" "documentation" "dsp" "io" "query" "state" "trace" "test"))
              ))
    ;;
+   #+tests
    (:module "tests"
             :depends-on ("commands")
             :components
@@ -131,11 +134,9 @@
              ))
    ;;
    (:module "targets"
-            :depends-on ("tests"
-                         #+(and linux sbcl nil)
-                         "host-pci")
             :components
-            ((:module "virtual"
+            (#+virtcore
+	     (:module "virtual"
                       :components
                       ((:file "packages")
                        ;;
