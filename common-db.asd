@@ -34,7 +34,7 @@
           (error 'compile-error :component c :operation operation))))))
 
 (defsystem :common-db
-  :depends-on (alexandria iterate pergamum semi-precious custom-harness bitmop symtable executor assem bintype cl-io-elf cffi opfr ironclad cl-who
+  :depends-on (alexandria iterate pergamum semi-precious custom-harness bitmop symtable executor assem bintype cl-io-elf cffi opfr ironclad
                #+linux lh-usb
                #+sbcl sb-x86-portio)
   :components
@@ -83,16 +83,13 @@
    (:file "dsp" :depends-on ("address-map" "core"))
    (:file "system-devices" :depends-on ("system"))
    ;;
-   (:file "gdb" :depends-on ("core" "dsp"))
-   ;;
    (:module "arch"
-            :depends-on ("address-map" "core" "eltext" "interfaces" "gdb")
+            :depends-on ("address-map" "core" "eltext" "interfaces")
             :components
             ((:module "mips"
                       :components
                       ((:file "mips")
-                       (:file "state" :depends-on ("mips"))
-                       (:file "gdb" :depends-on ("mips"))))))
+                       (:file "state" :depends-on ("mips"))))))
    ;;
    (:file "flash" :depends-on ("system" "arch"))
    ;;

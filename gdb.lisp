@@ -1,8 +1,8 @@
 ;;; -*- Mode: LISP; Syntax: COMMON-LISP; Package: GDB; Base: 10; indent-tabs-mode: nil -*-
 ;;;
-;;;  (c) copyright 2007-2010, ГУП НПЦ "Элвис"
+;;;  (c) copyright 2010, ГУП НПЦ "Элвис"
 ;;;
-;;;  (c) copyright 2007-2010 by
+;;;  (c) copyright 2010 by
 ;;;           Samium Gromoff (_deepfire@feelingofgreen.ru)
 ;;;
 ;;; This library is free software; you can redistribute it and/or
@@ -20,8 +20,19 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :gdb)
+(defpackage #:gdb
+  (:use :common-lisp :alexandria :pergamum :iterate :isa :isa-mips :assem :assem-mips :setc :bitmop :device-model
+        :options :portability :spaces :generic :platform :target :core :who)
+  (:shadow #:step)
+  (:shadowing-import-from :bitmop #:space)
+  (:shadowing-import-from :isa #:disassemble)
+  (:export
+   #:describe-target
+   #:describe-memory-map
+   #:describe-spu
+   #:core-register-order))
 
+(in-package :gdb)
 
 (defgeneric describe-target (target reginstance-cb)
   (:method ((o target) reginstance-cb &aux gdb-id-to-register-instance-map)
