@@ -513,7 +513,6 @@
    #:trans-funcall*
    #:*trace-trans-calls*
    #:*disasm-trans-calls*
-   #:*unturing-trans-calls*
    #:with-traced-trans-calls
    #:with-maybe-traced-trans-calls
    #:with-trans-funcallability
