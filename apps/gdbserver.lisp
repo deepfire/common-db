@@ -169,6 +169,12 @@
   (let ((*poll-interval* 0))
     (gdb-continue-at o addr)))
 
+(defmethod gdb-handle-query ((o common-db-gdbserver) (q (eql :supported)) args)
+  "QStartNoAckMode+;PacketSize=4000;qXfer:features:read+;qXfer:memory-map:read+;qXfer:spu:read+")
+
+(defmethod gdb-handle-query ((o common-db-gdbserver) (q (eql :attached)) args)
+  "0")
+
 (defmethod gdb-extended-command ((o common-db-gdbserver) (c (eql :cont)) arguments)
   "Use the first action and completely ignore all thread IDs."
   (if (plusp (length arguments))
