@@ -166,8 +166,8 @@ calls ANALYSE-CORE in case it wasn't in it already."))
 
 ;;; slaves
 (defgeneric core-slaves (core))
-(defgeneric freeze-core-slaves (core))
-(defgeneric thaw-core-slaves (core))
+(defgeneric freeze-core-slaves (core) (:method ((o core))))
+(defgeneric thaw-core-slaves (core) (:method ((o core))))
 
 ;;; core frequency
 (defgeneric core-frequency-multiplier (core))
