@@ -113,7 +113,9 @@ ERROR-RETURN-FORM."
   (:default-initargs
    :targets nil
    :fastio t
-   :enumeration-class 'interface))
+   :enumeration-class 'interface)
+  (:documentation
+   "Device representing the means of access to the target's OnChip Debug machinery."))
 
 (defmethod initialize-instance :after ((o interface) &key address &allow-other-keys)
   (setf (slot-value o 'name) (format nil "~A-~X" (type-of o) address)))
