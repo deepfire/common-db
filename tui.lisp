@@ -195,7 +195,6 @@
                 (*orgify* orgify)
                 (*virtual-interface-enabled* virtual)
                 (*virtual-target-enabled* virtual)
-                (*skip-platform-init* no-platform-init)
                 (*disable-usb* disable-usb)
                 (*forced-platform* (when platform
                                      (or (find-symbol (string-upcase (string platform)) :platform-definitions)
@@ -221,7 +220,7 @@
              (funcall (compile nil `(lambda () ,before-hook))))
            (unless no-scan
              (with-retry-restarts ((retry () :report "Retry scanning interface busses."))
-               (scan)
+               (scan :skip-platform-init no-platform-init)
                (unless *current*
                  (error "~@<No devices were found attached to active busses.~:@>"))))
            (cond (list-contexts (list-contexts)

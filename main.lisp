@@ -93,7 +93,8 @@ To be called once, before any use of COMMON-DB."
   (set-namespace :interface :platform :core :dsp)
   (values))
 
-(defun scan (&optional force-rescan)
+(defun scan (&key force-rescan skip-platform-init &aux
+             (*skip-platform-init* skip-platform-init))
   #+help-ru
   "Функция производит следующие операции:
 
