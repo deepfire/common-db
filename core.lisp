@@ -26,56 +26,15 @@
 (defvar *log-core-pipeline-crit* nil)
 
 ;;;;
-;;;; Moments of core
-;;;;
-(defclass moment ()
-  ((fetch :accessor moment-fetch :initarg :fetch)
-   (opcode :accessor moment-opcode :initarg :opcode)))
-
-(define-print-object-method ((o moment) fetch opcode)
-    "PC ~8,'0X, opcode ~8,'0X" fetch opcode)
-
-(defun make-moment (type fetch opcode &rest moment-args &key &allow-other-keys)
-  (apply #'make-instance type :fetch fetch :opcode opcode moment-args))
-
-(defgeneric core-moment (core))
-(defgeneric set-core-moment (core moment))
-(defgeneric make-neutral-moment (core address))
-(defgeneric derive-moment (moment address)
-  (:method ((m moment) (address integer))
-    (make-moment 'moment address (moment-opcode m))))
-
-(defsetf core-moment set-core-moment)
-
-;;;;
-;;;; ...and trails thereof.
-;;;;
-(define-protocol-class trail () ())
-
-(defgeneric core-trail (core))
-(defgeneric set-core-trail (core trail))
-(defgeneric make-neutral-trail (core))
-
-(defsetf core-trail set-core-trail)
-
-(defgeneric pc (core))
-(defgeneric (setf pc) (value core))
-
-(defun %pc (core selector)
-  (declare (ignore selector))
-  (pc core))
-
-(defun (setf %pc) (value core selector)
-  (declare (ignore selector))
-  (setf (pc core) value))
-
-;;;;
-;;;; Core
+;;;; Core protocol
 ;;;;
 (define-namespace :core
   (:layouts
    ((:control   "Control")
     (:pc        0))))
+
+(defun %pc (core selector) (declare (ignore selector)) (pc core))
+(defun (setf %pc) (value core selector) (declare (ignore selector)) (setf (pc core) value))
 
 (define-protocol-device-class core :core (generic:memory-device)
   (;; generic properties
@@ -91,7 +50,7 @@
    (stop-reason :accessor core-stop-reason :initarg :stop-reason))
   (:documentation
    "This definition takes an obligation to implement the memory device 
-protocol, but doesn't provides one. Which shifts the responsibility
+protocol, but doesn't provide one.  Which shifts responsibility
 to the concrete classes.")
   (:default-initargs
    :insn-instruction-limit nil
@@ -102,6 +61,165 @@ to the concrete classes.")
   (:layouts
    (:control %pc (setf %pc))))
 
+;;; pipeline
+(defgeneric core-moment (core))
+(defgeneric set-core-moment (core moment))
+(defsetf core-moment set-core-moment)
+(defgeneric make-neutral-moment (core address))
+(defgeneric derive-moment (moment address))
+
+(defgeneric core-trail (core))
+(defgeneric set-core-trail (core trail))
+(defsetf core-trail set-core-trail)
+(defgeneric make-neutral-trail (core))
+
+(defgeneric pc (core))
+(defgeneric (setf pc) (value core))
+
+(defgeneric push-core-pipeline-stages (core nstages))
+(defgeneric patch-core-pipeline-reginstances (core) (:method ((o core))))
+(defgeneric core-pipeline-addresses (core &optional cached)
+  (:documentation
+   "Obtain a list of addresses of instructions currently on CORE's pipeline,
+in most-recent-first order.  If CACHED is non-NIL, return the cached values,
+instead of going to the device.  Note, that this function isn't obliged
+to return an atomic picture of pipeline when CORE is running."))
+(defgeneric print-pipeline (core stream))
+(defgeneric print-pipeline-terse (core stream))
+
+;;; assets
+(defgeneric gpr (core gpr))
+(defgeneric set-gpr (core i val))
+(defsetf gpr set-gpr)
+(defgeneric gpr-by-name (core gpr))
+(defgeneric set-gpr-by-name (core gpr value))
+(defsetf gpr-by-name set-gpr-by-name)
+(defgeneric tlb-entry (core i))
+(defgeneric set-tlb-entry (core i val))
+(defsetf tlb-entry set-tlb-entry)
+(defgeneric decode-tlb-entry (entry))
+(defgeneric probe-tlb (core asid vpn))
+(defgeneric get-tlb (core))
+(defgeneric set-tlb (core new-tlb))
+(defsetf get-tlb set-tlb)
+(defgeneric tlb-address-map (core tlb page-size))
+
+;;; state
+(defgeneric core-running-p (core))
+(defgeneric (setf core-running-p) (run-p core))
+(defgeneric step-core-asynchronous (core))
+(defgeneric step-core-debug (core))
+(defgeneric reset-platform (core &key &allow-other-keys)
+  (:documentation
+   "The default primary method does nothing.  The :AROUND method acts as following:
+   - calls INTERFACE-RESET-TARGET on the target,
+   - then calls RESET-CORE on all of the GENERAL-PURPOSE-CORES associated with the target,
+   - yields to the next method,
+   - calls CONFIGURE-TARGET-PLATFORM."))
+(defgeneric reset-core (core)
+  (:documentation
+   "The backend is required to provide a primary method."))
+(defgeneric free-to-stop (core &key &allow-other-keys)  (:method ((o core) &key &allow-other-keys) t))
+(defgeneric stop-to-debug (core &key &allow-other-keys) (:method ((o core) &key &allow-other-keys) t))
+(defgeneric debug-to-stop (core &key &allow-other-keys) (:method ((o core) &key &allow-other-keys) t))
+(defgeneric stop-to-free (core &key &allow-other-keys)  (:method ((o core) &key &allow-other-keys) t))
+(defgeneric analyse-core (core)
+  (:documentation
+   "Collect necessary forensics just after the core stopped.
+The backend is required to provide a primary method, which would collect enough
+information for DEDUCE-STOP-REASON to succeed."))
+(defgeneric deduce-stop-reason (core)
+  (:documentation
+   "The backend is required to provide a primary method, which is expected to return
+an object of type CORE-STOP-REASON."))
+(defgeneric poll-core-interruptible (core &optional watch-fn watch-period iteration-period iteration-limit)
+  (:documentation
+   "The default primary method polls CORE until either CORE-RUNNING-P returns NIL, 
+with ITERATION-PERIOD granularity, or user requests termination.  WATCH-FN is executed
+every ITERATION-PERIOD * WATCH-PERIOD nanoseconds.
+ITERATION-LIMIT optionally soft-limits the time spent sleeping."))
+(defgeneric wait-core (core &optional watch-fn watch-period iteration-period iteration-limit)
+  (:documentation
+   "Poll core until it stops, then ANALYSE it.
+Default primary method calls POLL-CORE-INTERRUPTIBLE, and does ANALYSE-CORE, unless
+there was a timeout."))
+(defgeneric interrupt-core (core)
+  (:documentation
+   "Switch core to :STOP state and ANALYSE it.
+Default primary method, ensures that the core is in :STOP state and calls ANALYSE-CORE
+in the case it wasn't in it already."))
+
+;;; slaves
+(defgeneric core-slaves (core))
+(defgeneric freeze-core-slaves (core))
+(defgeneric thaw-core-slaves (core))
+
+;;; core frequency
+(defgeneric core-frequency-multiplier (core))
+(defgeneric core-frequency-multiplier-valid-p (core frequency-multiplier) (:method ((o core) mult) (and (integerp mult) (> mult 1))))
+(defgeneric default-core-frequency-multiplier (core)                      (:method ((o core)) 2))
+
+;;; caches
+(defgeneric flush-core-instruction-cache (core))
+(defgeneric flush-core-data-cache (core))
+
+;;; instruction counters
+(defgeneric capture-instruction-counters (core))
+(defgeneric restore-instruction-counters (core))
+(defgeneric reset-instruction-counters (core))
+
+;;; trans calls
+(defgeneric prepare-trans-args (core stack-top args))
+(defgeneric trans-funcall (core cenv address-space function-name args &key &allow-other-keys))
+(defgeneric watch-core (core cenv stack-top))
+
+;;; misc
+(defgeneric core-call-stack (core))
+
+
+;;;;
+;;;; Breakpoint protocol
+;;;;
+(defgeneric set-core-insn-execution-limit (core ninsns))
+(defgeneric enable-trap (controlled-trap))
+(defgeneric disable-trap (controlled-trap))
+(defgeneric forget-volatile-trap (volatile-address-trap))
+(defgeneric set-trap-enabled (controlled-trap enabledp))
+(defsetf trap-enabled-p set-trap-enabled)
+(defgeneric add-sw-breakpoint (core address))
+(defgeneric disable-breakpoint (breakpoint))
+(defgeneric setup-hw-breakpoint (breakpoint address skip-count &key &allow-other-keys))
+(defgeneric add-hw-breakpoint (core address &optional skip-count)
+  (:method ((core core) address &optional (skipcount 0))
+    (if-let ((free-breakpoint (allocate-hardware-breakpoint core)))
+      (setup-hw-breakpoint free-breakpoint address skipcount)
+      (error "~@<No free breakpoints.  Used:~{ ~8,'0X~}~:@>"
+             (do-core-hardware-breakpoints (b core)
+               (collect (trap-address b)))))))
+(defgeneric add-cell-watchpoint (core address &optional skip-count))
+(defgeneric coerce-to-trap (trap-specifier))
+
+;;;;
+;;;; Moments of core, and trails thereof.
+;;;;
+(defclass moment ()
+  ((fetch :accessor moment-fetch :initarg :fetch)
+   (opcode :accessor moment-opcode :initarg :opcode)))
+
+(define-print-object-method ((o moment) fetch opcode)
+    "PC ~8,'0X, opcode ~8,'0X" fetch opcode)
+
+(defun make-moment (type fetch opcode &rest moment-args &key &allow-other-keys)
+  (apply #'make-instance type :fetch fetch :opcode opcode moment-args))
+
+(defmethod derive-moment ((m moment) (address integer))
+  (make-moment 'moment address (moment-opcode m)))
+
+(define-protocol-class trail () ())
+
+;;;;
+;;;; Subclasses
+;;;;
 (define-protocol-device-class general-purpose-core :core (master-device core)
   ((moment :accessor saved-core-moment :initarg :moment)
    (moment-changed-p :accessor core-moment-changed-p :initarg :moment-changed-p)
@@ -109,7 +227,8 @@ to the concrete classes.")
    (trail-important-p :accessor core-trail-important-p :initarg :trail-important-p)
    (machine :accessor core-machine :initarg :machine)
    (executable :accessor core-executable :initarg :executable))
-  (:documentation "Cores which define GPR/(SETF GPR)")
+  (:documentation
+   "Cores which define GPR/(SETF GPR)")
   (:default-initargs
    :enumeration-class 'general-purpose-core
    :moment nil
@@ -118,32 +237,31 @@ to the concrete classes.")
    :slaves nil
    :executable nil))
 
-(defgeneric core-slaves (core)
-  (:method ((o general-purpose-core))
-    (remove-if-not (of-type 'core) (master-device-slaves o))))
-
 (define-protocol-device-class little-endian-core :core (core) ())
 (define-protocol-device-class big-endian-core :core (core) ())
 
 (define-protocol-device-class mmu-core :core (core)
     ((tlb-entries-nr :reader core-tlb-entries-nr :initarg :tlb-entries-nr)))
 
-(defmethod set-core-moment :after ((o general-purpose-core) moment)
-  (setf (core-moment-changed-p o) t
-        (saved-core-trail o) (make-neutral-trail o)
-        (core-trail-important-p o) nil))
-
-(defmethod (setf saved-core-moment) :after (moment (o general-purpose-core))
-  (setf (core-moment-changed-p o) t))
-
-(defmethod (setf saved-core-trail) :after (trail (o general-purpose-core))
-  (setf (core-trail-important-p o) t))
-
+;;;;
+;;;; Containers
+;;;;
 (define-subcontainer trap :container-slot traps :type address-trap :iterator do-core-traps :remover remove-trap :if-exists :error)
 (define-subcontainer hwbreak :container-slot hw-breakpoints :type hardware-breakpoint :iterator do-core-hardware-breakpoints :if-exists :error)
 
-(defgeneric coerce-to-trap (trap-specifier))
+(defmacro do-core-controlled-traps ((o core) &body body)
+  `(do-core-traps (,o ,core)
+     (when (typep ,o 'controlled-trap) ,@body)))
+(defmacro do-core-vector-traps ((o core) &body body)
+  `(do-core-traps (,o ,core)
+     (when (typep ,o 'vector-trap) ,@body)))
+(defmacro do-core-software-breakpoints ((o core) &body body)
+  `(do-core-traps (,o ,core)
+     (when (typep ,o 'software-breakpoint) ,@body)))
 
+;;;;
+;;;; Printing
+;;;;
 (define-print-object-method ((o core) id backend)
     "~A backend: ~A" id (with-output-to-string (string) (print-device-object backend string)))
 
@@ -151,6 +269,9 @@ to the concrete classes.")
     "~A backend: ~A ~_moment: ~A ~_trail: ~A"
   id (with-output-to-string (string) (print-device-object backend string)) moment trail)
 
+;;;;
+;;;; Conditions
+;;;;
 (define-condition core-condition ()
   ((core :accessor condition-core :initarg :core)))
 (define-condition core-error (error core-condition) ())
@@ -176,330 +297,7 @@ to the concrete classes.")
   (apply #'format *log-stream* (concatenate 'string "~&CORE~A: " format-control "~%") (enumerated-id core) format-arguments))
 
 ;;;;
-;;;; GPR
-;;;;
-(defgeneric gpr (core gpr))
-(defgeneric set-gpr (core i val))
-(defsetf gpr set-gpr)
-(defgeneric gpr-by-name (core gpr))
-(defgeneric set-gpr-by-name (core gpr value))
-(defsetf gpr-by-name set-gpr-by-name)
-;;;;
-;;;; Pipeline
-;;;;
-(defgeneric push-core-pipeline-stages (core nstages))
-(defgeneric patch-core-pipeline-reginstances (core)
-  (:method ((o core))))
-(defgeneric core-pipeline-addresses (core &optional cached)
-  (:documentation
-   "Obtain a list of addresses of instructions currently on CORE's pipeline,
-in most-recent-first order.  If CACHED is non-NIL, return the cached values,
-instead of going to the device.  Note, that this function isn't obliged
-to return an atomic picture of pipeline when CORE is running."))
-(defgeneric print-pipeline (core stream))
-(defgeneric print-pipeline-terse (core stream))
-;;;;
-;;;; State
-;;;;
-(defgeneric core-running-p (core))
-(defgeneric (setf core-running-p) (run-p core))
-(defgeneric step-core-asynchronous (core))
-(defgeneric step-core-debug (core))
-(defgeneric reset-core (core))
-(defgeneric free-to-stop (core &rest args)  (:method ((o general-purpose-core) &rest args) (declare (ignore args)) t))
-(defgeneric stop-to-debug (core &rest args) (:method ((o general-purpose-core) &rest args) (declare (ignore args)) t))
-(defgeneric debug-to-stop (core &rest args) (:method ((o general-purpose-core) &rest args) (declare (ignore args)) t))
-(defgeneric stop-to-free (core &rest args)  (:method ((o general-purpose-core) &rest args) (declare (ignore args)) t))
-(defgeneric deduce-stop-reason (core))
-(defgeneric poll-core-interruptible (core &optional watch-fn watch-period iteration-period iteration-limit)
-  (:documentation
-   "Poll CORE until it is not running with ITERATION-PERIOD 
-granularity, or the user requests termination, while executing WATCH-FN
-every ITERATION-PERIOD * WATCH-PERIOD nanoseconds. The return value is the stop reason.
-ITERATION-LIMIT Optionally soft-limits the time spent sleeping."))
-(defgeneric analyse-core (core)
-  (:documentation "Collect necessary forensics just after the core stopped."))
-(defgeneric wait-core (core &optional watch-fn watch-period iteration-period iteration-limit)
-  (:documentation "Poll core until it stops, then ANALYSE it."))
-(defgeneric interrupt-core (core)
-  (:documentation "Switch core to :STOP state and ANALYSE it."))
-;;;;
-;;;; Traps
-;;;;
-(defgeneric set-core-insn-execution-limit (core ninsns))
-(defgeneric enable-trap (controlled-trap))
-(defgeneric disable-trap (controlled-trap))
-(defgeneric forget-volatile-trap (volatile-address-trap))
-(defgeneric set-trap-enabled (controlled-trap enabledp))
-(defgeneric add-sw-breakpoint (core address))
-(defgeneric disable-breakpoint (breakpoint))
-(defgeneric setup-hw-breakpoint (breakpoint address skip-count &key &allow-other-keys))
-(defgeneric add-hw-breakpoint (core address &optional skip-count)
-  (:method ((core core) address &optional (skipcount 0))
-    (if-let ((free-breakpoint (allocate-hardware-breakpoint core)))
-      (setup-hw-breakpoint free-breakpoint address skipcount)
-      (error "~@<No free breakpoints.  Used:~{ ~8,'0X~}~:@>"
-             (do-core-hardware-breakpoints (b core)
-               (collect (trap-address b)))))))
-(defgeneric add-cell-watchpoint (core address &optional skip-count))
-
-(defsetf trap-enabled-p set-trap-enabled)
-;;;;
-;;;; Slaves
-;;;;
-(defgeneric freeze-core-slaves (core))
-(defgeneric thaw-core-slaves (core))
-;;;;
-;;;; Miscellaneous
-;;;;
-(defgeneric flush-core-instruction-cache (core))
-(defgeneric flush-core-data-cache (core))
-(defgeneric core-call-stack (core))
-(defgeneric capture-instruction-counters (core))
-(defgeneric restore-instruction-counters (core))
-(defgeneric reset-instruction-counters (core))
-(defgeneric watch-core (core cenv stack-top))
-(defgeneric prepare-trans-args (core stack-top args))
-(defgeneric trans-funcall (core cenv address-space function-name args &key &allow-other-keys))
-
-(defvar *trace-trans-calls* nil
-  "Whether the trans calls should be traced for correspondence between code in memory
-and code actually hitting the target core pipeline.  This is useful for tracking
-icache-related anomalies.")
-(defvar *disasm-trans-calls* nil
-  "Whether to print disassembly of whole trans call zone before doing the call.")
-(defvar *unturing-trans-calls* nil
-  "Whether to print basic block graph of whole trans call zone before doing the call.")
-
-(define-execute-with-bound-variable *trace-trans-calls*
-  (:binding traced-trans-calls t :define-with-maybe-macro t))
-
-(defgeneric handle-execution-error (core condition-type condition-args)
-  (:method ((o core) condition-type condition-args)
-    (error (apply #'make-condition condition-type condition-args))))
-
-
-;;;;
-;;;; Disassembly
-;;;;
-(defun print-variable-length-opcode (stream opcode-and-width colon at)
-  (declare (ignore colon at))
-  (destructuring-bind (opcode . width) opcode-and-width
-    (ecase width
-      (4 (format stream "~8,'0X~8,1@T" opcode))
-      (8 (format stream "~16,'0X" opcode)))))
-
-(defun default-disassembly-line-printer (stream addr opcode width insn params)
-  (format stream "~8,'0X:    ~/core::print-variable-length-opcode/    ~A~1,14T~{~S,~2,6T~}" addr (cons opcode width) insn params))
-
-(defun disassemble-and-print (stream isa startaddr seq &optional line-pre-annotate-fn line-post-annotate-fn
-                              (line-fn #'default-disassembly-line-printer))
-  (iter (for (opcode width insn . params) in (disassemble isa seq))
-        (for addr initially startaddr then (+ addr width))
-        (funcall (or line-pre-annotate-fn #'values) stream addr)
-        (funcall line-fn stream addr opcode width insn params)
-        (funcall (or line-post-annotate-fn #'values) stream addr insn params)
-        (terpri stream)))
-
-(defun core-disassemble (core addr len &key (stream *standard-output*) line-pre-annotate-fn line-post-annotate-fn
-                         (line-fn #'default-disassembly-line-printer))
-  (let* ((ioaddr (logandc1 #x3 addr))
-         (iolen (logandc1 #b11 (logior len (if (zerop (logand #b11 len)) 0 #b100))))
-         (ioarr (make-array iolen :element-type '(unsigned-byte 8))))
-    (read-block core ioaddr ioarr)
-    (disassemble-and-print stream (core-isa core) addr ioarr line-pre-annotate-fn line-post-annotate-fn line-fn)))
-
-;;;;
-;;;; Debugger
-;;;;
-(defun invoke-with-core-debugger (core fn &key segment address)
-  (labels ((reader (desc)
-             (format *debug-io* "Enter a positive integer for ~A: " desc)
-             (finish-output *debug-io*)
-             (let ((input (read *debug-io*)))
-               (if (and (integerp input) (plusp input))
-                   input
-                   (progn
-                     (format *debug-io* "~S is not a positive integer, please try again.~%" input)
-                     (finish-output *debug-io*)
-                     (reader desc)))))
-           (nvalue-reader (&rest descs)
-             (mapcar #'reader descs))
-           (reset-core ()
-             (reset-platform core)
-             (setf (state core) :debug)
-             t))
-    (loop (restart-case (funcall fn)
-            (cycle ()
-              :report "Recheck core status.")
-            (exit-and-continue ()
-              :report "Exit the debugger and continue execution."
-              (return))
-            (print-pipeline ()
-              :report "Print core pipeline."
-              (print-pipeline core *debug-io*))
-            (reset-and-abort ()
-              :report "Reset the core, enable debug mode and abort."
-              (reset-core)
-              (invoke-restart (find-restart 'abort)))
-            (reset-interface ()
-              :report "Reset the interface."
-              (interface:interface-reset (backend (backend core))))
-            (reset-target ()
-              :report "Reset the target and enable debug mode."
-              (reset-core))
-            (dump-memory (base size)
-              :report "Dump memory."
-              :interactive (lambda () (nvalue-reader "dump base" "dump size"))
-              (core-disassemble core base size :stream *debug-io*))
-            (disassemble-memory (base size)
-              :report "Disassemble memory."
-              :interactive (lambda () (nvalue-reader "disassemble base" "disassemble size"))
-              (core-disassemble core base size :stream *debug-io*))
-            (disassemble ()
-              :report "Disassemble the executed segment."
-              :test (lambda (c) (declare (ignore c)) segment)
-              (disassemble-and-print *debug-io*
-                                     (core-isa core)
-                                     (or address (when (typep segment 'pinned-segment) (pinned-segment-base segment)) 0)
-                                     (segment-active-vector segment)))))))
-
-(defmacro with-core-debugger ((core &key segment address) &body form)
-  `(invoke-with-core-debugger ,core (lambda () ,@form)
-                              ,@(when segment `(:segment ,segment))
-                              ,@(when address `(:address ,address))))
-
-;;;;
-;;;; Core API implementations
-;;;;
-(defmethod gpr-by-name ((o core) (gpr-name symbol))
-  (gpr o (optype-evaluate (isa-gpr-optype (core-isa o)) gpr-name)))
-
-(defmethod set-gpr-by-name ((o core) (gpr-name symbol) value)
-  (set-gpr o (optype-evaluate (isa-gpr-optype (core-isa o)) gpr-name) value))
-
-(defmethod reset-core :around ((o general-purpose-core))
-  (setf (saved-core-moment o) (make-neutral-moment o nil)
-        (saved-core-trail o) (make-neutral-trail o)
-        (core-trail-important-p o) nil)
-  (mapc #'reset-core (core-slaves o))
-  (call-next-method))
-
-(defmethod reset-core :around ((o core))
-  (do-core-traps (b o)
-    (disable-breakpoint b))
-  (call-next-method))
-
-(defmethod reset-instruction-counters :after ((o core))
-  (setf (core-instruction-counter o) 0))
-
-(defmethod add-sw-breakpoint ((o core) address)
-  (lret ((bp (or (let ((b (trap o address :if-does-not-exist :continue)))
-                   (when (typep b 'software-breakpoint)
-                     b))
-                 (make-instance (core-default-sw-breakpoint-type o) :core o :address address))))
-    (setf (trap-enabled-p bp) t)))
-
-(defgeneric reset-platform (core &key &allow-other-keys)
-  (:method ((o core) &key &allow-other-keys))
-  (:method :around ((o core) &rest platform-args &key stop-cores-p &allow-other-keys)
-    (let ((target (backend o)))
-      (iface:interface-reset-target (backend target) stop-cores-p)
-      (mapc #'reset-core (target-devices-by-type target 'general-purpose-core))
-      (call-next-method)
-      (apply #'configure-target-platform target (target-platform target)
-             (remove-from-plist platform-args :stop-cores-p)))))
-
-(defun step-core-synchronous (core)
-  "Perform steps necessary to make CORE do one step, and wait until it stops.
-The return value is T, except when execution is interrupted by SIGINT, 
-in which case it is NIL."
-  (step-core-asynchronous core)
-  (busywait-interruptible-executing (not (core-running-p core)) nil))
-
-(defmethod poll-core-interruptible ((core core) &optional (watch-fn #'values) (watch-period 1) (iteration-period 10000000) run-iteration-limit)
-  (busywait-interruptible-executing (not (core-running-p core)) (funcall watch-fn *standard-output*)
-                                    :watch-period watch-period :iteration-period iteration-period :run-time run-iteration-limit))
-
-
-(defmethod analyse-core :before ((o general-purpose-core))
-  (setf (saved-core-moment o) (core-moment o)
-        (saved-core-trail o) (core-trail o)))
-
-(defmethod analyse-core :after ((o general-purpose-core))
-  (setf (core-stop-reason o) (or (deduce-stop-reason o)
-                                 (make-instance 'user-interruption :core o))))
-
-(defmethod wait-core ((o core) &optional (watch-fn #'values) (watch-period 1) (iteration-period 10000000) iteration-limit)
-  (let ((execution-status (poll-core-interruptible o watch-fn watch-period iteration-period iteration-limit)))
-    (if (core-running-p o)
-        :timeout
-        (analyse-core o))))
-
-(defmethod interrupt-core ((o core))
-  (when (eq :free (state o))
-    (setf (state o) :stop)
-    (analyse-core o)))
-
-(defun prime-core-executable (core loadable &optional check)
-  "Prepare LOADABLE to be executed on a properly configured general-purpose
-CORE. When CHECK is non-NIL, an integrity check during upload of LOADABLE
-is performed."
-  (loadable:upload-loadable (backend core) loadable :section-before-fn #'loadable:report-section :check check)
-  (when *log-loadable-processing*
-    (format *log-stream* "Setting continuation address of ~S to ~8,'0X.~%" core (loadable:loadable-entry-point loadable)))
-  (setf (core-executable core) loadable)
-  (let ((trail (make-neutral-trail core))
-        (moment (make-neutral-moment core (loadable:loadable-entry-point loadable))))
-    (setf (saved-core-trail core) trail
-          (core-trail core) trail
-          (core-trail-important-p core) nil ; just done it manually
-          (saved-core-moment core) moment
-          (core-moment core) moment)))
-
-(defun run-core-asynchronous (core &optional address (moment-changed (not (null address))))
-  (prog1 (state core)
-    (setf (state core
-                 :address (or address (moment-fetch (saved-core-moment core)))
-                 :moment-changed moment-changed)
-          :free)))
-
-(defun run-core-synchronous (core &key address (moment-changed (not (null address))) exit-state watch-fn watch-period (iteration-period 10000000)
-                             segment iteration-limit (if-limit-reached :error) &aux
-                             (watch-fn (or watch-fn #'values))
-                             (watch-period (or watch-period 1)))
-  "Put CORE into running state, possibly changing its continuation address
-to ADDRESS, and specifying its MOMENT-CHANGED property, after which poll
-for either CORE stopping or the user requesting termination. The EXIT-STATE
-keyword customizes the exit state, which defaults to the state at the time
-of the call. The CORE's status is polled every ITERATION-PERIOD nanoseconds,
-optionally up to ITERATION-LIMIT times and an optional WATCH-FN is ran
-every WATCH-PERIOD such polls."
-  (let ((old-state (run-core-asynchronous core address moment-changed))
-        execution-status)
-    (funcall watch-fn *log-stream*)
-    (unwind-protect (setf execution-status (wait-core core watch-fn watch-period iteration-period iteration-limit))
-      (cond ((eq execution-status :timeout)
-             (ecase if-limit-reached
-               (:break)
-               (:warn
-                (warn "~@<While executing ~:[~;~:*~S ~]on ~S at #x~8,'0X:~_~
-                          ran out of execution time budget of ~D nanoseconds.~_~
-                          Core is ~:[not running anymore~;still running~].~:@>"
-                      segment core address (* iteration-period iteration-limit)
-                      (core-running-p core)))
-               (:error
-                (with-core-debugger (core :address address :segment segment)
-                  (error "~@<While executing ~:[~;~:*~S ~]on ~S at #x~8,'0X:~_~
-                          ran out of execution time budget of ~D nanoseconds.~_~
-                          Core is ~:[not running anymore~;still running~].~:@>"
-                         segment core address (* iteration-period iteration-limit)
-                         (core-running-p core))))))
-            (t
-             (setf (state core) (or exit-state old-state)))))))
-
-;;;;
-;;;; State
+;;;; State management
 ;;;;
 (defparameter *log-state-changes* nil)
 (defparameter *core-transitions* `((:free  :stop  ,#'free-to-stop)
@@ -586,6 +384,265 @@ every WATCH-PERIOD such polls."
   `(invoke-with-retry-with-state-restart ,core ,state (lambda () ,@body)))
 
 ;;;;
+;;;; Core protocol implementations
+;;;;
+(defmethod initialize-instance :after ((o core) &key &allow-other-keys)
+  (do-core-hardware-breakpoints (b o)
+    (setf (trap-core b) o))
+  (do-core-vector-traps (v o)
+    (setf (trap-core v) o)))
+
+(defmethod core-slaves ((o general-purpose-core))
+  (remove-if-not (of-type 'core) (master-device-slaves o)))
+
+(defmethod set-core-moment :after ((o general-purpose-core) moment)
+  (setf (core-moment-changed-p o) t
+        (saved-core-trail o) (make-neutral-trail o)
+        (core-trail-important-p o) nil))
+
+(defmethod (setf saved-core-moment) :after (moment (o general-purpose-core))
+  (setf (core-moment-changed-p o) t))
+
+(defmethod (setf saved-core-trail) :after (trail (o general-purpose-core))
+  (setf (core-trail-important-p o) t))
+
+(defmethod gpr-by-name ((o core) (gpr-name symbol))
+  (gpr o (optype-evaluate (isa-gpr-optype (core-isa o)) gpr-name)))
+
+(defmethod set-gpr-by-name ((o core) (gpr-name symbol) value)
+  (set-gpr o (optype-evaluate (isa-gpr-optype (core-isa o)) gpr-name) value))
+
+(defmethod reset-platform ((o core) &key &allow-other-keys))
+(defmethod reset-platform :around ((o core) &rest platform-args &key stop-cores-p &allow-other-keys)
+  (let ((target (backend o)))
+    (iface:interface-reset-target (backend target) stop-cores-p)
+    (mapc #'reset-core (target-devices-by-type target 'general-purpose-core))
+    (call-next-method)
+    (apply #'configure-target-platform target (target-platform target)
+           (remove-from-plist platform-args :stop-cores-p))))
+
+(defmethod reset-core :around ((o general-purpose-core))
+  (setf (saved-core-moment o) (make-neutral-moment o nil)
+        (saved-core-trail o) (make-neutral-trail o)
+        (core-trail-important-p o) nil)
+  (mapc #'reset-core (core-slaves o))
+  (call-next-method))
+
+(defmethod reset-core :around ((o core))
+  (do-core-traps (b o)
+    (disable-breakpoint b))
+  (call-next-method))
+
+(defmethod poll-core-interruptible ((core core) &optional (watch-fn #'values) (watch-period 1) (iteration-period 10000000) run-iteration-limit)
+  (busywait-interruptible-executing (not (core-running-p core)) (funcall watch-fn *standard-output*)
+                                    :watch-period watch-period :iteration-period iteration-period :run-time run-iteration-limit))
+
+(defmethod analyse-core :before ((o general-purpose-core))
+  (setf (saved-core-moment o) (core-moment o)
+        (saved-core-trail o) (core-trail o)))
+
+(defmethod analyse-core :after ((o general-purpose-core))
+  (setf (core-stop-reason o) (or (deduce-stop-reason o)
+                                 (make-instance 'user-interruption :core o))))
+
+(defmethod wait-core ((o core) &optional (watch-fn #'values) (watch-period 1) (iteration-period 10000000) iteration-limit)
+  (let ((execution-status (poll-core-interruptible o watch-fn watch-period iteration-period iteration-limit)))
+    (if (core-running-p o)
+        :timeout
+        (analyse-core o))))
+
+(defmethod interrupt-core ((o core))
+  (when (eq :free (state o))
+    (setf (state o) :stop)
+    (analyse-core o)))
+
+(defmethod reset-instruction-counters :after ((o core))
+  (setf (core-instruction-counter o) 0))
+
+(defmethod add-sw-breakpoint ((o core) address)
+  (lret ((bp (or (let ((b (trap o address :if-does-not-exist :continue)))
+                   (when (typep b 'software-breakpoint)
+                     b))
+                 (make-instance (core-default-sw-breakpoint-type o) :core o :address address))))
+    (setf (trap-enabled-p bp) t)))
+
+;;;;
+;;;; Core protocol -based toolkit
+;;;;
+(defun step-core-synchronous (core)
+  "Perform steps necessary to make CORE do one step, and wait until it stops.
+The return value is T, except when execution is interrupted by SIGINT, 
+in which case it is NIL."
+  (step-core-asynchronous core)
+  (busywait-interruptible-executing (not (core-running-p core)) nil))
+
+(defun prime-core-executable (core loadable &optional check)
+  "Prepare LOADABLE to be executed on a properly configured general-purpose
+CORE. When CHECK is non-NIL, an integrity check during upload of LOADABLE
+is performed."
+  (loadable:upload-loadable (backend core) loadable :section-before-fn #'loadable:report-section :check check)
+  (when *log-loadable-processing*
+    (format *log-stream* "Setting continuation address of ~S to ~8,'0X.~%" core (loadable:loadable-entry-point loadable)))
+  (setf (core-executable core) loadable)
+  (let ((trail (make-neutral-trail core))
+        (moment (make-neutral-moment core (loadable:loadable-entry-point loadable))))
+    (setf (saved-core-trail core) trail
+          (core-trail core) trail
+          (core-trail-important-p core) nil ; just done it manually
+          (saved-core-moment core) moment
+          (core-moment core) moment)))
+
+(defun run-core-asynchronous (core &optional address (moment-changed (not (null address))))
+  (prog1 (state core)
+    (setf (state core
+                 :address (or address (moment-fetch (saved-core-moment core)))
+                 :moment-changed moment-changed)
+          :free)))
+
+(defun run-core-synchronous (core &key address (moment-changed (not (null address))) exit-state watch-fn watch-period (iteration-period 10000000)
+                             segment iteration-limit (if-limit-reached :error) &aux
+                             (watch-fn (or watch-fn #'values))
+                             (watch-period (or watch-period 1)))
+  "Put CORE into running state, possibly changing its continuation address
+to ADDRESS, and specifying its MOMENT-CHANGED property, after which poll
+for either CORE stopping or the user requesting termination. The EXIT-STATE
+keyword customizes the exit state, which defaults to the state at the time
+of the call. The CORE's status is polled every ITERATION-PERIOD nanoseconds,
+optionally up to ITERATION-LIMIT times and an optional WATCH-FN is ran
+every WATCH-PERIOD such polls."
+  (let ((old-state (run-core-asynchronous core address moment-changed))
+        execution-status)
+    (funcall watch-fn *log-stream*)
+    (unwind-protect (setf execution-status (wait-core core watch-fn watch-period iteration-period iteration-limit))
+      (cond ((eq execution-status :timeout)
+             (ecase if-limit-reached
+               (:break)
+               (:warn
+                (warn "~@<While executing ~:[~;~:*~S ~]on ~S at #x~8,'0X:~_~
+                          ran out of execution time budget of ~D nanoseconds.~_~
+                          Core is ~:[not running anymore~;still running~].~:@>"
+                      segment core address (* iteration-period iteration-limit)
+                      (core-running-p core)))
+               (:error
+                (with-core-debugger (core :address address :segment segment)
+                  (error "~@<While executing ~:[~;~:*~S ~]on ~S at #x~8,'0X:~_~
+                          ran out of execution time budget of ~D nanoseconds.~_~
+                          Core is ~:[not running anymore~;still running~].~:@>"
+                         segment core address (* iteration-period iteration-limit)
+                         (core-running-p core))))))
+            (t
+             (setf (state core) (or exit-state old-state)))))))
+
+;;;;
+;;;; Disassembly
+;;;;
+(defun print-variable-length-opcode (stream opcode-and-width colon at)
+  (declare (ignore colon at))
+  (destructuring-bind (opcode . width) opcode-and-width
+    (ecase width
+      (4 (format stream "~8,'0X~8,1@T" opcode))
+      (8 (format stream "~16,'0X" opcode)))))
+
+(defun default-disassembly-line-printer (stream addr opcode width insn params)
+  (format stream "~8,'0X:    ~/core::print-variable-length-opcode/    ~A~1,14T~{~S,~2,6T~}" addr (cons opcode width) insn params))
+
+(defun disassemble-and-print (stream isa startaddr seq &optional line-pre-annotate-fn line-post-annotate-fn
+                              (line-fn #'default-disassembly-line-printer))
+  (iter (for (opcode width insn . params) in (disassemble isa seq))
+        (for addr initially startaddr then (+ addr width))
+        (funcall (or line-pre-annotate-fn #'values) stream addr)
+        (funcall line-fn stream addr opcode width insn params)
+        (funcall (or line-post-annotate-fn #'values) stream addr insn params)
+        (terpri stream)))
+
+(defun core-disassemble (core addr len &key (stream *standard-output*) line-pre-annotate-fn line-post-annotate-fn
+                         (line-fn #'default-disassembly-line-printer))
+  (let* ((ioaddr (logandc1 #x3 addr))
+         (iolen (logandc1 #b11 (logior len (if (zerop (logand #b11 len)) 0 #b100))))
+         (ioarr (make-array iolen :element-type '(unsigned-byte 8))))
+    (read-block core ioaddr ioarr)
+    (disassemble-and-print stream (core-isa core) addr ioarr line-pre-annotate-fn line-post-annotate-fn line-fn)))
+
+;;;;
+;;;; Trans calls
+;;;;
+(defvar *trace-trans-calls* nil
+  "Whether the trans calls should be traced for correspondence between code in memory
+and code actually hitting the target core pipeline.  This is useful for tracking
+icache-related anomalies.")
+(defvar *disasm-trans-calls* nil
+  "Whether to print disassembly of whole trans call zone before doing the call.")
+(defvar *unturing-trans-calls* nil
+  "Whether to print basic block graph of whole trans call zone before doing the call.")
+
+(define-execute-with-bound-variable *trace-trans-calls*
+  (:binding traced-trans-calls t :define-with-maybe-macro t))
+
+(defgeneric handle-execution-error (core condition-type condition-args)
+  (:method ((o core) condition-type condition-args)
+    (error (apply #'make-condition condition-type condition-args))))
+
+;;;;
+;;;; Debugger
+;;;;
+(defun invoke-with-core-debugger (core fn &key segment address)
+  (labels ((reader (desc)
+             (format *debug-io* "Enter a positive integer for ~A: " desc)
+             (finish-output *debug-io*)
+             (let ((input (read *debug-io*)))
+               (if (and (integerp input) (plusp input))
+                   input
+                   (progn
+                     (format *debug-io* "~S is not a positive integer, please try again.~%" input)
+                     (finish-output *debug-io*)
+                     (reader desc)))))
+           (nvalue-reader (&rest descs)
+             (mapcar #'reader descs))
+           (reset-core ()
+             (reset-platform core)
+             (setf (state core) :debug)
+             t))
+    (loop (restart-case (funcall fn)
+            (cycle ()
+              :report "Recheck core status.")
+            (exit-and-continue ()
+              :report "Exit the debugger and continue execution."
+              (return))
+            (print-pipeline ()
+              :report "Print core pipeline."
+              (print-pipeline core *debug-io*))
+            (reset-and-abort ()
+              :report "Reset the core, enable debug mode and abort."
+              (reset-core)
+              (invoke-restart (find-restart 'abort)))
+            (reset-interface ()
+              :report "Reset the interface."
+              (interface:interface-reset (backend (backend core))))
+            (reset-target ()
+              :report "Reset the target and enable debug mode."
+              (reset-core))
+            (dump-memory (base size)
+              :report "Dump memory."
+              :interactive (lambda () (nvalue-reader "dump base" "dump size"))
+              (core-disassemble core base size :stream *debug-io*))
+            (disassemble-memory (base size)
+              :report "Disassemble memory."
+              :interactive (lambda () (nvalue-reader "disassemble base" "disassemble size"))
+              (core-disassemble core base size :stream *debug-io*))
+            (disassemble ()
+              :report "Disassemble the executed segment."
+              :test (lambda (c) (declare (ignore c)) segment)
+              (disassemble-and-print *debug-io*
+                                     (core-isa core)
+                                     (or address (when (typep segment 'pinned-segment) (pinned-segment-base segment)) 0)
+                                     (segment-active-vector segment)))))))
+
+(defmacro with-core-debugger ((core &key segment address) &body form)
+  `(invoke-with-core-debugger ,core (lambda () ,@form)
+                              ,@(when segment `(:segment ,segment))
+                              ,@(when address `(:address ,address))))
+
+;;;;
 ;;;; Core stop reasoning
 ;;;;
 (define-protocol-class core-stop-reason () ())
@@ -637,16 +694,6 @@ every WATCH-PERIOD such polls."
 (defclass software-breakpoint (volatile-address-trap breakpoint)
   ((saved-insn :accessor software-breakpoint-saved-insn :initform 0 :initarg :saved-insn :type (unsigned-byte 32))))
 
-(defmacro do-core-controlled-traps ((o core) &body body)
-  `(do-core-traps (,o ,core)
-     (when (typep ,o 'controlled-trap) ,@body)))
-(defmacro do-core-vector-traps ((o core) &body body)
-  `(do-core-traps (,o ,core)
-     (when (typep ,o 'vector-trap) ,@body)))
-(defmacro do-core-software-breakpoints ((o core) &body body)
-  `(do-core-traps (,o ,core)
-     (when (typep ,o 'software-breakpoint) ,@body)))
-
 (define-print-object-method ((o trap)) "")
 (define-print-object-method ((o intercore-trap) trapping-core)
     " trapping core: ~S" trapping-core)
@@ -658,12 +705,6 @@ every WATCH-PERIOD such polls."
     "~8,'0X trigcount: ~D id: ~D" address trigcount id)
 (define-print-object-method ((b software-breakpoint) address trigcount saved-insn)
     "~8,'0X insn: 0x~8,'0X" address saved-insn)
-
-(defmethod initialize-instance :after ((o core) &key &allow-other-keys)
-  (do-core-hardware-breakpoints (b o)
-    (setf (trap-core b) o))
-  (do-core-vector-traps (v o)
-    (setf (trap-core v) o)))
 
 (defmethod set-trap-enabled ((o controlled-trap) enabledp)
   (if enabledp
@@ -849,19 +890,6 @@ with optional nanosecond-granular ITERATION-LIMIT and WATCH-FN."
                                      :dataseg-alignment ,dataseg-alignment
                                      :entry-length ,entry-length))
 
-;;;;
-;;;; TLB
-;;;;
-(defgeneric tlb-entry (core i))
-(defgeneric set-tlb-entry (core i val))
-(defsetf tlb-entry set-tlb-entry)
-(defgeneric decode-tlb-entry (entry))
-(defgeneric probe-tlb (core asid vpn))
-(defgeneric get-tlb (core))
-(defgeneric set-tlb (core new-tlb))
-(defsetf get-tlb set-tlb)
-(defgeneric tlb-address-map (core tlb page-size))
-
 (defmethod get-tlb ((o mmu-core))
   (iter (for i below (core-tlb-entries-nr o))
         (collect (tlb-entry o i))))
@@ -870,17 +898,6 @@ with optional nanosecond-granular ITERATION-LIMIT and WATCH-FN."
   (iter (for i below (core-tlb-entries-nr o))
         (for entry in new-tlb)
         (set-tlb-entry o i entry)))
-
-;;;;
-;;;; Core frequency
-;;;;
-(defgeneric core-frequency-multiplier (core))
-(defgeneric core-frequency-multiplier-valid-p (core frequency-multiplier)
-  (:method ((o core) mult)
-    (and (integerp mult) (> mult 1))))
-(defgeneric default-core-frequency-multiplier (core)
-  (:method ((o core))
-    2))
 
 (defmethod configure-platform-system :around (platform system &key core-multiplier prereset-core-multiplier)
   (let ((gp-core (target-device (backend system) '(general-purpose-core 0))))
