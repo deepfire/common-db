@@ -28,18 +28,17 @@ sources: $(wildcard apps/*.lisp) $(wildcard commands/*.lisp) $(wildcard tests/*.
 apps/help-cp1251.lisp: apps/help-unicode.lisp
 	@iconv --from utf-8 --to cp1251 $^ > $@
 
-comdb comdb-ru comdb-debug:        EXECUTABLE_NAME := comdb
-flasher:                           EXECUTABLE_NAME := flasher
-helpfn:                            EXECUTABLE_NAME := helpfn
-comdb comdb-ru comdb-debug:        SYSTEM_NAME := :common-db-opfr-toplevel
-flasher:                           SYSTEM_NAME := :common-db-flasher
-comdb comdb-ru comdb-debug:        FEATURES := :opfr-toplevel $(ironclad) $(virtcore) $(tests)
-comdb comdb-ru comdb-debug:        FUNCTION := comdb::opfr-toplevel
+comdb comdb-ru comdb-debug:         EXECUTABLE_NAME := comdb
+flasher:                            EXECUTABLE_NAME := flasher
+helpfn:                             EXECUTABLE_NAME := helpfn
+comdb comdb-ru comdb-debug:         SYSTEM_NAME := :common-db-opfr-toplevel
+flasher:                            SYSTEM_NAME := :common-db-flasher
+comdb comdb-ru comdb-debug flasher: FEATURES := $(ironclad) $(virtcore) $(tests)
+comdb comdb-ru comdb-debug:         FUNCTION := comdb::opfr-toplevel
 comdb comdb-ru comdb-debug flasher helpfn: ADDITIONAL_SAVE_LISP_AND_DIE_ARGS := :save-runtime-options t
-comdb-ru:                          FEATURES += :help-ru
-comdb-debug:                       OPTIMIZATIONS := debug safety
-flasher:                           FEATURES := :flasher $(ironclad) $(virtif) $(tests)
-flasher:                           FUNCTION := comdb::flasher
+comdb-ru helpfn:                    FEATURES += :help-ru
+comdb-debug:                        OPTIMIZATIONS := debug safety
+flasher:                            FUNCTION := comdb::flasher
 
 comdb-release flasher-release: export RELEASE-P := t
 comdb-release flasher-release: export VERSION := $(version)
@@ -60,22 +59,20 @@ comdb-release:   check-tree-clean comdb
 flasher-release: check-tree-clean flasher
 
 helpfn:      SETTINGS := *compile-verbose* nil *compile-print* nil
-helpfn:      FEATURES := :help-ru
 helpfn:      FUNCTION := comdb::print-api-documentation
 helpfn: sources
 	@sbcl --noinform --eval '(progn $(COMMON_SBCL_INIT))' --eval "$(SBCL_DUMP_FORM)"
 
 load-comdb: sources
 	@sbcl --eval '(progn #+win32 (load "d:/usr/chain/asdf-op.lisp")   #+(or)\
-	                     (push :opfr-toplevel *features*)             #+(or)\
 	                     (require :common-db-opfr-toplevel))' \
 	      --eval '(comdb::opfr-toplevel)'
 
 comdb-ecl:
-	ecl.exe -load $(USR)/chain/asdf-op.lisp -eval '(push :opfr-toplevel *features*)' -eval '(require :common-db-opfr-toplevel)' -eval '(setf c::*delete-files* nil)' -eval '(asdf:make-build :common-db :type :program :epilogue-code (list (find-symbol "FUNCALL" :CL) (list (find-symbol "FIND-SYMBOL" :CL) "OPFR-TOPLEVEL" :comdb)))' -eval '(format t "~&Done.~%")' -eval '(si:quit)'
+	ecl.exe -load $(USR)/chain/asdf-op.lisp -eval '(require :common-db-opfr-toplevel)' -eval '(setf c::*delete-files* nil)' -eval '(asdf:make-build :common-db :type :program :epilogue-code (list (find-symbol "FUNCALL" :CL) (list (find-symbol "FIND-SYMBOL" :CL) "OPFR-TOPLEVEL" :comdb)))' -eval '(format t "~&Done.~%")' -eval '(si:quit)'
 
 comdb-ecl-msvc:
-	ecl2.exe -load $(USR)/chain/asdf-op.lisp -eval '(push :opfr-toplevel *features*)' -eval '(require :common-db-opfr-toplevel)' -eval '(setf c::*delete-files* nil)' -eval '(asdf:make-build :common-db :type :program :epilogue-code (list (find-symbol "FUNCALL" :CL) (list (find-symbol "FIND-SYMBOL" :CL) "OPFR-TOPLEVEL" :comdb)))' -eval '(format t "~&Done.~%")' -eval '(si:quit)'
+	ecl2.exe -load $(USR)/chain/asdf-op.lisp -eval '(require :common-db-opfr-toplevel)' -eval '(setf c::*delete-files* nil)' -eval '(asdf:make-build :common-db :type :program :epilogue-code (list (find-symbol "FUNCALL" :CL) (list (find-symbol "FIND-SYMBOL" :CL) "OPFR-TOPLEVEL" :comdb)))' -eval '(format t "~&Done.~%")' -eval '(si:quit)'
 
 clean:
 	rm -f comdb comdb-ru flasher

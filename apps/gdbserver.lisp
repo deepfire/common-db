@@ -30,7 +30,8 @@
   (:shadowing-import-from :bitmop #:space #:*space*)
   (:shadowing-import-from :common-db #:catch #:step #:get #:set #:trace)
   (:export
-   #:test))
+   #:gdbserver
+   #:gdbserver-toplevel))
 
 (in-package :common-db-gdbserver)
 
@@ -240,10 +241,26 @@
                            (read-from-string rest-arg)))))
 
 ;;;;
-;;;; Test
+;;;; Server
 ;;;;
-(defun test (&optional (target-context *current*) (address "127.0.0.1") (port 9000) &aux
-             (core (ctx-core target-context)))
+(defvar *gdbserver-help-en*
+  "  GDB-server options:
+    --address <dotted-quad>     Address of the interface to accept connections.
+                                  Defaults to 127.0.0.1.
+    --port <integer>            Number of the TCP port to accept connections on.
+                                  Defaults to 9000.
+    --single-shot               Exit after the first connection terminates.")
+
+(defun gdbserver-toplevel ()
+  (setf common-db::*additional-help-en* *gdbserver-help-en*
+        common-db::*additional-help-ru* common-db::*gdbserver-help-ru*)
+  (comdb::comdb-toplevel-wrapper #'gdbserver
+                                 '((:address :string) :port)
+                                 '(:single-shot)
+                                 :no-memory-detection t))
+
+(defun gdbserver (&key (target-context *current*) (address "127.0.0.1") (port 9000) single-shot &aux
+                  (core (ctx-core target-context)))
   (change-class target-context 'common-db-gdbserver)
   (let ((ri-names (gdb:core-register-order core)))
     (setf *gdb-register-instance-vector*
@@ -253,4 +270,6 @@
           (make-hash-table)
           ;; XXX: wtf?
           (slot-value target-context 'gdbremote::no-ack-mode) nil))
-  (accept-gdb-connection target-context port address))
+  (iter (format t "; Accepting connections on ~A:~D~%" address port)
+        (accept-gdb-connection target-context port address)
+        (until single-shot)))
