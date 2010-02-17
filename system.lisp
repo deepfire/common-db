@@ -112,9 +112,9 @@ MEMORY-CONFIG-VALID-FOR-DEVICE-CLASSES-P could be used."))
         (ecase if-fails
           (:continue)
           (:print-checksum
-           #-ironclad
+           #+disable-ironclad
            (error "~@<COMMON-DB was built without IRONCLAD: checksumming not supported.~:@>")
-           #+ironclad
+           #-disable-ironclad
            (format *log-stream* "Checksum mismatch: write ~A, read ~A~%"
                    (digest-as-string (ironclad:digest-sequence :sha1 oarr))
                    (digest-as-string (ironclad:digest-sequence :sha1 iarr))))

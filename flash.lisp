@@ -413,9 +413,9 @@ otherwise."
           (trans-funcall* core (flash-compilation-environment o) (flash-as o)
                           :program-region flash-address (base dataseg) (ash iolen -2) `(:flash-base . ,(flash-base o)))
           (when compute-csums
-            #-ironclad
+            #+disable-ironclad
             (error "~@<COMMON-DB was built without IRONCLAD: checksumming not supported.~:@>")
-            #+ironclad
+            #-disable-ironclad
             (let ((iovec (make-array iolen :element-type '(unsigned-byte 8)))
                   (w-csum (ironclad:digest-sequence :md5 (extent-data extent) :start piece-offset :end (+ piece-offset iolen))))
               (flash-write o 0 :read-array)

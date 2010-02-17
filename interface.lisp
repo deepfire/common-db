@@ -128,7 +128,7 @@ ERROR-RETURN-FORM."
 (defmethod interface-close ((o interface)) t)
 
 (defun scan-interface-busses (&optional force-rescan)
-  #+virtcore
+  #-disable-virtcore
   (bus-scan (or (root-bus 'virtif :if-does-not-exist :continue) (make-instance 'virtif-bus :name 'virtif)) force-rescan)
   (bus-scan (or (root-bus 'parport :if-does-not-exist :continue) (make-instance 'parport-bus :name 'parport)) force-rescan)
   (unless *disable-usb*

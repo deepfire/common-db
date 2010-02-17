@@ -1,8 +1,8 @@
 all: comdb
 
-ironclad := $(if $(with-ironclad),:ironclad)
-virtcore := $(if $(with-no-virtcore),,:virtcore)
-tests := $(if $(with-no-tests),,:tests)
+disable-ironclad := $(if $(disable-ironclad),:no-ironclad)
+disable-virtcore := $(if $(disable-virtcore),:no-virtcore)
+disable-tests := $(if $(disable-tests),:no-tests)
 
 version := $(shell date +%y.%02W)$(if $(patchlevel),.$(patchlevel))
 date := $(shell date +%c)
@@ -33,7 +33,7 @@ flasher:                            EXECUTABLE_NAME := flasher
 helpfn:                             EXECUTABLE_NAME := helpfn
 comdb comdb-ru comdb-debug:         SYSTEM_NAME := :common-db-opfr-toplevel
 flasher:                            SYSTEM_NAME := :common-db-flasher
-comdb comdb-ru comdb-debug flasher: FEATURES := $(ironclad) $(virtcore) $(tests)
+comdb comdb-ru comdb-debug flasher: FEATURES := $(disable-ironclad) $(disable-virtcore) $(disable-tests)
 comdb comdb-ru comdb-debug:         FUNCTION := comdb::opfr-toplevel
 comdb comdb-ru comdb-debug flasher helpfn: ADDITIONAL_SAVE_LISP_AND_DIE_ARGS := :save-runtime-options t
 comdb-ru helpfn:                    FEATURES += :help-ru
