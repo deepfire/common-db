@@ -169,9 +169,6 @@
   (let ((*poll-interval* 0))
     (gdb-continue-at o addr)))
 
-(defmethod gdb-extended-query ((o common-db-gdbserver) (c (eql :cont)) arguments)
-  "vCont;cs")
-
 (defmethod gdb-extended-command ((o common-db-gdbserver) (c (eql :cont)) arguments)
   "Use the first action and completely ignore all thread IDs."
   (if (plusp (length arguments))
@@ -180,6 +177,9 @@
         (#\s (gdb-single-step-at o nil))
         (t ""))
       ""))
+
+(defmethod gdb-extended-command ((o common-db-gdbserver) (c (eql :kill)) arguments)
+  (gdb-kill o))
 
 ;;;;
 ;;;; Breakpoints
@@ -217,12 +217,8 @@
 
 (defmethod gdb-kill ((o common-db-gdbserver) &aux
                      (core (ctx-core o)))
-  (format *trace-output* "Killing is not supported. Hit the reset button manually.~%")
-  (dolist (core (cons core (core-slaves core)))
-    (do-core-traps (b core)
-      (disable-breakpoint b)))
-  ;; Call next method to really terminate the connection.
-  (call-next-method))
+  (reset :core core)
+  "OK")
 
 ;;;;
 ;;;; Stubs
