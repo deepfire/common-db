@@ -173,7 +173,7 @@ potential SLAVES."
       (format *log-stream* "~@<NOTE: ~@;initializing ~S with ~S.~:@>~%" o platform-type))
     (setf (target-platform o) (make-instance platform-type :target o))
     (unless skip-platform-init
-      (apply #'configure-target-platform o (target-platform o) (remove-from-plist platform-initargs :backend)))))
+      (apply #'configure-target-platform o (target-platform o) (remove-from-plist platform-initargs :backend :skip-platform-init)))))
 
 ;;;;
 ;;;; Queries
