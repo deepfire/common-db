@@ -259,7 +259,7 @@
                                  '(:single-shot)
                                  :no-memory-detection t))
 
-(defun gdbserver (&key (target-context *current*) (address "127.0.0.1") (port 9000) single-shot &aux
+(defun gdbserver (&key (target-context *current*) (address "127.0.0.1") (port 9000) single-shot trace-exchange &aux
                   (core (ctx-core target-context)))
   (change-class target-context 'common-db-gdbserver)
   (let ((ri-names (gdb:core-register-order core)))
@@ -271,5 +271,5 @@
           ;; XXX: wtf?
           (slot-value target-context 'gdbremote::no-ack-mode) nil))
   (iter (format t "; Accepting connections on ~A:~D~%" address port)
-        (accept-gdb-connection target-context port address)
+        (accept-gdb-connection target-context port address trace-exchange)
         (until single-shot)))
