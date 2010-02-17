@@ -237,15 +237,15 @@ potential SLAVES."
   (if (or start end)
       (let* ((iolen (- end start))
              (iovec (make-array iolen :element-type '(unsigned-byte 8))))
-        (bioable-memory-io o iovec (fixmap-address o base) iolen nil)
+        (bioable-memory-io o (fixmap-address o base) iovec iolen nil)
         (setf (subseq vector start end) iovec))
-      (bioable-memory-io o vector (fixmap-address o base) (length vector) nil)))
+      (bioable-memory-io o (fixmap-address o base) vector (length vector) nil)))
 
 ;;; XXX: inefficient
 (defmethod write-block ((o 32bit-bus-target) base vector &optional start end)
   (if (or start end)
-      (bioable-memory-io o (subseq vector start end) (fixmap-address o base) (- end start) t)
-      (bioable-memory-io o vector (fixmap-address o base) (length vector) t)))
+      (bioable-memory-io o (fixmap-address o base) (subseq vector start end) (- end start) t)
+      (bioable-memory-io o (fixmap-address o base) vector (length vector) t)))
 
 #+sbcl
 (define-device-class busmem :target (sequence device)

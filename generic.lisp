@@ -78,8 +78,8 @@
 (defun (setf memory-ref) (value memory-device offset)
   (memory-set memory-device offset value))
 
-(defgeneric merge-u8-extremity (memdev vector base length headp writep)
-  (:method ((o little-endian-memory-device) vector base length headp writep &aux
+(defgeneric merge-u8-extremity (memdev base vector length headp writep)
+  (:method ((o little-endian-memory-device) base vector length headp writep &aux
             (width (memory-device-byte-width o)))
     (declare (type (vector (unsigned-byte 8)) vector))
     (let ((extremity (if headp base (+ base length))))
@@ -93,7 +93,7 @@
                                       (lambda (g i) (setf (aref vector i) (aref exvec g)))))
             (when writep
               (setf (memory-ref o granule-base) (u8-vector-wordle exvec 0 width))))))))
-  (:method ((o big-endian-memory-device) vector base length headp writep &aux
+  (:method ((o big-endian-memory-device) base vector length headp writep &aux
             (width (memory-device-byte-width o)))
     (declare (type (vector (unsigned-byte 8)) vector))
     (let ((extremity (if headp base (+ base length))))
@@ -108,16 +108,16 @@
             (when writep
               (setf (memory-ref o granule-base) (u8-vector-wordbe exvec 0 width)))))))))
 
-(defgeneric bioable-memory-io (device vector address size writep)
-  (:method ((o bioable-memory-device) vector address size writep)
+(defgeneric bioable-memory-io (device address vector size writep)
+  (:method ((o bioable-memory-device) address vector size writep)
     (declare (type (vector (unsigned-byte 8)) vector) (type integer address size) (type boolean writep))
-    (merge-u8-extremity o vector address size t writep)
+    (merge-u8-extremity o address vector size t writep)
     (with-alignment (nil nil head) (memory-device-byte-width o) address
       (with-alignment (nil tail) (memory-device-byte-width o) (+ address size)
         (if writep
-            (write-aligned-block o vector (+ address head) (- size head tail) head) 
-            (read-aligned-block o vector (+ address head) (- size head tail) head))))
-    (merge-u8-extremity o vector address size nil writep)))
+            (write-aligned-block o (+ address head) vector head (- size head tail)) 
+            (read-aligned-block o (+ address head) vector head (- size head tail)))))
+    (merge-u8-extremity o address vector size nil writep)))
 
 ;;;;
 ;;;; Mapped device: base, scale, set-fn, get-fn, device-to-backend-fn
