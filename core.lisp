@@ -188,6 +188,8 @@ to the concrete classes.")
 ;;;; Pipeline
 ;;;;
 (defgeneric push-core-pipeline-stages (core nstages))
+(defgeneric patch-core-pipeline-reginstances (core)
+  (:method ((o core))))
 (defgeneric core-pipeline-addresses (core &optional cached)
   (:documentation
    "Obtain a list of addresses of instructions currently on CORE's pipeline,

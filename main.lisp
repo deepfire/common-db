@@ -79,7 +79,7 @@
   (remove-context (find interface *target-contexts* :key #'ctx-interface)))
 
 (defmethod add-target-device :after ((target target) (o mips-core))
-  (patch-core-inteface-pipeline-reginstances o))
+  (patch-core-pipeline-reginstances o))
 
 ;;;;
 ;;;; Control
