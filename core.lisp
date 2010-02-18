@@ -439,9 +439,7 @@ calls ANALYSE-CORE in case it wasn't in it already."))
            (remove-from-plist platform-args :stop-cores-p))))
 
 (defmethod reset-core :around ((o general-purpose-core))
-  (setf (saved-core-moment o) (make-neutral-moment o nil)
-        (saved-core-trail o) (make-neutral-trail o)
-        (core-trail-important-p o) nil)
+  (save-core-pipeline o :trail-important nil)
   (mapc #'reset-core (core-slaves o))
   (call-next-method))
 
