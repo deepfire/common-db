@@ -30,6 +30,7 @@
   (:shadowing-import-from :bitmop #:space #:*space*)
   (:shadowing-import-from :common-db #:catch #:step #:get #:set #:trace)
   (:export
+   #:*poll-interval*
    #:*trace-state-actions*
    #:gdbserver
    #:gdbserver-toplevel))
