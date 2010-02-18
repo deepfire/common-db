@@ -212,13 +212,14 @@ calls ANALYSE-CORE in case it wasn't in it already."))
 ;;;; Moments of core, and trails thereof.
 ;;;;
 (defclass moment ()
-  ((fetch :accessor moment-fetch :initarg :fetch)
-   (opcode :accessor moment-opcode :initarg :opcode)))
+  ((fetch :accessor moment-fetch :type (integer 0) :initarg :fetch)
+   (opcode :accessor moment-opcode :type (integer 0) :initarg :opcode)))
 
 (define-print-object-method ((o moment) fetch opcode)
     "PC ~8,'0X, opcode ~8,'0X" fetch opcode)
 
 (defun make-moment (type fetch opcode &rest moment-args &key &allow-other-keys)
+  (declare (type (integer 0) fetch opcode))
   (apply #'make-instance type :fetch fetch :opcode opcode moment-args))
 
 (defmethod derive-moment ((m moment) (address integer))
