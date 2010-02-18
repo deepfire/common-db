@@ -423,6 +423,10 @@ calls ANALYSE-CORE in case it wasn't in it already."))
         (saved-core-trail o) (core-trail o)
         (core-trail-important-p o) trail-important))
 
+(defmethod (setf pc) :before (value (o core))
+  "The moment we change PC knowingly, CORE's stop reason ceases to matter."
+  (setf (core-stop-reason o) nil))
+
 (defmethod gpr-by-name ((o core) (gpr-name symbol))
   (gpr o (optype-evaluate (isa-gpr-optype (core-isa o)) gpr-name)))
 
