@@ -139,7 +139,7 @@ to the concrete classes.")
 (defmethod (setf saved-core-trail) :after (trail (o general-purpose-core))
   (setf (core-trail-important-p o) t))
 
-(define-subcontainer trap :container-slot traps :type address-trap :iterator do-core-traps :remover remove-trap :if-exists :continue)
+(define-subcontainer trap :container-slot traps :type address-trap :iterator do-core-traps :remover remove-trap :if-exists :error)
 (define-subcontainer hwbreak :container-slot hw-breakpoints :type hardware-breakpoint :iterator do-core-hardware-breakpoints :if-exists :error)
 
 (defgeneric coerce-to-trap (trap-specifier))
@@ -627,7 +627,7 @@ every WATCH-PERIOD such polls."
 (defclass breakpoint (address-trap)
   ()
   (:default-initargs
-   :address #xfaced911
+   :address #x0
    :skipcount 1))
 
 (defclass hardware-breakpoint (breakpoint)
@@ -661,11 +661,9 @@ every WATCH-PERIOD such polls."
 
 (defmethod initialize-instance :after ((o core) &key &allow-other-keys)
   (do-core-hardware-breakpoints (b o)
-    (setf (trap-core b) o
-          (trap o (trap-address b)) b))
+    (setf (trap-core b) o))
   (do-core-vector-traps (v o)
-    (setf (trap-core v) o
-          (trap o (trap-address v)) v)))
+    (setf (trap-core v) o)))
 
 (defmethod set-trap-enabled ((o controlled-trap) enabledp)
   (if enabledp
