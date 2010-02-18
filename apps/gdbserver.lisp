@@ -145,7 +145,9 @@
 
 (defmethod gdb-continue-at ((o common-db-gdbserver) addr &aux
                             (core (ctx-core o)))
-  (run-core-asynchronous core addr)
+  (run-core-asynchronous core (unless (or (not addr)
+                                          (= addr (moment-fetch (saved-core-moment core))))
+                                addr))
   (loop
      ;; Poll for condition of remote target every now and then. Not
      ;; very pretty...
