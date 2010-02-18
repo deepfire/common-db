@@ -459,10 +459,10 @@ calls ANALYSE-CORE in case it wasn't in it already."))
                                  (make-instance 'user-interruption :core o))))
 
 (defmethod wait-core ((o core) &optional (watch-fn #'values) (watch-period 1) (iteration-period 10000000) iteration-limit)
-  (let ((execution-status (poll-core-interruptible o watch-fn watch-period iteration-period iteration-limit)))
-    (if (core-running-p o)
-        :timeout
-        (analyse-core o))))
+  (poll-core-interruptible o watch-fn watch-period iteration-period iteration-limit)
+  (if (core-running-p o)
+      :timeout
+      (analyse-core o)))
 
 (defmethod interrupt-core ((o core))
   (when (eq :free (state o))

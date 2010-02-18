@@ -185,7 +185,6 @@
 ;;;;
 (defmethod gdb-insert-breakpoint ((o common-db-gdbserver) type address length &aux
                                   (core (ctx-core o)))
-  (declare (ignore length))
   (cond
     ((eq type :software)
      (add-sw-breakpoint core address) ; We ignore LENGTH for software breakpoints.
@@ -234,7 +233,6 @@
       "E00"))
 
 (defmethod gdb-monitor ((o common-db-gdbserver) command rest-arg)
-  (declare (ignore args))
   "Command not supported.")
 
 (defmethod gdb-monitor ((o common-db-gdbserver) (command (eql :eval)) rest-arg)

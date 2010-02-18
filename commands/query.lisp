@@ -181,6 +181,7 @@ NAME-OR-ADDRESS.  В том случае если указано имя реги
 
 (defgeneric display-register-using-core (core name &key &allow-other-keys)
   (:method ((o core) name &rest args)
+    (declare (ignore args))
     (multiple-value-bind (value extended-value) (show name)
       (print-generic-register-and-value name value extended-value))))
 
@@ -225,8 +226,7 @@ When NEW-ITEMS is non-NIL, change (DISPLAY-LIST) before printing."
 (defgeneric edisplay-using-core (core)
   (:method-combination most-specific-last)
   (:method ((o mips-core))
-    (let* ((pc (moment-fetch (saved-core-moment o)))
-           (epc (show :epc))
+    (let* ((epc (show :epc))
            (badvaddr (show :badvaddr)))
       (display)
       (format t "count: ~X~%" (show :count))

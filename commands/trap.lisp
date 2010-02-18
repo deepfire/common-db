@@ -58,7 +58,6 @@
   "Проинтерпретировать остаточный список параметров как набор адресов
 векторных ловушек, и активировать их, сбросив неуказанные."
   (let* ((core *core*)
-         (interface (backend (backend core)))
          (catches (mapcar #'trap addresses)))
     (iter (for addr in addresses)
           (for catch in catches)
