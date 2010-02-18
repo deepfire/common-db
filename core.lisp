@@ -448,6 +448,7 @@ calls ANALYSE-CORE in case it wasn't in it already."))
 (defmethod reset-core :around ((o core))
   (do-core-traps (b o)
     (disable-breakpoint b))
+  (setf (core-stop-reason o) nil)
   (call-next-method))
 
 (defmethod poll-core-interruptible ((core core) &optional (watch-fn #'values) (watch-period 1) (iteration-period 10000000) run-iteration-limit)
