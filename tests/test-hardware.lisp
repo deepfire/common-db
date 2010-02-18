@@ -34,7 +34,7 @@
                                       #x1000)))
 
 (defcomdbtest :target external-memory () (target)
-  (expect-success (test-target-memory target (base (memory-region-extent (target-device target '(external-memory 0))))
+  (expect-success (test-target-memory target (base (memory-region-extent (target-device target '(ram 0))))
                                       #x1000)))
 
 (defcomdbtest :mips step-one () (core)
