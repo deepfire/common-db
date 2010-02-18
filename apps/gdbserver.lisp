@@ -30,6 +30,7 @@
   (:shadowing-import-from :bitmop #:space #:*space*)
   (:shadowing-import-from :common-db #:catch #:step #:get #:set #:trace)
   (:export
+   #:*trace-state-actions*
    #:gdbserver
    #:gdbserver-toplevel))
 
@@ -43,6 +44,9 @@
 
 (defvar *poll-interval* (/ 20)
   "How often to query target for its state.")
+
+(defvar *trace-state-actions* nil
+  "Whether to log state and breakpoint -related actions.")
 
 ;;;;
 ;;;; Classes
@@ -137,7 +141,8 @@
 
 (defmethod gdb-interrupt ((o common-db-gdbserver) &aux
                           (core (ctx-core o)))
-  (format *trace-output* "Interrupt!~%")
+  (when *trace-state-actions*
+    (format *trace-output* "~&Entering debug mode..~%"))
   (when (core-running-p core)
     (setf (state core) :stop))
   (setf (state core) :debug)
@@ -148,6 +153,8 @@
   (run-core-asynchronous core (unless (or (not addr)
                                           (= addr (moment-fetch (saved-core-moment core))))
                                 addr))
+  (when *trace-state-actions*
+    (format t "~&Continuing from ~8,'0X~%" addr))
   (loop
      ;; Poll for condition of remote target every now and then. Not
      ;; very pretty...
@@ -167,6 +174,8 @@
 
 (defmethod gdb-single-step-at ((o common-db-gdbserver) addr &aux
                                (core (ctx-core o)))
+  (when *trace-state-actions*
+    (format t "~&Single-stepping from ~8,'0X~%" addr))
   (set-core-insn-execution-limit core 1)
   (let ((*poll-interval* 0))
     (gdb-continue-at o addr)))
@@ -196,18 +205,25 @@
                                   (core (ctx-core o)))
   (cond
     ((eq type :software)
+     (when *trace-state-actions*
+       (format t "~&Adding a software breakpoint at ~8,'0X~%" address))
      (add-sw-breakpoint core address) ; We ignore LENGTH for software breakpoints.
      "OK")
     ((not (= 4 length)) "EInvalidLength")
     (t
+     (when *trace-state-actions*
+       (format t "~&Attempting to add a hardware breakpoint at ~8,'0X~%" address))
      (if-let ((b (add-hw-breakpoint core address)))
        (prog1 "OK"
-         (format *trace-output* "~&New breakpoint in slot ~A, type ~A, address ~8,'0X.~%" (trap-id b) type address))
+         (when *trace-state-actions*
+           (format *trace-output* "~&New hardware breakpoint in slot ~A, type ~A, address ~8,'0X.~%" (trap-id b) type address)))
        "ENoDebugRegistersLeft"))))
 
 (defmethod gdb-remove-breakpoint ((o common-db-gdbserver) type address length &aux
                                   (core (ctx-core o)))
   (declare (ignore type length))
+  (when *trace-state-actions*
+    (format *trace-output* "~&Attempting to remove a breakpoint at ~8,'0X~%" address))
   (when-let ((b (trap core address)))
     (disable-trap b))
   "OK")
@@ -265,18 +281,19 @@
                                  '(:single-shot)
                                  :no-memory-detection t))
 
-(defun gdbserver (&key (target-context *current*) (address "127.0.0.1") (port 9000) single-shot trace-exchange &aux
+(defun gdbserver (&key (target-context *current*) (address "127.0.0.1") (port 9000) single-shot (trace-state-actions t) trace-exchange &aux
                   (core (if target-context
                             (ctx-core target-context)
                             (error "~@<No active target context: cannot start GDB server.~:@>"))))
   (change-class target-context 'common-db-gdbserver)
-  (let ((ri-names (gdb:core-register-order core)))
+  (let ((ri-names (gdb:core-register-order core))
+        (*trace-state-actions* trace-state-actions))
     (setf *gdb-register-instance-vector*
           (make-array (length ri-names)
                       :initial-contents (mapcar (curry #'device-register-instance core) ri-names))
           *gdb-id-to-register-instance-map*
-          (make-hash-table)))
-  (iter (format t "; Accepting connections on ~A:~D~:[~;, tracing exchanges, up to ~:*~X bytes~]~%" address port trace-exchange)
-        (setf (slot-value target-context 'gdbremote::no-ack-mode) nil)
-        (accept-gdb-connection target-context port address trace-exchange)
-        (until single-shot)))
+          (make-hash-table))
+    (iter (format t "; Accepting connections on ~A:~D~:[~;, tracing exchanges, up to ~:*~X bytes~]~%" address port trace-exchange)
+          (setf (slot-value target-context 'gdbremote::no-ack-mode) nil)
+          (accept-gdb-connection target-context port address trace-exchange)
+          (until single-shot))))
