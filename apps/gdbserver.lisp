@@ -239,8 +239,10 @@
   "Command not supported.")
 
 (defmethod gdb-monitor ((o common-db-gdbserver) (command (eql :eval)) rest-arg)
-  (princ-to-string (eval (let ((*package* (find-package :common-db)))
-                           (read-from-string rest-arg)))))
+  (princ-to-string (handler-case (eval (let ((*package* (find-package :common-db)))
+                                         (read-from-string rest-arg)))
+                     (serious-condition (c)
+                       (format nil "~A" c)))))
 
 ;;;;
 ;;;; Server
