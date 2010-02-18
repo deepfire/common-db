@@ -270,7 +270,7 @@
                       :initial-contents (mapcar (curry #'device-register-instance core) ri-names))
           *gdb-id-to-register-instance-map*
           (make-hash-table)))
-  (iter (format t "; Accepting connections on ~A:~D~%" address port)
+  (iter (format t "; Accepting connections on ~A:~D~:[~;, tracing exchanges, up to ~:*~X bytes~]~%" address port trace-exchange)
         (setf (slot-value target-context 'gdbremote::no-ack-mode) nil)
         (accept-gdb-connection target-context port address trace-exchange)
         (until single-shot)))
