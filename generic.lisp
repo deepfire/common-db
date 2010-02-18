@@ -78,6 +78,50 @@
 (defun (setf memory-ref) (value memory-device offset)
   (memory-set memory-device offset value))
 
+(defgeneric merge-u8-extremity (memdev vector base length headp writep)
+  (:method ((o little-endian-memory-device) vector base length headp writep &aux
+            (width (memory-device-byte-width o)))
+    (declare (type (vector (unsigned-byte 8)) vector))
+    (let ((extremity (if headp base (+ base length))))
+      (with-alignment (granule-base left right mask) width extremity
+        (unless (= granule-base extremity)
+          (let* ((exvec (make-array width :element-type '(unsigned-byte 8))))
+            (setf (u8-vector-wordle exvec 0 width) (memory-ref o granule-base))
+            (operate-on-extremity length headp left right
+                                  (if writep
+                                      (lambda (g i) (setf (aref exvec g) (aref vector i)))
+                                      (lambda (g i) (setf (aref vector i) (aref exvec g)))))
+            (when writep
+              (setf (memory-ref o granule-base) (u8-vector-wordle exvec 0 width))))))))
+  (:method ((o big-endian-memory-device) vector base length headp writep &aux
+            (width (memory-device-byte-width o)))
+    (declare (type (vector (unsigned-byte 8)) vector))
+    (let ((extremity (if headp base (+ base length))))
+      (with-alignment (granule-base left right mask) width extremity
+        (unless (= granule-base extremity)
+          (let* ((exvec (make-array width :element-type '(unsigned-byte 8))))
+            (setf (u8-vector-wordbe exvec 0 width) (memory-ref o granule-base))
+            (operate-on-extremity length headp left right
+                                  (if writep
+                                      (lambda (g i) (setf (aref exvec g) (aref vector i)))
+                                      (lambda (g i) (setf (aref vector i) (aref exvec g)))))
+            (when writep
+              (setf (memory-ref o granule-base) (u8-vector-wordbe exvec 0 width)))))))))
+
+(defgeneric bioable-memory-io (device vector address size writep)
+  (:method ((o bioable-memory-device) vector address size writep)
+    (declare (type (vector (unsigned-byte 8)) vector) (type integer address size) (type boolean writep))
+    (merge-u8-extremity o vector address size t writep)
+    (with-alignment (nil nil head) (memory-device-byte-width o) address
+      (with-alignment (nil tail) (memory-device-byte-width o) (+ address size)
+        (if writep
+            (write-aligned-block o vector (+ address head) (- size head tail) head) 
+            (read-aligned-block o vector (+ address head) (- size head tail) head))))
+    (merge-u8-extremity o vector address size nil writep)))
+
+;;;;
+;;;; Mapped device: base, scale, set-fn, get-fn, device-to-backend-fn
+;;;;
 (define-protocol-device-class mapped-device nil ()
   ((base :accessor mapped-device-base :initarg :base)
    (scale :accessor mapped-device-scale :initarg :scale)

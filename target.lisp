@@ -51,7 +51,7 @@
 ;;;
 ;;; Target
 ;;;
-(define-protocol-device-class target :target (memory-device)
+(define-protocol-device-class target :target (bioable-memory-device)
   ((backend :type interface)
    (platform :accessor target-platform :initarg :platform)
    (enumpool :accessor target-enumpool :initarg :enumpool)
@@ -62,6 +62,8 @@
 
 (define-protocol-device-class 32bit-bus-target :target (32bit-memory-device target) ())
 (define-protocol-device-class 64bit-bus-target :target (32bit-memory-device target) ())
+(define-protocol-device-class little-endian-target :target (little-endian-memory-device target) ())
+(define-protocol-device-class big-endian-target :target (big-endian-memory-device target) ())
 
 (defmethod print-object ((o target) stream)
   (format stream "~@<#<~;~A:~A platform: ~S devices: ~S backend: ~S~;>~:@>"
@@ -217,48 +219,33 @@ potential SLAVES."
 (defgeneric exec-raw (target insn &optional address))
 
 ;;;;
-;;;; Memory device
+;;;; Memory device & bioable
 ;;;;
 (defmethod memory-device-32bit-ref ((o 32bit-bus-target) address)
   (interface-bus-word (backend o) (fixmap-address o address)))
 (defmethod memory-device-32bit-set ((o 32bit-bus-target) address val)
   (setf (interface-bus-word (backend o) (fixmap-address o address)) val))
 
-(defun merge-u8-extremity-32 (interface vector base length headp writep)
-  (declare (type (vector (unsigned-byte 8)) vector))
-  (let ((extremity (if headp base (+ base length))))
-    (with-alignment (granule-base left right mask) 4 extremity
-      (unless (= granule-base extremity)
-        (let* ((exvec (make-array 4 :element-type '(unsigned-byte 8))))
-          (setc (u8-vector-word32le exvec 0) (interface-bus-word interface granule-base))
-          (operate-on-extremity length headp left right
-                                (if writep
-                                    (lambda (g i) (setf (aref exvec g) (aref vector i)))
-                                    (lambda (g i) (setf (aref vector i) (aref exvec g)))))
-          (when writep
-            (setc (interface-bus-word interface granule-base) (u8-vector-word32le exvec 0))))))))
+(defmethod read-aligned-block ((o 32bit-bus-target) address vector offset length)
+  (interface-bus-io (backend o) vector address length :read offset))
 
-(defun bus-extent (vector physaddr size dir tgt &aux (interface (backend tgt)))
-  (merge-u8-extremity-32 interface vector physaddr size t (eq dir :write))
-  (with-alignment (nil nil head) 4 physaddr
-    (with-alignment (nil tail) 4 (+ physaddr size)
-      (interface-bus-io interface vector (+ physaddr head) (- size head tail) dir head)))
-  (merge-u8-extremity-32 interface vector physaddr size nil (eq dir :write)))
+(defmethod write-aligned-block ((o 32bit-bus-target) address vector offset length)
+  (interface-bus-io (backend o) vector address length :write offset))
 
 ;;; XXX: inefficient
 (defmethod read-block ((o 32bit-bus-target) base vector &optional start end)
   (if (or start end)
       (let* ((iolen (- end start))
              (iovec (make-array iolen :element-type '(unsigned-byte 8))))
-        (bus-extent iovec (fixmap-address o base) iolen :read o)
+        (bioable-memory-io o iovec (fixmap-address o base) iolen nil)
         (setf (subseq vector start end) iovec))
-      (bus-extent vector (fixmap-address o base) (length vector) :read o)))
+      (bioable-memory-io o vector (fixmap-address o base) (length vector) nil)))
 
 ;;; XXX: inefficient
 (defmethod write-block ((o 32bit-bus-target) base vector &optional start end)
   (if (or start end)
-      (bus-extent (subseq vector start end) (fixmap-address o base) (- end start) :write o)
-      (bus-extent vector (fixmap-address o base) (length vector) :write o)))
+      (bioable-memory-io o (subseq vector start end) (fixmap-address o base) (- end start) t)
+      (bioable-memory-io o vector (fixmap-address o base) (length vector) t)))
 
 #+sbcl
 (define-device-class busmem :target (sequence device)

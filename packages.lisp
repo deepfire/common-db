@@ -47,6 +47,8 @@
    #:target
    #:32bit-bus-target
    #:64bit-bus-target
+   #:little-endian-target
+   #:big-endian-target
    #:system
    ;; cores
    #:general-purpose-core
@@ -164,6 +166,7 @@
    #:16bit-memory-device
    #:32bit-memory-device
    #:64bit-memory-device
+   #:bioable-memory-device
    #:memory-device-byte-width
    #:memory-device-8bit-ref
    #:memory-device-8bit-set
@@ -175,6 +178,8 @@
    #:memory-device-64bit-set
    #:memory-ref
    #:memory-set
+   #:merge-u8-extremity
+   #:bioable-memory-io
    ;; mapped-device
    #:mapped-device
    #:mapped-device-p
@@ -315,7 +320,6 @@
    #:make-target-device
    #:create-target-device-from-spec
    #:with-target-devices
-   #:bus-extent
    #:busmem
    ;; conditions
    #:target-condition
