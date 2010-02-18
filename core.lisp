@@ -73,11 +73,29 @@ to the concrete classes.")
 (defsetf core-trail set-core-trail)
 (defgeneric make-neutral-trail (core))
 
-(defgeneric pc (core))
-(defgeneric (setf pc) (value core))
+(defgeneric pc (core)
+  (:documentation
+   "The backend must provide access to a program counter."))
+(defgeneric (setf pc) (value core)
+  (:documentation
+   "The backend must provide access to a program counter."))
 
-(defgeneric push-core-pipeline-stages (core nstages))
-(defgeneric patch-core-pipeline-reginstances (core) (:method ((o core))))
+(defgeneric save-core-pipeline (core &key trail-important)
+  (:documentation
+   "The provided default method copies CORE's pipeline into backing store,
+using CORE-MOMENT and CORE-TRAIL.  TRAIL-IMPORTANT provides means to specify
+the importance of the trail; it defaults to T."))
+(defgeneric finish-core-pipeline (core)
+  (:documentation
+   "The backend must provide a method which is expected to make sure that
+all effects of instructions on CORE's pipeline have taken place."))
+(defgeneric patch-core-pipeline-reginstances (core)
+  (:documentation
+   "Make sure that pipeline register modifications, as channeled through
+their respective register instances, go to the proper backing store, so
+they take effect upon transition to :FREE state.
+The default primary method does nothing.")
+  (:method ((o core))))
 (defgeneric core-pipeline-addresses (core &optional cached)
   (:documentation
    "Obtain a list of addresses of instructions currently on CORE's pipeline,
@@ -125,29 +143,26 @@ to return an atomic picture of pipeline when CORE is running."))
 (defgeneric stop-to-free (core &key &allow-other-keys)  (:method ((o core) &key &allow-other-keys) t))
 (defgeneric analyse-core (core)
   (:documentation
-   "Collect necessary forensics just after the core stopped.
-The backend is required to provide a primary method, which would collect enough
-information for DEDUCE-STOP-REASON to succeed."))
+   "The backend is required to provide a primary method, which would collect
+necessary forensics information for DEDUCE-STOP-REASON to succeed."))
 (defgeneric deduce-stop-reason (core)
   (:documentation
    "The backend is required to provide a primary method, which is expected to return
 an object of type CORE-STOP-REASON."))
 (defgeneric poll-core-interruptible (core &optional watch-fn watch-period iteration-period iteration-limit)
   (:documentation
-   "The default primary method polls CORE until either CORE-RUNNING-P returns NIL, 
+   "The provided default primary method polls CORE until either CORE-RUNNING-P returns NIL, 
 with ITERATION-PERIOD granularity, or user requests termination.  WATCH-FN is executed
 every ITERATION-PERIOD * WATCH-PERIOD nanoseconds.
 ITERATION-LIMIT optionally soft-limits the time spent sleeping."))
 (defgeneric wait-core (core &optional watch-fn watch-period iteration-period iteration-limit)
   (:documentation
-   "Poll core until it stops, then ANALYSE it.
-Default primary method calls POLL-CORE-INTERRUPTIBLE, and does ANALYSE-CORE, unless
-there was a timeout."))
+   "The provided default primary method calls POLL-CORE-INTERRUPTIBLE, and does ANALYSE-CORE,
+unless there was a timeout."))
 (defgeneric interrupt-core (core)
   (:documentation
-   "Switch core to :STOP state and ANALYSE it.
-Default primary method, ensures that the core is in :STOP state and calls ANALYSE-CORE
-in the case it wasn't in it already."))
+   "The provided default primary method ensures that the core is in :STOP state and
+calls ANALYSE-CORE in case it wasn't in it already."))
 
 ;;; slaves
 (defgeneric core-slaves (core))
@@ -189,13 +204,7 @@ in the case it wasn't in it already."))
 (defgeneric add-sw-breakpoint (core address))
 (defgeneric disable-breakpoint (breakpoint))
 (defgeneric setup-hw-breakpoint (breakpoint address skip-count &key &allow-other-keys))
-(defgeneric add-hw-breakpoint (core address &optional skip-count)
-  (:method ((core core) address &optional (skipcount 0))
-    (if-let ((free-breakpoint (allocate-hardware-breakpoint core)))
-      (setup-hw-breakpoint free-breakpoint address skipcount)
-      (error "~@<No free breakpoints.  Used:~{ ~8,'0X~}~:@>"
-             (do-core-hardware-breakpoints (b core)
-               (collect (trap-address b)))))))
+(defgeneric add-hw-breakpoint (core address &optional skip-count))
 (defgeneric add-cell-watchpoint (core address &optional skip-count))
 (defgeneric coerce-to-trap (trap-specifier))
 
@@ -406,6 +415,11 @@ in the case it wasn't in it already."))
 (defmethod (setf saved-core-trail) :after (trail (o general-purpose-core))
   (setf (core-trail-important-p o) t))
 
+(defmethod save-core-pipeline ((o general-purpose-core) &key (trail-important t))
+  (setf (saved-core-moment o) (core-moment o)
+        (saved-core-trail o) (core-trail o)
+        (core-trail-important-p o) trail-important))
+
 (defmethod gpr-by-name ((o core) (gpr-name symbol))
   (gpr o (optype-evaluate (isa-gpr-optype (core-isa o)) gpr-name)))
 
@@ -438,8 +452,7 @@ in the case it wasn't in it already."))
                                     :watch-period watch-period :iteration-period iteration-period :run-time run-iteration-limit))
 
 (defmethod analyse-core :before ((o general-purpose-core))
-  (setf (saved-core-moment o) (core-moment o)
-        (saved-core-trail o) (core-trail o)))
+  (save-core-pipeline o))
 
 (defmethod analyse-core :after ((o general-purpose-core))
   (setf (core-stop-reason o) (or (deduce-stop-reason o)
@@ -498,6 +511,63 @@ is performed."
                  :address (or address (moment-fetch (saved-core-moment core)))
                  :moment-changed moment-changed)
           :free)))
+
+(defun invoke-with-core-debugger (core fn &key segment address)
+  (labels ((reader (desc)
+             (format *debug-io* "Enter a positive integer for ~A: " desc)
+             (finish-output *debug-io*)
+             (let ((input (read *debug-io*)))
+               (if (and (integerp input) (plusp input))
+                   input
+                   (progn
+                     (format *debug-io* "~S is not a positive integer, please try again.~%" input)
+                     (finish-output *debug-io*)
+                     (reader desc)))))
+           (nvalue-reader (&rest descs)
+             (mapcar #'reader descs))
+           (reset-core ()
+             (reset-platform core)
+             (setf (state core) :debug)
+             t))
+    (loop (restart-case (funcall fn)
+            (cycle ()
+              :report "Recheck core status.")
+            (exit-and-continue ()
+              :report "Exit the debugger and continue execution."
+              (return))
+            (print-pipeline ()
+              :report "Print core pipeline."
+              (print-pipeline core *debug-io*))
+            (reset-and-abort ()
+              :report "Reset the core, enable debug mode and abort."
+              (reset-core)
+              (invoke-restart (find-restart 'abort)))
+            (reset-interface ()
+              :report "Reset the interface."
+              (interface:interface-reset (backend (backend core))))
+            (reset-target ()
+              :report "Reset the target and enable debug mode."
+              (reset-core))
+            (dump-memory (base size)
+              :report "Dump memory."
+              :interactive (lambda () (nvalue-reader "dump base" "dump size"))
+              (core-disassemble core base size :stream *debug-io*))
+            (disassemble-memory (base size)
+              :report "Disassemble memory."
+              :interactive (lambda () (nvalue-reader "disassemble base" "disassemble size"))
+              (core-disassemble core base size :stream *debug-io*))
+            (disassemble ()
+              :report "Disassemble the executed segment."
+              :test (lambda (c) (declare (ignore c)) segment)
+              (disassemble-and-print *debug-io*
+                                     (core-isa core)
+                                     (or address (when (typep segment 'pinned-segment) (pinned-segment-base segment)) 0)
+                                     (segment-active-vector segment)))))))
+
+(defmacro with-core-debugger ((core &key segment address) &body form)
+  `(invoke-with-core-debugger ,core (lambda () ,@form)
+                              ,@(when segment `(:segment ,segment))
+                              ,@(when address `(:address ,address))))
 
 (defun run-core-synchronous (core &key address (moment-changed (not (null address))) exit-state watch-fn watch-period (iteration-period 10000000)
                              segment iteration-limit (if-limit-reached :error) &aux
@@ -581,66 +651,6 @@ icache-related anomalies.")
 (defgeneric handle-execution-error (core condition-type condition-args)
   (:method ((o core) condition-type condition-args)
     (error (apply #'make-condition condition-type condition-args))))
-
-;;;;
-;;;; Debugger
-;;;;
-(defun invoke-with-core-debugger (core fn &key segment address)
-  (labels ((reader (desc)
-             (format *debug-io* "Enter a positive integer for ~A: " desc)
-             (finish-output *debug-io*)
-             (let ((input (read *debug-io*)))
-               (if (and (integerp input) (plusp input))
-                   input
-                   (progn
-                     (format *debug-io* "~S is not a positive integer, please try again.~%" input)
-                     (finish-output *debug-io*)
-                     (reader desc)))))
-           (nvalue-reader (&rest descs)
-             (mapcar #'reader descs))
-           (reset-core ()
-             (reset-platform core)
-             (setf (state core) :debug)
-             t))
-    (loop (restart-case (funcall fn)
-            (cycle ()
-              :report "Recheck core status.")
-            (exit-and-continue ()
-              :report "Exit the debugger and continue execution."
-              (return))
-            (print-pipeline ()
-              :report "Print core pipeline."
-              (print-pipeline core *debug-io*))
-            (reset-and-abort ()
-              :report "Reset the core, enable debug mode and abort."
-              (reset-core)
-              (invoke-restart (find-restart 'abort)))
-            (reset-interface ()
-              :report "Reset the interface."
-              (interface:interface-reset (backend (backend core))))
-            (reset-target ()
-              :report "Reset the target and enable debug mode."
-              (reset-core))
-            (dump-memory (base size)
-              :report "Dump memory."
-              :interactive (lambda () (nvalue-reader "dump base" "dump size"))
-              (core-disassemble core base size :stream *debug-io*))
-            (disassemble-memory (base size)
-              :report "Disassemble memory."
-              :interactive (lambda () (nvalue-reader "disassemble base" "disassemble size"))
-              (core-disassemble core base size :stream *debug-io*))
-            (disassemble ()
-              :report "Disassemble the executed segment."
-              :test (lambda (c) (declare (ignore c)) segment)
-              (disassemble-and-print *debug-io*
-                                     (core-isa core)
-                                     (or address (when (typep segment 'pinned-segment) (pinned-segment-base segment)) 0)
-                                     (segment-active-vector segment)))))))
-
-(defmacro with-core-debugger ((core &key segment address) &body form)
-  `(invoke-with-core-debugger ,core (lambda () ,@form)
-                              ,@(when segment `(:segment ,segment))
-                              ,@(when address `(:address ,address))))
 
 ;;;;
 ;;;; Core stop reasoning
@@ -735,6 +745,13 @@ icache-related anomalies.")
 
 (defmethod setup-hw-breakpoint :after ((o hardware-breakpoint) address skipcount &key &allow-other-keys)
   (setf (trap-enabled-p o) (not (null address))))
+
+(defmethod add-core-hw-breakpoint ((core core) address &optional (skipcount 0))
+  (if-let ((free-breakpoint (allocate-hardware-breakpoint core)))
+    (setup-hw-breakpoint free-breakpoint address skipcount)
+    (error "~@<No free breakpoints.  Used:~{ ~8,'0X~}~:@>"
+           (do-core-hardware-breakpoints (b core)
+             (collect (trap-address b))))))
 
 (defun allocate-hardware-breakpoint (core)
   (do-core-hardware-breakpoints (b core)

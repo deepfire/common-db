@@ -399,7 +399,8 @@
    #:gpr-by-name
    #:set-gpr-by-name
    ;; pipeline
-   #:push-core-pipeline-stages
+   #:save-core-pipeline
+   #:finish-core-pipeline
    #:patch-core-pipeline-reginstances
    #:core-pipeline-addresses
    #:print-pipeline
