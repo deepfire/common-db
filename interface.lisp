@@ -29,9 +29,11 @@
 (define-namespace :interface
   (:documentation "OnCD interface"))
 
-(defparameter *log-tap-register-access* nil)
-(defvar *disable-usb* nil)
 (defvar *verbose-interface-init* nil)
+(defparameter *log-tap-register-access* nil)
+
+(defvar *disable-usb* nil)
+(defvar *virtual-interface-enabled* nil)
 
 (define-condition interface-error (error)
   ((interface :reader condition-interface :initarg :interface)))
@@ -124,6 +126,7 @@ ERROR-RETURN-FORM."
 (defmethod interface-close ((o interface)) t)
 
 (defun scan-interface-busses (&optional force-rescan)
+  (bus-scan (or (root-bus 'virtif :if-does-not-exist :continue) (make-instance 'virtif-bus :name 'virtif)) force-rescan)
   (bus-scan (or (root-bus 'parport :if-does-not-exist :continue) (make-instance 'parport-bus :name 'parport)) force-rescan)
   (unless *disable-usb*
     (bus-scan (or (root-bus 'ezusb :if-does-not-exist :continue) (make-instance 'ezusb-bus :name 'ezusb)) force-rescan)))

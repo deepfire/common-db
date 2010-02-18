@@ -1,5 +1,14 @@
 ;;; -*- Mode: Lisp; indent-tabs-mode: nil -*-
 
+(cl:defpackage #:interface-virtual
+  (:use :common-lisp :alexandria :iterate :pergamum :setc :bitmop :device-model
+        :portability :options :bus :interface)
+  (:shadowing-import-from :bitmop #:space)
+  (:export
+   #:virtif-interface
+   #:*virtual-interface-stop-during-reset*
+   ))
+
 (cl:defpackage #:interface-parport
   (:use :common-lisp :alexandria :iterate :pergamum :setc :bitmop :device-model
         :portability :options :bus :interface)

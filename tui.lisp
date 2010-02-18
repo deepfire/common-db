@@ -105,6 +105,7 @@
     --core-multiplier <integer> Set core frequency multiplier.
     --list-platforms            List all known platforms and quit.
     --platform <platform-name>  Specify platform manually, instead of detection.
+    --virtual                   Enable the virtual interface/target/core.
     --no-scan                   Don't scan interfaces.
     --list-contexts             After scanning interfaces, list contexts of 
                                   found target devices and quit.
@@ -144,7 +145,7 @@
     (write-string "#+END_EXAMPLE") (terpri)))
 
 (defvar *standard-parameters* '((:load :string) (:core-multiplier :decimal) :before-hook :context :platform :memory-detection-threshold))
-(defvar *standard-switches*   '(:no-rc :no-scan :list-contexts :list-platforms :help :help-en :version :disable-usb :no-memory-detection
+(defvar *standard-switches*   '(:no-rc :virtual :no-scan :list-contexts :list-platforms :help :help-en :version :disable-usb :no-memory-detection
                                 :disable-debugger :print-backtrace-on-errors :early-break-on-signals :break-on-signals
                                 :run-tests :ignore-test-failure :quit-after-tests
                                 ;; not documented
@@ -167,7 +168,7 @@
      (with-quit-restart
        (destructuring-bind (&rest args &key (verbose verbose)
                                   (no-rc no-rc) before-hook
-                                  core-multiplier no-scan
+                                  core-multiplier virtual no-scan
                                   load quit-after-load
                                   run-tests ignore-test-failures quit-after-tests
                                   log-pipeline-crit
@@ -191,6 +192,8 @@
                 (*log-system-configuration* verbose)
                 (discrimination:*discriminate-verbosely* verbose)
                 (*orgify* orgify)
+                (*virtual-interface-enabled* virtual)
+                (*virtual-target-enabled* virtual)
                 (*disable-usb* disable-usb)
                 (*forced-platform* (when platform
                                      (or (find-symbol (string-upcase (string platform)) :platform-definitions)

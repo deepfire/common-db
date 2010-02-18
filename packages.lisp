@@ -21,6 +21,8 @@
    #:*log-interface-bus-discovery*      ; common-db-core
    #:*verbose-interface-init*           ; interface
 
+   #:*virtual-interface-enabled*        ; interface
+   #:*virtual-target-enabled*           ; targets/virtual
    #:*disable-usb*                      ; interface
    #:*memory-detection-threshold*       ; platform-memory
    #:*orgify*                           ; common-db-tui
@@ -235,6 +237,7 @@
   (:shadowing-import-from :bitmop #:space)
   (:export
    #:interface-bus
+   #:virtif-bus
    #:parport-bus
    #:ezusb-bus
    #:interface

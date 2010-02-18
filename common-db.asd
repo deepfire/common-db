@@ -64,6 +64,7 @@
             ((:file "packages")
              (:file "elvees")
              ;;
+             (:file "virtif" :depends-on ("packages"))
              (:file "parport" :depends-on ("packages" "elvees"))
              #+linux
              (:file "ezusb-elvees-linux" :depends-on ("packages" "elvees"))
@@ -87,11 +88,11 @@
    (:module "arch"
             :depends-on ("address-map" "core" "eltext" "interfaces" "gdb")
             :components
-            (:module "mips"
-                     :components
-                     ((:file "mips")
-                      (:file "state" :depends-on ("mips"))
-                      (:file "gdb" :depends-on ("mips")))))
+            ((:module "mips"
+                      :components
+                      ((:file "mips")
+                       (:file "state" :depends-on ("mips"))
+                       (:file "gdb" :depends-on ("mips"))))))
    ;;
    (:file "flash" :depends-on ("system" "arch"))
    ;;
@@ -137,4 +138,19 @@
                          #+(and linux sbcl nil)
                          "host-pci")
             :components
-            ())))
+            ((:module "virtual"
+                      :components
+                      ((:file "packages")
+                       ;;
+                       (:file "space" :depends-on ("packages"))
+                       (:file "target" :depends-on ("packages"))
+                       ;;
+                       (:file "platform" :depends-on ("space"))
+                       ;;
+                       (:file "virtcore" :depends-on ("space" "target"))
+                       (:file "memory" :depends-on ("space" "target"))
+                       ;;
+                       (:file "sim" :depends-on ("target" "platform" "virtcore"))
+                       (:file "definitions" :depends-on ("target" "platform" "virtcore" "memory"))
+                       ;;
+                       (:file "ancillary" :depends-on ("sim" "definitions"))))))))

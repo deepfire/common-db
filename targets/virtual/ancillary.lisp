@@ -1,8 +1,8 @@
-;;; -*- Mode: LISP; Syntax: COMMON-LISP; Package: BUS; Base: 10; indent-tabs-mode: nil -*-
+;;; -*- Mode: LISP; Syntax: COMMON-LISP; Package: VIRTCORE; Base: 10; indent-tabs-mode: nil -*-
 ;;;
-;;;  (c) copyright 2009, ГУП НПЦ "Элвис"
+;;;  (c) copyright 2010, ГУП НПЦ "Элвис"
 ;;;
-;;;  (c) copyright 2009 by
+;;;  (c) copyright 2010 by
 ;;;           Samium Gromoff (_deepfire@feelingofgreen.ru)
 ;;;
 ;;; This library is free software; you can redistribute it and/or
@@ -20,10 +20,9 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :options)
+(in-package :virtcore)
 
-(defvar *log-stream* t 
-  "Global log stream for the whole debugger.")
 
-(defvar *virtual-target-enabled* nil
-  "Whether the virt target shows up on the virt interface.")
+;;; Layering violation?
+(defmethod comdb:default-display-list ((platform virtual-platform) interface target core)
+  (list :fetch :dec :exec :mem :writeback :insn))
