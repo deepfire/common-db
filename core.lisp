@@ -148,7 +148,7 @@ to the concrete classes.")
     "~A backend: ~A" id (with-output-to-string (string) (print-device-object backend string)))
 
 (define-print-object-method ((o general-purpose-core) id backend moment trail)
-    "~A backend: ~A moment: ~A trail: ~A"
+    "~A backend: ~A ~_moment: ~A ~_trail: ~A"
   id (with-output-to-string (string) (print-device-object backend string)) moment trail)
 
 (define-condition core-condition ()
