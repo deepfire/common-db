@@ -188,6 +188,12 @@ to the concrete classes.")
 ;;;; Pipeline
 ;;;;
 (defgeneric push-core-pipeline-stages (core nstages))
+(defgeneric core-pipeline-addresses (core &optional cached)
+  (:documentation
+   "Obtain a list of addresses of instructions currently on CORE's pipeline,
+in most-recent-first order.  If CACHED is non-NIL, return the cached values,
+instead of going to the device.  Note, that this function isn't obliged
+to return an atomic picture of pipeline when CORE is running."))
 (defgeneric print-pipeline (core stream))
 (defgeneric print-pipeline-terse (core stream))
 ;;;;

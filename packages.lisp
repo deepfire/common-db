@@ -398,6 +398,7 @@
    #:set-gpr-by-name
    ;; pipeline
    #:push-core-pipeline-stages
+   #:core-pipeline-addresses
    #:print-pipeline
    #:print-pipeline-terse
    ;; initialisation

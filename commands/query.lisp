@@ -167,3 +167,11 @@ NAME-OR-ADDRESS.  В том случае если указано имя реги
   "Распечатать содержимое TLB.  Размер отображаемый страницей принимается
 равным PAGE-SIZE."
   (tlb-address-map core (get-tlb core) page-size))
+
+(defun pipesyms ()
+  #+help-ru
+  "Вернуть список имён функций соответствующих адресам на конвейере,
+используя активную таблицу символов."
+  #-help-ru
+  "Return a list of symbols referred to by the pipeline."
+  (remove-duplicates (mapcar #'addrsym (core-pipeline-addresses *core*))))
