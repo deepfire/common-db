@@ -237,7 +237,7 @@
                    (quit (if successp 0 1)))))
              (when run-tests
                (let ((successp (run-tests)))
-                 (unless (or successp ignore-test-failures)
+                 (unless (or successp ignore-test-failures quit-after-tests)
                    (error "~@<Some tests failed.~:@>"))
                  (when quit-after-tests
                    (quit (if successp 0 1)))))
