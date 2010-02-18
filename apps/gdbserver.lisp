@@ -262,7 +262,9 @@
                                  :no-memory-detection t))
 
 (defun gdbserver (&key (target-context *current*) (address "127.0.0.1") (port 9000) single-shot trace-exchange &aux
-                  (core (ctx-core target-context)))
+                  (core (if target-context
+                            (ctx-core target-context)
+                            (error "~@<No active target context: cannot start GDB server.~:@>"))))
   (change-class target-context 'common-db-gdbserver)
   (let ((ri-names (gdb:core-register-order core)))
     (setf *gdb-register-instance-vector*
