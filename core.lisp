@@ -75,10 +75,12 @@ to the concrete classes.")
 
 (defgeneric pc (core)
   (:documentation
-   "The backend must provide access to a program counter."))
+   "The backend must provide access to an illusion of a program counter,
+which doesn't really exists as a single entity, on pipelined CPUs."))
 (defgeneric (setf pc) (value core)
   (:documentation
-   "The backend must provide access to a program counter."))
+   "The backend must provide access to an illusion of a program counter,
+which doesn't really exists as a single entity, on pipelined CPUs."))
 
 (defgeneric save-core-pipeline (core &key trail-important)
   (:documentation
