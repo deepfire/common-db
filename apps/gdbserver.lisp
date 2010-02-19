@@ -281,10 +281,13 @@
 (defmethod gdb-monitor ((o common-db-gdbserver) (command (eql :eval)) rest-arg)
   (when *trace-comdb-calls*
     (log-comdb 'eval "~S" rest-arg))
-  (princ-to-string (handler-case (eval (let ((*package* (find-package :common-db)))
-                                         (read-from-string rest-arg)))
-                     (serious-condition (c)
-                       (format nil "~A" c)))))
+  (values-list
+   (mapcar #'princ-to-string
+           (multiple-value-list
+            (handler-case (eval (let ((*package* (find-package :common-db)))
+                                  (read-from-string rest-arg)))
+              (serious-condition (c)
+                (format nil "~A" c)))))))
 
 ;;;;
 ;;;; Stubs
