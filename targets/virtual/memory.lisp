@@ -35,36 +35,35 @@
   ()
   (:layouts (:vmport-02 mapped-ref (setf mapped-ref))))
 
-(setf *memory-configurations*
-      (alist-hash-table
-       (list
-        `(:plain .  ,(make-memory-config
-                      :plain
-                      '(:vcscon0      (:type        :enable      :wait-states  :busaddr  :addrmask)
-                                      (:sync+dyn    t            0             0         #xfc))
-                      '(:vcscon1      (:type        :enable      :wait-states  :busaddr  :addrmask)
-                                      (:sync+dyn    t            0             4         #xfc))
-                      '(:vmemcon      (:init        :cas-latency :refresh      :page)
-                                      (t            :cl-3        #x70          :|512|))))
-        `(:d02-1 .  ,(make-memory-config
-                      :d02-1
-                      '(:vcscon0      (:type        :enable      :wait-states  :busaddr  :addrmask)
-                                      (:sync+dyn    t            0             0         #xfc))
-                      '(:vcscon1      (:type        :enable      :wait-states  :busaddr  :addrmask)
-                                      (:async+wait  t            4             8         #xfc))
-                      '(:vmemcon-d02  (:init        :cas-latency :page         :prefetch)
-                                      (t            :cl-3        :|512|        16))))
-        `(:d02-2 . ,(make-memory-config
-                     :d02-2
-                     '(:vcscon0      (:type         :enable      :wait-states  :busaddr  :addrmask)
-                                     (:sync+dyn     t            0             0         #xfc))
-                     '(:vcscon1      (:type         :enable      :wait-states  :busaddr  :addrmask)
-                                     (:async+wait   t            4             8         #xfc))
-                     '(:vmemcon-d02  (:init         :cas-latency :page         :prefetch)
-                                     (t             :cl-2        :|512|        32)))))))
+(defmethod platform-memory-configurations ((o virtual-platform))
+  (list
+   `(:plain . ,(make-memory-config
+                :plain
+                '(:vcscon0      (:type        :enable      :wait-states  :busaddr  :addrmask)
+                  (:sync+dyn    t            0             0         #xfc))
+                '(:vcscon1      (:type        :enable      :wait-states  :busaddr  :addrmask)
+                  (:sync+dyn    t            0             4         #xfc))
+                '(:vmemcon      (:init        :cas-latency :refresh      :page)
+                  (t            :cl-3        #x70          :|512|))))
+   `(:d02-1 . ,(make-memory-config
+                :d02-1
+                '(:vcscon0      (:type        :enable      :wait-states  :busaddr  :addrmask)
+                  (:sync+dyn    t            0             0         #xfc))
+                '(:vcscon1      (:type        :enable      :wait-states  :busaddr  :addrmask)
+                  (:async+wait  t            4             8         #xfc))
+                '(:vmemcon-d02  (:init        :cas-latency :page         :prefetch)
+                  (t            :cl-3        :|512|        16))))
+   `(:d02-2 . ,(make-memory-config
+                :d02-2
+                '(:vcscon0      (:type         :enable      :wait-states  :busaddr  :addrmask)
+                  (:sync+dyn     t            0             0         #xfc))
+                '(:vcscon1      (:type         :enable      :wait-states  :busaddr  :addrmask)
+                  (:async+wait   t            4             8         #xfc))
+                '(:vmemcon-d02  (:init         :cas-latency :page         :prefetch)
+                  (t             :cl-2        :|512|        32))))))
 
-(setf *memory-configuration-order*
-      '(:plain :d02-2 :d02-1))
+(defmethod platform-memory-configuration-order ((o virtual-platform))
+  '(:plain :d02-2 :d02-1))
 
 (defmethod memory-config-valid-for-platform-p ((o virtual-platform) (c memory-config))
   (memory-config-valid-for-device-classes-p

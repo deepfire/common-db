@@ -23,8 +23,6 @@
 (in-package :sysdev)
 
 
-(defvar *memory-configurations*)
-(defvar *memory-configuration-order*)
 (defparameter *memory-detection-threshold* #x1000)
 
 
@@ -82,7 +80,16 @@
   name
   register-values)
 
-(define-root-container *memory-configurations* memory-config :iterator do-memory-configs)
+(defgeneric platform-memory-configurations (platform)
+  (:documentation
+   "The implementation must return an alist of MEMORY-CONFIGs keyed by name."))
+(defgeneric platform-memory-configuration-order (platform)
+  (:documentation
+   "The implementation must return a list of memory configuration names."))
+
+(defun memory-config (platform name)
+  (or (cdr (assoc name (platform-memory-configurations platform)))
+      (platform-error "~@<Platform ~A doesn't have a memory config named ~A.~:@>" (type-of platform) name)))
 
 (defun memory-config-valid-for-device-classes-p (config classes)
   "See if all of CONFIG's registers refer to the union of registers
@@ -152,8 +159,8 @@ the consequent behavior:
       (pprint-logical-block (*log-stream* nil :per-line-prefix "NOTE: ")
         (format *log-stream* "trying memory configurations for bus address #x00000000:~%")
         (multiple-value-bind (config size)
-            (iter (for config-name in *memory-configuration-order*)
-                  (for config = (memory-config config-name))
+            (iter (for config-name in (platform-memory-configuration-order platform))
+                  (for config = (memory-config platform config-name))
                   (unless (memory-config-valid-for-platform-p platform config)
                     (next-iteration))
                   (finish-output *log-stream*)

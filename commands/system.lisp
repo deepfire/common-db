@@ -41,12 +41,12 @@
   "List names of memory configurations valid for current target."
   (mapcar #'memory-config-name
           (xform target (curry #'remove-if-not (curry #'memory-config-valid-for-platform-p (target-platform target)))
-                 (hash-table-values *memory-configurations*))))
+                 (mapcar #'cdr (platform-memory-configurations (target-platform target))))))
 
 (defun compile-memconfig (name)
   #+help-ru
   "Вывести список пар адрес-значение соответствующих названной конфигурации памяти."
-  (iter (for (regname regbitnames regbitvalues) in (memory-config-register-values (memory-config name)))
+  (iter (for (regname regbitnames regbitvalues) in (memory-config-register-values (memory-config (target-platform *target*) name)))
         (multiple-value-bind (address value) (compute-raw-register-value regname regbitnames regbitvalues)
           (collect (cons address value)))))
 
@@ -55,7 +55,7 @@
   "Детально, по битовым полям, разобрать структуру конфигурации памяти
 с именем NAME.  Если имя не указано, разобрать текущую настройку."
   (let ((config (if name
-                    (memory-config name)
+                    (memory-config (target-platform *target*) name)
                     (platform-memory-configuration (target-platform *target*)))))
     (format *log-stream* "Memory config ~A:~%" (memory-config-name config))
     (iter (for (regname fieldnames fieldvalues) in (memory-config-register-values config))
@@ -89,8 +89,8 @@
 When TRY is specified, and non-NIL a TESTMEM is performed afterwards.
 When REMEMBER is specified, and non-NIL, the configuration is
 remembered for the current target."
-  (let ((platform (target-platform *target*))
-        (config (memory-config name)))
+  (let* ((platform (target-platform *target*))
+         (config (memory-config platform name)))
     (apply-memory-config platform config)
     (when test
       (testmem 0 test-size))

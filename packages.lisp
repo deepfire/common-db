@@ -277,6 +277,8 @@
   (:shadowing-import-from :bitmop #:space)
   (:export
    #:platform-target
+   #:platform-memory-configurations
+   #:platform-memory-configuration-order
    #:platform-memory-configuration
    #:platform-predefined-devices
    #:platform-memory-map
