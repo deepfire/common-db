@@ -51,10 +51,12 @@
 (defun virt-gpr (core sel) (aref (virtcore-gpr core) sel))
 (defun virt-fpr (core sel) (aref (virtcore-fpr core) sel))
 (defun virt-cop0 (core sel) (aref (virtcore-cop0 core) sel))
+(defun virt-cop1 (core sel) (aref (virtcore-cop1 core) sel))
 (defun virt-hilo (core sel) (aref (virtcore-hilo core) sel))
 (defun (setf virt-gpr) (val core sel) (setf (aref (virtcore-gpr core) sel) val))
 (defun (setf virt-fpr) (val core sel) (setf (aref (virtcore-fpr core) sel) val))
 (defun (setf virt-cop0) (val core sel) (setf (aref (virtcore-cop0 core) sel) val))
+(defun (setf virt-cop1) (val core sel) (setf (aref (virtcore-cop1 core) sel) val))
 (defun (setf virt-hilo) (val core sel) (setf (aref (virtcore-hilo core) sel) val))
 
 (define-device-class virtcore :core (mipsel torn-pipeline-mips-core)
@@ -69,6 +71,7 @@
    (gpr :reader virtcore-gpr :initarg :gpr)
    (fpr :reader virtcore-fpr :initarg :fpr)
    (cop0 :reader virtcore-cop0 :initarg :cop0)
+   (cop1 :reader virtcore-cop1 :initarg :cop0)
    (hilo :reader virtcore-hilo :initarg :hilo))
   (:default-initargs
    :pcf #xbfc00000
@@ -82,6 +85,7 @@
    :gpr (make-array 32 :element-type '(unsigned-byte 32))
    :fpr (make-array 32 :element-type '(unsigned-byte 32))
    :cop0 (make-array 32 :element-type '(unsigned-byte 32))
+   :cop1 (make-array 32 :element-type '(unsigned-byte 32))
    :hilo (make-array 2 :element-type '(unsigned-byte 32))
    :default-sw-breakpoint-type 'virtcore-mips-software-breakpoint
    :traps          (alist-hash-table
@@ -101,6 +105,7 @@
             (:gpr virt-gpr (setf virt-gpr))
             (:fpr virt-fpr (setf virt-fpr))
             (:cop0 virt-cop0 (setf virt-cop0))
+            (:cop1 virt-cop1 (setf virt-cop1))
             (:hilo virt-hilo (setf virt-hilo))))
 
 (defclass virtcore-trail (trail)
