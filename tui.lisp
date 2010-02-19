@@ -193,8 +193,6 @@
                 (*log-system-configuration* verbose)
                 (discrimination:*discriminate-verbosely* verbose)
                 (*orgify* orgify)
-                (*virtual-interface-enabled* virtual)
-                (*disable-physical-interfaces* no-physical)
                 (*virtual-target-enabled* virtual)
                 (*forced-platform* (when platform
                                      (or (find-symbol (string-upcase (string platform)) :platform-definitions)
@@ -220,7 +218,8 @@
              (funcall (compile nil `(lambda () ,before-hook))))
            (unless no-scan
              (with-retry-restarts ((retry () :report "Retry scanning interface busses."))
-               (scan :skip-platform-init no-platform-init)
+               (scan :physical (not no-physical) :virtual virtual
+                     :skip-platform-init no-platform-init)
                (unless *current*
                  (error "~@<No devices were found attached to active busses.~:@>"))))
            (cond (list-contexts (list-contexts)

@@ -31,8 +31,6 @@
 
 (defvar *verbose-interface-init* nil)
 (defparameter *log-tap-register-access* nil)
-
-(defvar *disable-physical-interfaces* nil)
 (defvar *virtual-interface-enabled* nil)
 
 (define-condition interface-error (error)
@@ -128,10 +126,12 @@ ERROR-RETURN-FORM."
 
 (defmethod interface-close ((o interface)) t)
 
-(defun scan-interface-busses (&optional force-rescan)
+(defun scan-interface-busses (&key force-rescan virtual (physical t))
   #-disable-virtcore
-  (bus-scan (or (root-bus 'virtif :if-does-not-exist :continue) (make-instance 'virtif-bus :name 'virtif)) force-rescan)
-  (unless *disable-physical-interfaces*
+  (let ((*virtual-interface-enabled* virtual)
+        (*virtual-target-enabled* virtual))
+    (bus-scan (or (root-bus 'virtif :if-does-not-exist :continue) (make-instance 'virtif-bus :name 'virtif)) force-rescan))
+  (when physical
     (bus-scan (or (root-bus 'parport :if-does-not-exist :continue) (make-instance 'parport-bus :name 'parport)) force-rescan)
     (bus-scan (or (root-bus 'ezusb :if-does-not-exist :continue) (make-instance 'ezusb-bus :name 'ezusb)) force-rescan)))
 

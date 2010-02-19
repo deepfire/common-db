@@ -93,7 +93,7 @@ To be called once, before any use of COMMON-DB."
   (set-namespace :interface :platform :core :dsp)
   (values))
 
-(defun scan (&key force-rescan skip-platform-init &aux
+(defun scan (&key force-rescan virtual (physical t) skip-platform-init &aux
              (*skip-platform-init* skip-platform-init))
   #+help-ru
   "Функция производит следующие операции:
@@ -110,7 +110,7 @@ To be called once, before any use of COMMON-DB."
 При нескольких подключенных устройствах, активным становится последнее найденное.
 При этом, следует отметить что шина USB сканируется после портов EPP, что, как следствие,
 придаёт адаптерам на шине USB определённый приоритет."
-  (scan-interface-busses force-rescan)
+  (scan-interface-busses :force-rescan force-rescan :virtual virtual :physical physical)
   (values))
 
 (defun reset (&rest platform-args &key (core *core*) (state *depth*) &allow-other-keys)
