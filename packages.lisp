@@ -22,7 +22,7 @@
    #:*verbose-interface-init*           ; interface
 
    #:*virtual-interface-enabled*        ; interface
-   #:*disable-usb*                      ; interface
+   #:*disable-physical-interfaces*      ; interface
    #:*virtual-target-enabled*           ; targets/virtual
    #:*skip-platform-init*               ; target
    #:*memory-detection-threshold*       ; platform-memory

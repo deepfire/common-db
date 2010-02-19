@@ -106,6 +106,7 @@
     --list-platforms            List all known platforms and quit.
     --platform <platform-name>  Specify platform manually, instead of detection.
     --virtual                   Enable the virtual interface/target/core.
+    --no-physical               Omit looking for physical targets.
     --no-scan                   Don't scan interfaces.
     --no-platform-init          Do not do platform-level initialisation.
     --no-memory-detection       Don't try detecting and configuring memory.
@@ -123,7 +124,6 @@
     --no-rc                     Do not load ~~/.comdbrc
     --load <filename>           Execute commands from file.
     --quit-after-load           Quit after file execution.
-    --disable-usb               Don't user USB JTAG adapters.
     --verbose                   During operation print out MORE STATUS.
                                   Implies --print-backtrace-on-errors.
     --version                   Print version and quit.
@@ -146,7 +146,8 @@
     (write-string "#+END_EXAMPLE") (terpri)))
 
 (defvar *standard-parameters* '((:load :string) (:core-multiplier :decimal) :before-hook :context :platform :memory-detection-threshold))
-(defvar *standard-switches*   '(:no-rc :virtual :no-scan :no-platform-init :list-contexts :list-platforms :help :help-en :version :disable-usb :no-memory-detection
+(defvar *standard-switches*   '(:no-rc :virtual :no-physical  :no-scan :no-platform-init
+                                :list-contexts :list-platforms :help :help-en :version :no-memory-detection
                                 :disable-debugger :print-backtrace-on-errors :early-break-on-signals :break-on-signals
                                 :run-tests :ignore-test-failure :quit-after-tests
                                 ;; not documented
@@ -158,7 +159,7 @@
                                (help-needed-discriminator (constantly nil))
                                (user-package :comdb)
                                ;; default option customisation
-                               no-rc no-platform-init disable-usb disable-debugger print-backtrace-on-errors
+                               no-rc no-platform-init disable-debugger print-backtrace-on-errors
                                no-memory-detection memory-detection-threshold verbose)
   (declare (optimize debug))
   (portability:set-and-activate-repl-fun
@@ -169,14 +170,13 @@
      (with-quit-restart
        (destructuring-bind (&rest args &key (verbose verbose)
                                   (no-rc no-rc) before-hook
-                                  core-multiplier virtual no-scan (no-platform-init no-platform-init)
+                                  core-multiplier virtual no-physical no-scan (no-platform-init no-platform-init)
                                   load quit-after-load
                                   run-tests ignore-test-failures quit-after-tests
                                   log-pipeline-crit
                                   list-contexts context list-platforms platform
                                   early-break-on-signals break-on-signals help help-en orgify version
                                   ;; customisable
-                                  (disable-usb disable-usb)
                                   (no-memory-detection (unless run-tests no-memory-detection))
                                   (memory-detection-threshold memory-detection-threshold)
                                   (disable-debugger disable-debugger)
@@ -194,8 +194,8 @@
                 (discrimination:*discriminate-verbosely* verbose)
                 (*orgify* orgify)
                 (*virtual-interface-enabled* virtual)
+                (*disable-physical-interfaces* no-physical)
                 (*virtual-target-enabled* virtual)
-                (*disable-usb* disable-usb)
                 (*forced-platform* (when platform
                                      (or (find-symbol (string-upcase (string platform)) :platform-definitions)
                                          (error "~@<Unknown platform \"~A\": use --list-platforms.~:@>" platform))))
