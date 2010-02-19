@@ -92,6 +92,7 @@ ERROR-RETURN-FORM."
              (format stream "~@<Error persisting after reset on ~S: ~A~:@>" (condition-interface condition) (interface-error-error condition)))))
 
 (defgeneric interface-reset (interface))
+(defgeneric interface-target-discrimination-tree (interface))
 (defgeneric interface-attach-target (interface))
 (defgeneric interface-stop-target (interface))
 (defgeneric stop-target-using-interface (target interface))

@@ -73,10 +73,8 @@
 ;;;
 ;;; Identification
 ;;;
-(defvar *target-discrimination* nil)
-
 (defun find-target-class-for-interface (interface &optional (if-does-not-exist :error))
-  (or (discriminate *target-discrimination* interface)
+  (or (discriminate (interface-target-discrimination-tree interface) interface)
       (ecase if-does-not-exist
         (:error
          (interface-close interface)

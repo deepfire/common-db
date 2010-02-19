@@ -25,21 +25,8 @@
 (set-namespace :target :interface)
 
 
-;;;;
-;;;; Discrimination
-;;;;
 (defvar *virtual-target-platform-known* t
   "Whether the virt target has a known platform.")
-
-(defun discriminate-by-target-enabledness (interface)
-  (declare (ignore interface))
-  (when *virtual-target-enabled*
-    :virt))
-
-(defun discriminate-by-platform-knownness (target)
-  (declare (ignore target))
-  (when *virtual-target-platform-known*
-    :certified-virt))
 
 ;;;;
 ;;;; Custom target types
@@ -52,15 +39,26 @@
 
 (define-device-class virtual-target :target (generic-virtual-target) ())
 
-(setf *target-discrimination*
-      (make-discrimination-tree
-       (node :root #'discriminate-by-target-enabledness
-             (node :virt virtual-target))))
+;;;;
+;;;; Target discrimination
+(defun discriminate-by-target-enabledness (interface)
+  (declare (ignore interface))
+  (when *virtual-target-enabled*
+    :virt))
+
+(defmethod interface-target-discrimination-tree ((o virtif-interface))
+  (make-discrimination-tree
+   (node :root #'discriminate-by-target-enabledness
+         (node :virt virtual-target))))
 
 ;;;;
-;;;; Platform discrimination: see platform-definitions.lisp
-;;;;
-(defvar *platform-discrimination*
+;;;; Platform discrimination: see definitions.lisp
+(defun discriminate-by-platform-knownness (target)
+  (declare (ignore target))
+  (when *virtual-target-platform-known*
+    :certified-virt))
+
+(defmethod target-platform-discrimination-tree ((o virtual-target))
   (make-discrimination-tree
    (node :root #'discriminate-by-platform-knownness
          (node nil generic-virtual-platform)
@@ -68,7 +66,7 @@
 
 (defmethod detect-target-platform ((o generic-virtual-target) &optional if-does-not-exist)
   (declare (ignore if-does-not-exist))
-  (discriminate *platform-discrimination* o))
+  (discriminate (target-platform-discrimination-tree o) o))
 
 ;;;;
 ;;;; Execution

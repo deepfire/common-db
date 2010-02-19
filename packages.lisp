@@ -259,6 +259,7 @@
    #:interface-debug-quiescence-timeout
    #:make-interface-for-device-name
    #:interface-reset
+   #:interface-target-discrimination-tree
    #:interface-attach-target
    #:interface-stop-target
    #:stop-target-using-interface
@@ -313,8 +314,8 @@
    #:target-mapped-artifact-map
    #:find-target-class-for-interface
    #:detect-target-platform
+   #:target-platform-discrimination-tree
    #:configure-target-platform
-   #:*target-discrimination*
    #:target-artifact-by-address
    #:target-devices
    #:target-devices-by-type
