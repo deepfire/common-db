@@ -454,7 +454,7 @@ calls ANALYSE-CORE in case it wasn't in it already."))
            (remove-from-plist platform-args :stop-cores-p))))
 
 (defmethod poll-core-interruptible ((core core) &optional (watch-fn #'values) (watch-period 1) (iteration-period 10000000) run-iteration-limit)
-  (busywait-interruptible-executing (not (core-running-p core)) (funcall watch-fn *standard-output*)
+  (busywait-interruptible-executing (not (core-running-p core)) (funcall watch-fn core *standard-output*)
                                     :watch-period watch-period :iteration-period iteration-period :run-time run-iteration-limit))
 
 (defmethod analyse-core :before ((o general-purpose-core))
@@ -588,7 +588,7 @@ optionally up to ITERATION-LIMIT times and an optional WATCH-FN is ran
 every WATCH-PERIOD such polls."
   (let ((old-state (run-core-asynchronous core address moment-changed))
         execution-status)
-    (funcall watch-fn *log-stream*)
+    (funcall watch-fn core *log-stream*)
     (unwind-protect (setf execution-status (wait-core core watch-fn watch-period iteration-period iteration-limit))
       (cond ((eq execution-status :timeout)
              (ecase if-limit-reached
