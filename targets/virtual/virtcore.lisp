@@ -217,8 +217,7 @@
   )
 
 (defmethod (setf core-running-p) ((run-p (eql t)) (o virtcore))
-  (when-let ((limit (core-insn-execution-limit o)))
-    (setf (virtcore-state o) :running)))
+  (setf (virtcore-state o) :running))
 
 (defmethod (setf core-running-p) ((run-p (eql nil)) (core virtcore) &aux (iface (backend (backend core))))
   (interface-attach-target iface)
