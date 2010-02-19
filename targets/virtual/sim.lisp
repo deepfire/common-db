@@ -66,14 +66,16 @@
 (defun clear-memory (target)
   (clrhash (target-memory target)))
 
-(defmethod memory-device-32bit-ref ((o generic-virtual-target) address)
+(defmethod memory-device-32bit-ref ((o generic-virtual-target) address &aux
+                                    (address (fixmap-address o address)))
   (u8-vector-word32le (get-block o address) (logand address memory-interblock-addr-mask)))
 
-(defmethod memory-device-32bit-set ((o generic-virtual-target) address val)
+(defmethod memory-device-32bit-set ((o generic-virtual-target) address val &aux
+                                    (address (fixmap-address o address)))
   (setf (u8-vector-word32le (get-block o address) (logand address memory-interblock-addr-mask)) val))
 
 (defmethod read-block ((o generic-virtual-target) base vector &optional start end &aux
-                       (base (+ base start))
+                       (base (fixmap-address o (+ base start)))
                        (len (- end start)))
   (declare (type (vector (unsigned-byte 8)) vector))
   (with-aligned-extent-spec-pieces memory-block-bytes 
@@ -89,7 +91,7 @@
             (subseq (get-block o tailstart) 0 (logand (+ tailstart taillen) memory-interblock-addr-mask))))))
 
 (defmethod write-block ((o generic-virtual-target) base vector &optional start end &aux
-                        (base (+ base start))
+                        (base (fixmap-address o (+ base start)))
                         (len (- end start)))
   (declare (type (vector (unsigned-byte 8)) vector))
   (with-aligned-extent-spec-pieces memory-block-bytes 
