@@ -32,6 +32,7 @@
   (:export
    #:*poll-interval*
    #:*trace-comdb-calls*
+   #:*trace-comdb-memory-io*
    #:gdbserver
    #:gdbserver-toplevel))
 
@@ -44,6 +45,9 @@
 
 (defvar *trace-comdb-calls* nil
   "Whether to trace COMMON-DB calls.")
+
+(defvar *trace-comdb-memory-io* nil
+  "Whether to trace target memory I/O COMMON-DB calls.")
 
 (defun log-comdb (call control &rest args)
   (apply #'format *trace-output* (concatenate 'string "~&COMDB ~A: " control "~%")
@@ -137,7 +141,9 @@
   (handler-case (lret ((iovec (make-array size :element-type '(unsigned-byte 8)))) 
                   (when *trace-comdb-calls*
                     (log-comdb 'read-block "~X, 0x~X bytes" addr size))
-                  (read-block c addr iovec))
+                  (read-block c addr iovec)
+                  (when *trace-comdb-memory-io*
+                    (print-u8-sequence *trace-output* iovec :address addr)))
     (error (c)
       (format *trace-output* "Error in GDB-READ-MEMORY: ~A~%" c)
       "E00")))
@@ -146,10 +152,12 @@
                              (c (ctx-core o)))
   (handler-case (progn
                   (when *trace-comdb-calls*
-                    (log-comdb 'write-block "~X, 0x~X bytes~:[~;, CRC32: ~:*~{~2,'0X~}~]"
+                    (log-comdb 'write-block "~X, 0x~X bytes~:[~;, MD5: ~:*~{~2,'0X~}~]"
                                addr (length data)
                                #+no-ironclad nil
-                               #-no-ironclad (coerce (ironclad:digest-sequence :crc32 data) 'list)))
+                               #-no-ironclad (coerce (ironclad:digest-sequence :md5 data) 'list))
+                    (when *trace-comdb-memory-io*
+                      (print-u8-sequence *trace-output* data :address addr)))
                   (write-block c addr data)
                   "OK")
     (error (c)
@@ -321,13 +329,15 @@
                                  '(:single-shot)
                                  :no-memory-detection t))
 
-(defun gdbserver (&key (target-context *current*) (address "127.0.0.1") (port 9000) single-shot trace-comdb-calls trace-exchange &aux
+(defun gdbserver (&key (target-context *current*) (address "127.0.0.1") (port 9000) single-shot
+                  trace-comdb-calls trace-comdb-memory-io trace-exchange &aux
                   (core (if target-context
                             (ctx-core target-context)
                             (error "~@<No active target context: cannot start GDB server.~:@>"))))
   (change-class target-context 'common-db-gdbserver)
   (let ((ri-names (gdb:core-register-order core))
-        (*trace-comdb-calls* trace-comdb-calls))
+        (*trace-comdb-calls* trace-comdb-calls)
+        (*trace-comdb-memory-io* trace-comdb-memory-io))
     (setf *gdb-register-instance-vector*
           (make-array (length ri-names)
                       :initial-contents (mapcar (curry #'device-register-instance core) ri-names))
