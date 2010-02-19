@@ -87,7 +87,7 @@
           (for vecaddr from start by memory-block-bytes)
           (setf (subseq vector vecaddr (+ vecaddr memory-block-bytes)) (get-block o coreaddr)))
     (when (plusp taillen)
-      (setf (subseq vector (+ start headlen len))
+      (setf (subseq vector (+ start headlen corelen))
             (subseq (get-block o tailstart) 0 (logand (+ tailstart taillen) memory-interblock-addr-mask))))))
 
 (defmethod write-block ((o generic-virtual-target) base vector &optional start end &aux
@@ -104,7 +104,7 @@
           (setf (get-block o coreaddr) (subseq vector vecaddr (+ vecaddr memory-block-bytes))))
     (when (plusp taillen)
       (setf (subseq (get-block o tailstart) 0 (logand (+ tailstart taillen) memory-interblock-addr-mask))
-            (subseq vector (+ start headlen len))))))
+            (subseq vector (+ start headlen corelen))))))
 
 (defmethod detect-platform-memory-size ((o virtual-platform) base &key &allow-other-keys)
   #x1000000)
