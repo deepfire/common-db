@@ -63,7 +63,20 @@ custom FILENAME and ENTRY-POINT."
 
 (defun report-section (stream section)
   "Print an one-line summary of SECTION into STREAM."
-  (format stream "~A~26,1T~8,'.X at ~8,'0X~%" (elf:section-name section) (size section) (base section)))
+  (format stream "~A~26,1T~8,'.X at ~8,'0X~%"
+          (elf:section-name section) (size section) (base section)))
+
+(defun report-checksummed-section (stream section)
+  "Print an one-line summary of SECTION into STREAM."
+  (format stream "~A~26,1T~8,'.X at ~8,'0X~:[~;, MD5: ~:*~{~2,'0X~}~]~%"
+          (elf:section-name section) (size section) (base section)
+          #-no-ironclad (coerce (ironclad:digest-sequence :md5 (extent-data section)) 'list)
+          #+no-ironclad (error "~@<Checksumming disabled at build time.~:@>")))
+
+(defun dump-section (stream section)
+  "Print an one-line summary of SECTION and its dump into STREAM."
+  (report-section stream section)
+  (print-u8-sequence stream (extent-data section) :address (base section)))
 
 (defun upload-loadable (bioable loadable &rest write-u8-extents-args &key section-before-fn address-remap-fn check &allow-other-keys)
   "Upload LOADABLE into BIOABLE, with section base addresses optionally 

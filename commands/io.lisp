@@ -22,7 +22,7 @@
 
 (in-package :common-db)
 
-(defun loadelf (filename &key check)
+(defun loadelf (filename &key check csum dump)
   #+help-ru
   "Загрузить содержимое FILENAME в формате ELF в память устройства
 и установить точку входа.
@@ -32,9 +32,9 @@
     включить проверку целостности записи."
   #-help-ru
   "Load an ELF executable from FILENAME into target device memory, and prepare it for execution."
-  (prime-core-executable *core* (loadable:extract-loadable :elf filename) check))
+  (prime-core-executable *core* (loadable:extract-loadable :elf filename) :check check :report t :checksum csum :dump dump))
 
-(defun loadldr (filename &key check)
+(defun loadldr (filename &key check csum dump)
   #+help-ru
   "Загрузить содержимое FILENAME в формате LDR-MCS в память устройства
 и установить точку входа.
@@ -44,9 +44,9 @@
     включить проверку целостности записи."
   #-help-ru
   "Load an LDR executable from FILENAME into target device memory, and prepare it for execution."
-  (prime-core-executable *core* (loadable:extract-loadable :ldr filename) check))
+  (prime-core-executable *core* (loadable:extract-loadable :ldr filename) :check check :checksum csum :report t :dump dump))
 
-(defun loadeltext (filename &key (entry-point #xbfc00000) check)
+(defun loadeltext (filename &key (entry-point #xbfc00000) check csum dump)
   #+help-ru
   "Загрузить содержимое FILENAME в текстовом формате 'eltext' в память
 устройства и установить точку входа.
@@ -61,7 +61,7 @@
   "Load eltext from FILENAME into target device memory, and prepare it
 for execution.  Note that, as ENTRY-POINT isn't provided by the format,
 it has to be specified by ENTRY-POINT (which defaults to #xBFC00000)."
-  (prime-core-executable *core* (loadable:extract-loadable :eltext filename :entry-point entry-point) check))
+  (prime-core-executable *core* (loadable:extract-loadable :eltext filename :entry-point entry-point) :check check :checksum csum :report t :dump dump))
 
 (defun loadbin (filename address &key check)
   #+help-ru

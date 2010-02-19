@@ -495,11 +495,16 @@ in which case it is NIL."
   (step-core-asynchronous core)
   (busywait-interruptible-executing (not (core-running-p core)) nil))
 
-(defun prime-core-executable (core loadable &optional check)
+(defun prime-core-executable (core loadable &key check report checksum dump)
   "Prepare LOADABLE to be executed on a properly configured general-purpose
 CORE. When CHECK is non-NIL, an integrity check during upload of LOADABLE
 is performed."
-  (loadable:upload-loadable (backend core) loadable :section-before-fn #'loadable:report-section :check check)
+  (loadable:upload-loadable (backend core) loadable
+                            :check check
+                            :section-before-fn (cond (dump #'loadable:dump-section)
+                                                     (checksum #'loadable:report-checksummed-section)
+                                                     (report #'loadable:report-section)
+                                                     (t #'values)))
   (when *log-loadable-processing*
     (format *log-stream* "Setting continuation address of ~S to ~8,'0X.~%" core (loadable:loadable-entry-point loadable)))
   (setf (core-executable core) loadable)

@@ -229,6 +229,8 @@
    #:make-loadable
    #:extract-loadable
    #:report-section
+   #:report-checksummed-section
+   #:dump-section
    #:upload-loadable))
 
 (defpackage #:interface ;; needed by test-hardware
