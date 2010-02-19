@@ -39,10 +39,6 @@
 
 (set-namespace :core)
 
-(defvar *gdbserver-help-en*
-  "  GDB server options:
-    --port <port-number>        Accept remote GDB connections on this port.")
-
 (defvar *poll-interval* (/ 20)
   "How often to query target for its state.")
 
@@ -64,8 +60,12 @@
 (define-root-container *gdb-id-to-register-instance-map* gdb-reginstance :type register-instance :if-exists :continue)
 
 ;;;;
-;;;; GDB-SERVER methods
+;;;; This is definitive: explain our capabilities
+(defmethod gdb-handle-query ((o common-db-gdbserver) (q (eql :supported)) args)
+  "QStartNoAckMode+;PacketSize=4000;qXfer:features:read+;qXfer:memory-map:read+;qXfer:spu:read+")
+
 ;;;;
+;;;; Explain out our guts to GDB
 (defmethod gdb-describe-target ((o common-db-gdbserver))
   (gdb:describe-target (ctx-target o)
                        (lambda (ri register-nr)
@@ -77,6 +77,8 @@
 (defmethod gdb-describe-target-spu ((o common-db-gdbserver))
   (gdb:describe-spu (ctx-target o)))
 
+;;;;
+;;;; Register set I/O
 (defmethod gdb-target-registers-as-vector ((o common-db-gdbserver))
   (lret ((regvec (make-array (* 4 (length *gdb-register-instance-vector*)) :element-type '(unsigned-byte 8))))
     (iter (for ri in-vector *gdb-register-instance-vector*)
@@ -107,6 +109,8 @@
 (defmethod gdb-write-target-register ((o big-endian-core) register-nr value)
   (setf (reginstance-value (gdb-reginstance register-nr)) value))
 
+;;;;
+;;;; Memory I/O
 (defmethod gdb-read-memory ((o common-db-gdbserver) addr size &aux
                             (c (ctx-core o)))
   (handler-case (lret ((iovec (make-array size :element-type '(unsigned-byte 8)))) 
@@ -127,7 +131,6 @@
 
 ;;;;
 ;;;; Execution control
-;;;;
 (defun encode-gdb-stop-reason (trapped &key core-id watchpoint-address)
   (format nil "T~2,'0X~:[~;core:~:*~D~]~:[~;watch:~:*~X~]"
           (if trapped +reason-trap+ +reason-interrupt+)
@@ -181,12 +184,6 @@
   (let ((*poll-interval* 0))
     (gdb-continue-at o addr)))
 
-(defmethod gdb-handle-query ((o common-db-gdbserver) (q (eql :supported)) args)
-  "QStartNoAckMode+;PacketSize=4000;qXfer:features:read+;qXfer:memory-map:read+;qXfer:spu:read+")
-
-(defmethod gdb-handle-query ((o common-db-gdbserver) (q (eql :attached)) args)
-  "0")
-
 (defmethod gdb-extended-command ((o common-db-gdbserver) (c (eql :cont)) arguments)
   "Use the first action and completely ignore all thread IDs."
   (if (plusp (length arguments))
@@ -201,7 +198,6 @@
 
 ;;;;
 ;;;; Breakpoints
-;;;;
 (defmethod gdb-insert-breakpoint ((o common-db-gdbserver) type address length &aux
                                   (core (ctx-core o)))
   (cond
@@ -230,8 +226,7 @@
   "OK")
 
 ;;;;
-;;;; Attach/detach
-;;;;
+;;;; Termination
 (defmethod gdb-detach ((o common-db-gdbserver) &aux
                        (core (ctx-core o)))
   (dolist (core (cons core (master-device-slaves core)))
@@ -246,17 +241,7 @@
   "OK")
 
 ;;;;
-;;;; Stubs
-;;;;
-(defmethod gdb-set-thread ((o common-db-gdbserver) domain thread)
-  (if (or (= thread -1)
-          (= thread 0))
-      "OK"
-      "E00"))
-
-(defmethod gdb-monitor ((o common-db-gdbserver) command rest-arg)
-  "Command not supported.")
-
+;;;; Security hole
 (defmethod gdb-monitor ((o common-db-gdbserver) (command (eql :eval)) rest-arg)
   (princ-to-string (handler-case (eval (let ((*package* (find-package :common-db)))
                                          (read-from-string rest-arg)))
@@ -264,8 +249,18 @@
                        (format nil "~A" c)))))
 
 ;;;;
-;;;; Server
+;;;; Stubs
+(defmethod gdb-set-thread ((o common-db-gdbserver) domain thread)
+  (if (or (= thread -1)
+          (= thread 0))
+      "OK"
+      "E00"))
+
+(defmethod gdb-handle-query ((o common-db-gdbserver) (q (eql :attached)) args)
+  "0")
+
 ;;;;
+;;;; Server
 (defvar *gdbserver-help-en*
   "  GDB-server options:
     --address <dotted-quad>     Address of the interface to accept connections.
