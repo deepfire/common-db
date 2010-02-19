@@ -42,8 +42,12 @@
 (defvar *poll-interval* (/ 20)
   "How often to query target for its state.")
 
-(defvar *trace-state-actions* nil
-  "Whether to log state and breakpoint -related actions.")
+(defvar *trace-comdb-calls* nil
+  "Whether to trace COMMON-DB calls.")
+
+(defun log-comdb (call control &rest args)
+  (apply #'format *trace-output* (concatenate 'string "~&COMDB ~A: " control "~%")
+         call args))
 
 ;;;;
 ;;;; Classes
@@ -80,40 +84,59 @@
 ;;;;
 ;;;; Register set I/O
 (defmethod gdb-target-registers-as-vector ((o common-db-gdbserver))
+  (when *trace-comdb-calls*
+    (log-comdb 'reginstance-value "~A" (map 'list #'name *gdb-register-instance-vector*)))
   (lret ((regvec (make-array (* 4 (length *gdb-register-instance-vector*)) :element-type '(unsigned-byte 8))))
     (iter (for ri in-vector *gdb-register-instance-vector*)
           (for offt from 0 by 4)
           (setf (u8-vector-word32le regvec offt) (reginstance-value ri)))))
 
 (defmethod gdb-set-target-registers-from-vector ((o common-db-gdbserver) vector)
+  (when *trace-comdb-calls*
+    (log-comdb '(setf reginstance-value) "~A" (map 'list #'name *gdb-register-instance-vector*)))
   (lret ((regvec (make-array (* 4 (length *gdb-register-instance-vector*)) :element-type '(unsigned-byte 8))))
     (iter (for ri in-vector *gdb-register-instance-vector*)
           (for offt from 0 by 4)
           (setf (reginstance-value ri) (u8-vector-word32le regvec offt)))))
 
+;;; reroute these calls to re-dispatch on core endianness
 (defmethod gdb-read-target-register ((o common-db-gdbserver) register-nr)
   (gdb-read-target-register (ctx-core o) register-nr))
-
 (defmethod gdb-write-target-register ((o common-db-gdbserver) register-nr value)
   (gdb-write-target-register (ctx-core o) register-nr value))
 
-(defmethod gdb-read-target-register ((o little-endian-core) register-nr)
-  (swap-word32 (reginstance-value (gdb-reginstance register-nr))))
+(defmethod gdb-read-target-register ((o little-endian-core) register-nr &aux
+                                     (ri (gdb-reginstance register-nr)))
+  (when *trace-comdb-calls*
+    (log-comdb 'reginstance-value "~A" (name ri)))
+  (swap-word32 (reginstance-value ri)))
 
-(defmethod gdb-read-target-register ((o big-endian-core) register-nr)
-  (reginstance-value (gdb-reginstance register-nr)))
+(defmethod gdb-read-target-register ((o big-endian-core) register-nr &aux
+                                     (ri (gdb-reginstance register-nr)))
+  (when *trace-comdb-calls*
+    (log-comdb 'reginstance-value "~A" (name ri)))
+  (reginstance-value ri))
 
-(defmethod gdb-write-target-register ((o little-endian-core) register-nr value)
-  (setf (reginstance-value (gdb-reginstance register-nr)) (swap-word32 value)))
+(defmethod gdb-write-target-register ((o little-endian-core) register-nr value &aux
+                                      (ri (gdb-reginstance register-nr))
+                                      (value (swap-word32 value)))
+  (when *trace-comdb-calls*
+    (log-comdb '(setf reginstance-value) "~A ~X" (name ri) value))
+  (setf (reginstance-value ri) value))
 
-(defmethod gdb-write-target-register ((o big-endian-core) register-nr value)
-  (setf (reginstance-value (gdb-reginstance register-nr)) value))
+(defmethod gdb-write-target-register ((o big-endian-core) register-nr value &aux
+                                      (ri (gdb-reginstance register-nr)))
+  (when *trace-comdb-calls*
+    (log-comdb '(setf reginstance-value) "~A ~X" (name ri) value))
+  (setf (reginstance-value ri) value))
 
 ;;;;
 ;;;; Memory I/O
 (defmethod gdb-read-memory ((o common-db-gdbserver) addr size &aux
                             (c (ctx-core o)))
   (handler-case (lret ((iovec (make-array size :element-type '(unsigned-byte 8)))) 
+                  (when *trace-comdb-calls*
+                    (log-comdb 'read-block "~X, 0x~X bytes" addr size))
                   (read-block c addr iovec))
     (error (c)
       (format *trace-output* "Error in GDB-READ-MEMORY: ~A~%" c)
@@ -121,8 +144,9 @@
 
 (defmethod gdb-write-memory ((o common-db-gdbserver) addr data &aux
                              (c (ctx-core o)))
-  #+ ignore (format *trace-output* "Writing ~A@~X~%" data addr)
   (handler-case (progn
+                  (when *trace-comdb-calls*
+                    (log-comdb 'write-block "~X, 0x~X bytes" addr (length data)))
                   (write-block c addr data)
                   "OK")
     (error (c)
@@ -141,24 +165,28 @@
   (core-running-p (ctx-core o)))
 
 (defmethod gdb-why-stop ((o common-db-gdbserver))
+  (when *trace-comdb-calls*
+    (log-comdb 'core-stop-reason "~A" (core-stop-reason (ctx-core o))))
   (encode-gdb-stop-reason (typep (core-stop-reason (ctx-core o)) 'trap)))
 
 (defmethod gdb-interrupt ((o common-db-gdbserver) &aux
                           (core (ctx-core o)))
-  (when *trace-state-actions*
-    (format *trace-output* "~&Entering debug mode..~%"))
   (when (core-running-p core)
+    (when *trace-comdb-calls*
+      (log-comdb '(setf state) ":STOP"))
     (setf (state core) :stop))
+  (when *trace-comdb-calls*
+    (log-comdb '(setf state) ":DEBUG"))
   (setf (state core) :debug)
   (values))
 
 (defmethod gdb-continue-at ((o common-db-gdbserver) addr &aux
                             (core (ctx-core o)))
+  (when *trace-comdb-calls*
+    (log-comdb 'run-core-asynchronous "~:[continuing~;jumping to address ~:*~X~]" addr))
   (run-core-asynchronous core (unless (or (not addr)
                                           (= addr (moment-fetch (saved-core-moment core))))
                                 addr))
-  (when *trace-state-actions*
-    (format t "~&Continuing from ~8,'0X~%" addr))
   (loop
      ;; Poll for condition of remote target every now and then. Not
      ;; very pretty...
@@ -168,7 +196,11 @@
      ;; breakpoint.
      (let ((int? (check-interrupt o))
            (db? (not (core-running-p core))))
+       (when *trace-comdb-calls*
+         (log-comdb 'core-running-p "~:[running~;stopped~]" db?))
        (when (or int? db?)
+         (when *trace-comdb-calls*
+           (log-comdb '(setf state) ":DEBUG"))
          (setf (state core) :debug)
          ;; If we are interrupted or inside the debugger return to
          ;; GDB.
@@ -178,8 +210,8 @@
 
 (defmethod gdb-single-step-at ((o common-db-gdbserver) addr &aux
                                (core (ctx-core o)))
-  (when *trace-state-actions*
-    (format t "~&Single-stepping from ~8,'0X~%" addr))
+  (when *trace-comdb-calls*
+    (log-comdb 'set-core-insn-execution-limit "1"))
   (set-core-insn-execution-limit core 1)
   (let ((*poll-interval* 0))
     (gdb-continue-at o addr)))
@@ -202,26 +234,26 @@
                                   (core (ctx-core o)))
   (cond
     ((eq type :software)
-     (when *trace-state-actions*
-       (format t "~&Adding a software breakpoint at ~8,'0X~%" address))
+     (when *trace-comdb-calls*
+       (log-comdb 'add-sw-breakpoint "~X" address))
      (add-sw-breakpoint core address) ; We ignore LENGTH for software breakpoints.
      "OK")
     ((not (= 4 length)) "EInvalidLength")
     (t
-     (when *trace-state-actions*
-       (format t "~&Attempting to add a hardware breakpoint at ~8,'0X~%" address))
+     (when *trace-comdb-calls*
+       (log-comdb 'add-hw-breakpoint "~X => allocate.." address))
      (if-let ((b (add-hw-breakpoint core address)))
        (prog1 "OK"
-         (when *trace-state-actions*
-           (format *trace-output* "~&New hardware breakpoint in slot ~A, type ~A, address ~8,'0X.~%" (trap-id b) type address)))
+         (when *trace-comdb-calls*
+           (log-comdb 'add-hw-breakpoint "~X => success" address)))
        "ENoDebugRegistersLeft"))))
 
 (defmethod gdb-remove-breakpoint ((o common-db-gdbserver) type address length &aux
                                   (core (ctx-core o)))
   (declare (ignore type length))
-  (when *trace-state-actions*
-    (format *trace-output* "~&Attempting to remove a breakpoint at ~8,'0X~%" address))
   (when-let ((b (trap core address)))
+    (when *trace-comdb-calls*
+      (log-comdb 'disable-trap "~X" address))
     (disable-trap b))
   "OK")
 
@@ -231,18 +263,24 @@
                        (core (ctx-core o)))
   (dolist (core (cons core (master-device-slaves core)))
     (do-core-traps (b core)
-      (disable-breakpoint b)))
+      (when *trace-comdb-calls*
+        (log-comdb 'disable-trap "~X" (trap-address b)))
+      (disable-trap b)))
   ;; Call next method to really terminate the connection.
   (call-next-method))
 
 (defmethod gdb-kill ((o common-db-gdbserver) &aux
                      (core (ctx-core o)))
+  (when *trace-comdb-calls*
+    (log-comdb 'reset ""))
   (reset :core core)
   "OK")
 
 ;;;;
 ;;;; Security hole
 (defmethod gdb-monitor ((o common-db-gdbserver) (command (eql :eval)) rest-arg)
+  (when *trace-comdb-calls*
+    (log-comdb 'eval "~S" rest-arg))
   (princ-to-string (handler-case (eval (let ((*package* (find-package :common-db)))
                                          (read-from-string rest-arg)))
                      (serious-condition (c)
@@ -277,13 +315,13 @@
                                  '(:single-shot)
                                  :no-memory-detection t))
 
-(defun gdbserver (&key (target-context *current*) (address "127.0.0.1") (port 9000) single-shot (trace-state-actions t) trace-exchange &aux
+(defun gdbserver (&key (target-context *current*) (address "127.0.0.1") (port 9000) single-shot trace-comdb-calls trace-exchange &aux
                   (core (if target-context
                             (ctx-core target-context)
                             (error "~@<No active target context: cannot start GDB server.~:@>"))))
   (change-class target-context 'common-db-gdbserver)
   (let ((ri-names (gdb:core-register-order core))
-        (*trace-state-actions* trace-state-actions))
+        (*trace-comdb-calls* trace-comdb-calls))
     (setf *gdb-register-instance-vector*
           (make-array (length ri-names)
                       :initial-contents (mapcar (curry #'device-register-instance core) ri-names))
