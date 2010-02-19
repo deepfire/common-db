@@ -31,7 +31,7 @@
   (:shadowing-import-from :common-db #:catch #:step #:get #:set #:trace)
   (:export
    #:*poll-interval*
-   #:*trace-state-actions*
+   #:*trace-comdb-calls*
    #:gdbserver
    #:gdbserver-toplevel))
 
