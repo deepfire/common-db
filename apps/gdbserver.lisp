@@ -146,7 +146,10 @@
                              (c (ctx-core o)))
   (handler-case (progn
                   (when *trace-comdb-calls*
-                    (log-comdb 'write-block "~X, 0x~X bytes" addr (length data)))
+                    (log-comdb 'write-block "~X, 0x~X bytes~:[~;, CRC32: ~:*~{~2,'0X~}~]"
+                               addr (length data)
+                               #+no-ironclad nil
+                               #-no-ironclad (coerce (ironclad:digest-sequence :crc32 data) 'list)))
                   (write-block c addr data)
                   "OK")
     (error (c)
