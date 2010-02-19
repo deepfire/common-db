@@ -750,7 +750,7 @@ icache-related anomalies.")
 (defmethod setup-hw-breakpoint :after ((o hardware-breakpoint) address skipcount &key &allow-other-keys)
   (setf (trap-enabled-p o) (not (null address))))
 
-(defmethod add-core-hw-breakpoint ((core core) address &optional (skipcount 0))
+(defmethod add-hw-breakpoint ((core core) address &optional (skipcount 0))
   (if-let ((free-breakpoint (allocate-hardware-breakpoint core)))
     (setup-hw-breakpoint free-breakpoint address skipcount)
     (error "~@<No free breakpoints.  Used:~{ ~8,'0X~}~:@>"
