@@ -319,14 +319,17 @@
                                   Defaults to 127.0.0.1.
     --port <integer>            Number of the TCP port to accept connections on.
                                   Defaults to 9000.
+    --trace-comdb-calls         Trace all common-db API calls.
+    --trace-comdb-memory-io     Trace all memory IO.
+    --trace-exchange            Trace gdbserver protocol exchange.
     --single-shot               Exit after the first connection terminates.")
 
 (defun gdbserver-toplevel ()
   (setf common-db::*additional-help-en* *gdbserver-help-en*
         common-db::*additional-help-ru* common-db::*gdbserver-help-ru*)
   (comdb::comdb-toplevel-wrapper #'gdbserver
-                                 '((:address :string) :port)
-                                 '(:single-shot)
+                                 '((:address :string) :port :trace-exchange)
+                                 '(:single-shot :trace-comdb-calls :trace-comdb-memory-io)
                                  :no-memory-detection t))
 
 (defun gdbserver (&key (target-context *current*) (address "127.0.0.1") (port 9000) single-shot
