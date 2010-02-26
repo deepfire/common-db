@@ -350,5 +350,6 @@
           (make-hash-table))
     (iter (format t "; Accepting connections on ~A:~D~:[~;, tracing exchanges, up to ~:*~X bytes~]~%" address port trace-exchange)
           (setf (slot-value target-context 'gdbremote::no-ack-mode) nil)
+          (reset :core core)
           (accept-gdb-connection target-context port address trace-exchange)
           (until single-shot))))
