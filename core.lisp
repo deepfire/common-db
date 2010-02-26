@@ -444,6 +444,8 @@ calls ANALYSE-CORE in case it wasn't in it already."))
 
 (defmethod reset-core :around ((o core))
   (do-core-traps (b o)
+    (when (typep b 'hardware-breakpoint)
+      (setf (breakpoint-owned-p b) nil))
     (disable-breakpoint b))
   (setf (core-stop-reason o) nil)
   (call-next-method))
