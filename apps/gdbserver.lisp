@@ -262,11 +262,13 @@
 (defmethod gdb-remove-breakpoint ((o common-db-gdbserver) type address length &aux
                                   (core (ctx-core o)))
   (declare (ignore type length))
-  (when-let ((b (trap core address)))
-    (when *trace-comdb-calls*
-      (log-comdb 'disable-trap "~X" address))
-    (disable-trap b))
-  "OK")
+  (if-let ((b (trap core address :if-does-not-exist :continue)))
+          (progn
+            (when *trace-comdb-calls*
+              (log-comdb 'disable-trap "~X" address))
+            (disable-trap b)
+            "OK")
+          "ENoSuchBreakpoint"))
 
 ;;;;
 ;;;; Termination

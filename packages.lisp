@@ -397,6 +397,7 @@
    #:core-condition
    #:core-error
    #:simple-core-error
+   #:no-core-breakpoint
    #:core-halt-failure
    #:invalid-core-frequency-multiplier
    #:core-execution-error
