@@ -5,34 +5,6 @@
 
 (in-package :common-db.system)
 
-#+(and sbcl win32)
-(progn
-  (defclass encoded-file ()
-    ((external-format :reader file-external-format :initarg :external-format)))
-  (defclass encoded-cl-source-file (encoded-file cl-source-file) ())
-
-  (defmethod perform ((operation compile-op) (c encoded-cl-source-file))
-    (let ((source-file (component-pathname c))
-          (output-file (car (output-files operation c))))
-      (multiple-value-bind (output warnings-p failure-p)
-          (compile-file source-file :output-file output-file :external-format (file-external-format c))
-        (when warnings-p
-          (case (operation-on-warnings operation)
-            (:warn (warn
-                    "~@<COMPILE-FILE warned while performing ~A on ~A.~@:>"
-                    operation c))
-            (:error (error 'compile-warned :component c :operation operation))
-            (:ignore nil)))
-        (when failure-p
-          (case (operation-on-failure operation)
-            (:warn (warn
-                    "~@<COMPILE-FILE failed while performing ~A on ~A.~@:>"
-                    operation c))
-            (:error (error 'compile-failed :component c :operation operation))
-            (:ignore nil)))
-        (unless output
-          (error 'compile-error :component c :operation operation))))))
-
 (defsystem :common-db
   :depends-on (alexandria iterate pergamum semi-precious custom-harness bitmop symtable executor assem bintype cl-io-elf cffi opfr
 	       #-disable-ironclad ironclad
