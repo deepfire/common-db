@@ -470,16 +470,15 @@ calls ANALYSE-CORE in case it wasn't in it already."))
   (setf (core-stop-reason o) (or (deduce-stop-reason o)
                                  (make-instance 'user-interruption :core o))))
 
-(defmethod wait-core ((o core) &optional (watch-fn #'values) (watch-period 1) (iteration-period 10000000) iteration-limit)
-  (poll-core-interruptible o watch-fn watch-period iteration-period iteration-limit)
-  (if (core-running-p o)
-      :timeout
-      (analyse-core o)))
-
 (defmethod interrupt-core ((o core))
   (when (eq :free (state o))
-    (setf (state o) :stop)
-    (analyse-core o)))
+    (setf (state o) :stop))
+  (analyse-core o))
+
+(defmethod wait-core ((o core) &optional (watch-fn #'values) (watch-period 1) (iteration-period 10000000) iteration-limit)
+  (case (poll-core-interruptible o watch-fn watch-period iteration-period iteration-limit)
+    (:timeout :timeout)
+    ((t nil) (interrupt-core o))))
 
 (defmethod reset-instruction-counters :after ((o core))
   (setf (core-instruction-counter o) 0))
