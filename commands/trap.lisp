@@ -58,7 +58,7 @@
   "Проинтерпретировать остаточный список параметров как набор адресов
 векторных ловушек, и активировать их, сбросив неуказанные."
   (let* ((core *core*)
-         (catches (mapcar #'trap addresses)))
+         (catches (mapcar (curry #'trap core) addresses)))
     (iter (for addr in addresses)
           (for catch in catches)
           (unless catch (collect catch into missing))
