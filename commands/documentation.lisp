@@ -88,10 +88,6 @@ SECONDS могут быть любым неотрицательным реаль
      explain
      get set peek show
      pipeline pipesyms)
-    ((intercession #-help-ru "Intercession"
-                   #+help-ru "Вмешательство"
-                   :conc-name haq)
-     set #+(or) set-jtag)
     ((tracing #-help-ru "Tracing"
               #+help-ru "Трассировка"
               :conc-name trc)
