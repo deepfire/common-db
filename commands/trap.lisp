@@ -94,7 +94,7 @@
 (defun clear-sw-breaks ()
   #+help-ru
   "Удалить все программные точки останова."
-  (do-core-traps (b *core*)
+  (do-core-traps (addr b *core*)
     (when (typep b 'core:software-breakpoint)
       (forget-volatile-trap b)))
   (values))
@@ -102,7 +102,7 @@
 (defun disable-breaks ()
   #+help-ru
   "Отключить все точки останова."
-  (do-core-traps (b *core*)
+  (do-core-traps (addr b *core*)
     (setf (trap-enabled-p b) nil))
   (values))
 
@@ -110,7 +110,7 @@
   #+help-ru
   "Описать все активные точки останова."
   (let ((*print-right-margin* 200))
-    (do-core-traps (b *core*)
+    (do-core-traps (addr b *core*)
       (when (trap-enabled-p b)
         (format t "~A~%~4T" b)
         (addr (trap-address b)))))

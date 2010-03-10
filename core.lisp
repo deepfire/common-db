@@ -258,18 +258,22 @@ calls ANALYSE-CORE in case it wasn't in it already."))
 ;;;;
 ;;;; Containers
 ;;;;
-(define-subcontainer trap :container-slot traps :type address-trap :iterator do-core-traps :remover remove-trap :if-exists :error)
+(define-subcontainer trap :container-slot traps :type address-trap :iterator do-core-traps :remover remove-trap :if-exists :error
+                     :iterator-bind-key t)
 (define-subcontainer hwbreak :container-slot hw-breakpoints :type hardware-breakpoint :iterator do-core-hardware-breakpoints :if-exists :error)
 
 (defmacro do-core-controlled-traps ((o core) &body body)
-  `(do-core-traps (,o ,core)
-     (when (typep ,o 'controlled-trap) ,@body)))
+  (with-gensyms (addr)
+    `(do-core-traps (,addr ,o ,core)
+       (when (typep ,o 'controlled-trap) ,@body))))
 (defmacro do-core-vector-traps ((o core) &body body)
-  `(do-core-traps (,o ,core)
-     (when (typep ,o 'vector-trap) ,@body)))
+  (with-gensyms (addr)
+    `(do-core-traps (,addr ,o ,core)
+       (when (typep ,o 'vector-trap) ,@body))))
 (defmacro do-core-software-breakpoints ((o core) &body body)
-  `(do-core-traps (,o ,core)
-     (when (typep ,o 'software-breakpoint) ,@body)))
+  (with-gensyms (addr)
+    `(do-core-traps (,addr ,o ,core)
+       (when (typep ,o 'software-breakpoint) ,@body))))
 
 ;;;;
 ;;;; Printing
@@ -443,7 +447,7 @@ calls ANALYSE-CORE in case it wasn't in it already."))
   (call-next-method))
 
 (defmethod reset-core :around ((o core))
-  (do-core-traps (b o)
+  (do-core-traps (addr b o)
     (when (typep b 'hardware-breakpoint)
       (setf (breakpoint-owned-p b) nil))
     (disable-breakpoint b))

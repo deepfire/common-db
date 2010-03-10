@@ -275,7 +275,7 @@
 (defmethod gdb-detach ((o common-db-gdbserver) &aux
                        (core (ctx-core o)))
   (dolist (core (cons core (master-device-slaves core)))
-    (do-core-traps (b core)
+    (do-core-traps (addr b core)
       (when *trace-comdb-calls*
         (log-comdb 'disable-trap "~X" (trap-address b)))
       (disable-trap b)))

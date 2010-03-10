@@ -110,6 +110,8 @@ To be called once, before any use of COMMON-DB."
 При нескольких подключенных устройствах, активным становится последнее найденное.
 При этом, следует отметить что шина USB сканируется после портов EPP, что, как следствие,
 придаёт адаптерам на шине USB определённый приоритет."
+  (setf *print-circle* t
+        *print-base* #x10)
   (scan-interface-busses :force-rescan force-rescan :virtual virtual :physical physical)
   (values))
 
