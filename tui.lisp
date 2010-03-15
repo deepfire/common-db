@@ -146,7 +146,7 @@
     (write-string "#+END_EXAMPLE") (terpri)))
 
 (defvar *standard-parameters* '((:load :string) (:core-multiplier :decimal) :before-hook :context :platform :memory-detection-threshold))
-(defvar *standard-switches*   '(:no-rc :virtual :no-physical  :no-scan :no-platform-init
+(defvar *standard-switches*   '(:no-rc :virtual :no-physical :no-usb :no-scan :no-platform-init
                                 :list-contexts :list-platforms :help :help-en :version :no-memory-detection
                                 :disable-debugger :print-backtrace-on-errors :early-break-on-signals :break-on-signals
                                 :run-tests :ignore-test-failure :quit-after-tests
@@ -170,7 +170,7 @@
      (with-quit-restart
        (destructuring-bind (&rest args &key (verbose verbose)
                                   (no-rc no-rc) before-hook
-                                  core-multiplier virtual no-physical no-scan (no-platform-init no-platform-init)
+                                  core-multiplier virtual no-physical no-usb no-scan (no-platform-init no-platform-init)
                                   load quit-after-load
                                   run-tests ignore-test-failures quit-after-tests
                                   log-pipeline-crit
@@ -193,6 +193,7 @@
                 (*log-system-configuration* verbose)
                 (discrimination:*discriminate-verbosely* verbose)
                 (*orgify* orgify)
+                (*disable-usb-interfaces* no-usb)
                 (*virtual-target-enabled* virtual)
                 (*forced-platform* (when platform
                                      (or (find-symbol (string-upcase (string platform)) :platform-definitions)
