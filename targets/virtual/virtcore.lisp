@@ -279,8 +279,7 @@
   b)
 
 (defmethod add-cell-watchpoint ((core virtcore) address &optional (skipcount 0))
-  (when-let ((free-breakpoint (allocate-hardware-breakpoint core)))
-    (setup-hw-breakpoint free-breakpoint address skipcount :read t :write t :memory t)))
+  (setup-hw-breakpoint (allocate-hardware-breakpoint core) address skipcount :read t :write t :memory t))
 
 (defmethod enable-trap ((b virtcore-mips-software-breakpoint))
   (let ((target (backend (trap-core b)))

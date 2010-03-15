@@ -769,28 +769,25 @@ icache-related anomalies.")
   (setf (trap-enabled-p o) (not (null address))))
 
 (defmethod add-hw-breakpoint ((core core) address &optional (skipcount 0))
-  (if-let ((free-breakpoint (allocate-hardware-breakpoint core)))
-    (setup-hw-breakpoint free-breakpoint address skipcount)
-    (error "~@<No free breakpoints.  Used:~{ ~8,'0X~}~:@>"
-           (do-core-hardware-breakpoints (b core)
-             (collect (trap-address b))))))
+  (setup-hw-breakpoint (allocate-hardware-breakpoint core) address skipcount))
 
-(defun allocate-hardware-breakpoint (core)
-  (do-core-hardware-breakpoints (b core)
-    (unless (breakpoint-owned-p b)
-      (setf (breakpoint-owned-p b) t)
-      (return b))))
+(defun allocate-hardware-breakpoint (core &optional (if-no-free-breakpoints :error))
+  (or (do-core-hardware-breakpoints (b core)
+        (unless (breakpoint-owned-p b)
+          (setf (breakpoint-owned-p b) t)
+          (return b)))
+      (ecase if-no-free-breakpoints
+        (:error (error "~@<No free breakpoints.  Used:~{ ~8,'0X~}~:@>"
+                       (do-core-hardware-breakpoints (b core)
+                         (collect (trap-address b)))))
+        (:continue))))
 
 (defun release-hardware-breakpoint (b)
   (setf (breakpoint-owned-p b) nil))
 
 (defun allocate-hardware-breakpoints (core n)
-  (lret ((breakpoints (iter (repeat n) (collect (allocate-hardware-breakpoint core)))))
-    (unless (every #'identity breakpoints)
-      (dolist (allocated breakpoints)
-        (when allocated
-          (release-hardware-breakpoint allocated)))
-      (error "~@<Not enough free hardware breakpoints on ~S.~:@>" core))))
+  (iter (repeat n)
+        (collect (allocate-hardware-breakpoint core))))
 
 (defun invoke-with-maybe-free-hardware-breakpoints (maybe core fn addresses skipcount
                                                     &rest breakpoint-setup-args &key &allow-other-keys)
