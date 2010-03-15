@@ -139,10 +139,6 @@ to return an atomic picture of pipeline when CORE is running."))
 (defgeneric reset-core (core)
   (:documentation
    "The backend is required to provide a primary method."))
-(defgeneric free-to-stop (core &key &allow-other-keys)  (:method ((o core) &key &allow-other-keys) t))
-(defgeneric stop-to-debug (core &key &allow-other-keys) (:method ((o core) &key &allow-other-keys) t))
-(defgeneric debug-to-stop (core &key &allow-other-keys) (:method ((o core) &key &allow-other-keys) t))
-(defgeneric stop-to-free (core &key &allow-other-keys)  (:method ((o core) &key &allow-other-keys) t))
 (defgeneric analyse-core (core)
   (:documentation
    "The backend is required to provide a primary method, which would collect
@@ -161,10 +157,23 @@ ITERATION-LIMIT optionally soft-limits the time spent sleeping."))
   (:documentation
    "The provided default primary method calls POLL-CORE-INTERRUPTIBLE, and does ANALYSE-CORE,
 unless there was a timeout."))
-(defgeneric interrupt-core (core)
+(defgeneric core-enter-debug (core)
   (:documentation
-   "The provided default primary method ensures that the core is in :STOP state and
-calls ANALYSE-CORE in case it wasn't in it already."))
+   "Manipulate the state machinery of CORE so that it can be resumed later.
+Different backends have different requirements on what exact state the core
+needs to be put in to guarantee non-intervention, and these requirements
+might vary depending on situation."))
+
+(defgeneric free-to-stop (core &key &allow-other-keys)
+  (:method ((o core) &key &allow-other-keys) t)
+  (:method :after ((o core) &key &allow-other-keys)
+    (analyse-core o)))
+(defgeneric stop-to-debug (core &key &allow-other-keys)
+  (:method ((o core) &key &allow-other-keys) t))
+(defgeneric debug-to-stop (core &key &allow-other-keys)
+  (:method ((o core) &key &allow-other-keys) t))
+(defgeneric stop-to-free (core &key &allow-other-keys)
+  (:method ((o core) &key &allow-other-keys) t))
 
 ;;; slaves
 (defgeneric core-slaves (core))
@@ -474,15 +483,10 @@ calls ANALYSE-CORE in case it wasn't in it already."))
   (setf (core-stop-reason o) (or (deduce-stop-reason o)
                                  (make-instance 'user-interruption :core o))))
 
-(defmethod interrupt-core ((o core))
-  (when (eq :free (state o))
-    (setf (state o) :stop))
-  (analyse-core o))
-
 (defmethod wait-core ((o core) &optional (watch-fn #'values) (watch-period 1) (iteration-period 10000000) iteration-limit)
   (case (poll-core-interruptible o watch-fn watch-period iteration-period iteration-limit)
     (:timeout :timeout)
-    ((t nil) (interrupt-core o))))
+    ((t nil) (setf (state o) :stop))))
 
 (defmethod reset-instruction-counters :after ((o core))
   (setf (core-instruction-counter o) 0))

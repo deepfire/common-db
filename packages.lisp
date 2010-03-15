@@ -430,7 +430,7 @@
    #:poll-core-interruptible
    #:analyse-core
    #:wait-core
-   #:interrupt-core
+   #:core-enter-debug
    #:prime-core-executable
    #:run-core-asynchronous
    #:run-core-synchronous
