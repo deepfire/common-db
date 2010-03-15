@@ -762,6 +762,9 @@ icache-related anomalies.")
 (defmethod disable-breakpoint ((o controlled-trap))
   (disable-trap o))
 
+(defmethod setup-hw-breakpoint ((b hardware-breakpoint) address skipcount &key &allow-other-keys)
+  b)
+
 (defmethod setup-hw-breakpoint :before ((o hardware-breakpoint) address skipcount &key &allow-other-keys)
   (setf (trap-address o) address))
 
