@@ -109,11 +109,12 @@ MEMORY-CONFIG-VALID-FOR-DEVICE-CLASSES-P could be used."))
     (when *log-platform-processing*
       (format *log-stream* "~@<;;; ~@;Applying memory configuration ~A~:@>~%" (memory-config-name c)))))
 
-(defun test-target-memory (target busaddr size &key (if-fails :print-delta))
+(defun test-target-memory (target busaddr size &key (delay 0) (if-fails :print-delta))
   (let ((oarr (make-array size :element-type '(unsigned-byte 8)))
         (iarr (make-array size :element-type '(unsigned-byte 8))))
     (map-into oarr (the (function () (unsigned-byte 8)) (curry #'random 256)))
     (write-block target busaddr oarr)
+    (sleep delay)
     (read-block target busaddr iarr)
     (or (equalp iarr oarr)
         (ecase if-fails

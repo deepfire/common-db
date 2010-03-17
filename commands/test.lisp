@@ -25,7 +25,7 @@
 
 (defvar *examine-test* nil)
 
-(defun testmem (&optional (address 0) (length #x10000) &aux
+(defun testmem (&optional (address 0) (length #x10000) (delay 0) &aux
                 (target *target*)
                 (*log-platform-processing* t))
   #+help-ru
@@ -33,7 +33,7 @@
 начиная с ADDRESS."
   #-help-ru
   "Test a chunk of memory, LENGTH bytes long, at address ADDR."
-  (test-target-memory target (fixmap-address target address) length)
+  (test-target-memory target (fixmap-address target address) length :delay delay)
   (values))
 
 (defun run-tests (&optional all-contexts &rest test-suites)
