@@ -32,19 +32,18 @@
      (:cache-mode       3 3 "cache mode"
        ((#b010  :uncached       "uncached")
         (#b011  :cacheable      "cacheable noncoherent")))
-     (:addr             20 6 "address part")
-     (:entrylo-reserved 2 30 "reserved"))
-;;    (:entryhi ""
-;;      (:asid          8 0 "AS Id")
-;;      (:vpn2          18 12 "Virtual Page Number"))
-   (:entryhi-mc ""
+     (:addr             20 6 "address part"))
+   (:entryhi ""
      (:asid             8 0 "AS Id")
-     (:vpn2             18 13 "Virtual Page Number"))
-   (:status-mc ""
+     (:vpn2            19 13 "Virtual Page Number"))
+   (:status ""
      (:ie               1 0 "Interrupts Enabled")
      (:exl              1 1 "Exception Level")
      (:erl              1 2 "Error Level")
      (:um               1 4 "User mode")
+     (:ux               1 5 "64bit user virtual address space enable")
+     (:sx               1 6 "64bit supervisor virtual address space enable")
+     (:kx               1 7 "64bit kernel virtual address space enable")
      (:sw0              1 8 "Software interrupt 0")
      (:sw1              1 9 "Software interrupt 1")
      (:irq0             1 10 "Hardware interrupt 0")
@@ -54,8 +53,11 @@
      (:irq4             1 14 "Hardware interrupt 4")
      (:irq5             1 15 "Hardware interrupt 5")
      (:nmi              1 19 "Boot vector reached becaused of an NMI.")
-     (:ts               1 21 "TLB Shutdown")
+     (:sr               1 20 "Boot vector reached becaused of soft reset.")
+     (:ts               1 21 "TLB shutdown")
      (:bev              1 22 "Boot Exception Vectors")
+     (:px               1 23 "Enable 64-bit operations")
+     (:mx               1 24 "MDMX enable")
      (:re               1 25 "Reverse Endianness")
      (:rp               1 27 "Reduced Power")
      (:cu0              1 28 "Cop0 Usable")
@@ -116,11 +118,15 @@
         (#b010  :uncached "")))
      (:mmu-mode         3 7 "MMU Mode"
        ((#b001  :tlb    "TLB")
+        (#b010  :bat    "BAT")
         (#b011  :fm     "Fixed mapping")))
      (:version          3 10 "Version")
      (:arch             2 13 ""
-       ((#b00   :mips32 "")))
+       ((#b00   :mips32 "")
+        (#b01   :mips64-compat32 "")
+        (#b10   :mips64 "")))
      (:big-endian       1 15 "Big Endian mode")
+     ;; (mc-specific
      (:burst-mode       1 16 "0: sequential, 1: ???")
      (:merge-mode       2 17 "32bit Collapsing write buffer"
        ((#b00   :no-merging "")))
@@ -131,20 +137,24 @@
      (:kseg23-cacheable 3 28 ""
        ((#b011  :cached "")
         (#b010  :uncached "")))
+     ;; )
      (:config1-present  1 31 ""))
    (:config1 ""
-     (:fp               1 0 "")
+     (:fp               1 0 "FPU implemented")
      (:ejtag            1 1 "")
-     (:ca               1 2 "")
+     (:ca               1 2 "Code compression: MIPS16")
      (:watch-reg-p      1 3 "")
      (:perfcount-reg-p  1 4 "")
+     (:mdmx             1 5 "MDMX implemented")
+     (:c2-p             1 6 "Co-processor 2 implemented")
      (:d$-associativity 3 7 "")
      (:d$-linesize      3 10 "")
      (:d$-sets          3 13 "")
      (:i$-associativity 3 16 "")
      (:i$-linesize      3 19 "")
      (:i$-sets          3 22 "")
-     (:tlb-entries      6 25 "")))
+     (:tlb-entries      6 25 "")
+     (:config2-present  1 31 "Config2 register present")))
   (:layouts
    ((:cop0      "MIPS Cop0 registers")
     (:index     0 :doc "TLB entry selector")
@@ -157,9 +167,9 @@
     (:c0.rsvd0  7)
     (:badvaddr  8)
     (:count     9)
-    (:entryhi   10 :format :entryhi-mc)
+    (:entryhi   10 :format :entryhi)
     (:compare   11)
-    (:status    12 :format :status-mc)
+    (:status    12 :format :status)
     (:cause     13 :format :cause)
     (:epc       14)
     (:prid      15)
@@ -461,10 +471,11 @@ such kind of thing.")
 ;;;;
 ;;;; TLB
 ;;;;
-(defstruct (mips-tlb-entry (:constructor make-mips-tlb-entry (hi lo0 lo1)))
-  (hi 0 :type (unsigned-byte 32))
-  (lo0 0 :type (unsigned-byte 32))
-  (lo1 0 :type (unsigned-byte 32)))
+(defstruct (mips-tlb-entry (:constructor make-mips-tlb-entry (hi lo0 lo1))
+                           (:conc-name mips-tlbent-))
+  (hi nil :type (unsigned-byte 32))
+  (lo0 nil :type (unsigned-byte 32))
+  (lo1 nil :type (unsigned-byte 32)))
 
 (defmethod tlb-entry ((o mips-core) (i integer))
   (setc (devreg o :index) i)
@@ -477,16 +488,16 @@ such kind of thing.")
 
 (defmethod set-tlb-entry ((o mips-core) (i integer) (entry mips-tlb-entry))
   (setc (devreg o :index) i
-        (devreg o :entryhi) (mips-tlb-entry-hi entry)
-        (devreg o :entrylo0) (mips-tlb-entry-lo0 entry)
-        (devreg o :entrylo1) (mips-tlb-entry-lo1 entry))
+        (devreg o :entryhi) (mips-tlbent-hi entry)
+        (devreg o :entrylo0) (mips-tlbent-lo0 entry)
+        (devreg o :entrylo1) (mips-tlbent-lo1 entry))
   (exec o
     (:tlbwi)
     (:nop)))
 
 (defmethod decode-tlb-entry ((o mips-tlb-entry))
   (with-slots (hi lo0 lo1) o
-    (list (decode :entryhi-mc hi)
+    (list (decode :entryhi hi)
           (decode :entrylo lo0)
           (decode :entrylo lo1))))
 
