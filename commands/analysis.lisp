@@ -39,3 +39,15 @@
                       (member j ignores))
             (format t "snap ~D: difference in r~D: ~8,'0X vs ~8,'0X~%"
                     i j (aref s0elt j) (aref s1elt j))))))
+
+(defun snaptrace (addr-or-sym &optional nsnaps (core *core*))
+  #+help-ru
+  "Произвести трассировку со съёмом снимков регистрового файла при попадании
+на адрес заданный ADDR-OR-SYM."
+  (with-free-hardware-breakpoints (core) ((b (coerce-to-address addr-or-sym)))
+    (iter (for i from 0)
+          (when (and nsnaps (= i nsnaps))
+            (return snapshots))
+          (run :core core)
+          (collect (snapshot-gprs core) into snapshots)
+          (finally (return snapshots)))))
