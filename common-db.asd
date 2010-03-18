@@ -79,6 +79,7 @@
             :components
             (;;
              (:file "address")
+             (:file "analysis")
              (:file "documentation")
              (:file "dsp")
              (:file "io")
