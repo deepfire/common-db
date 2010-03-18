@@ -471,9 +471,9 @@ such kind of thing.")
   (exec o
     (:tlbr)
     (:nop))
-  (list (devreg o :entryhi)
-        (devreg o :entrylo0)
-        (devreg o :entrylo1)))
+  (make-mips-tlb-entry (devreg o :entryhi)
+                       (devreg o :entrylo0)
+                       (devreg o :entrylo1)))
 
 (defmethod set-tlb-entry ((o mips-core) (i integer) (entry mips-tlb-entry))
   (setc (devreg o :index) i
