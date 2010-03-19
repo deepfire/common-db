@@ -100,7 +100,7 @@
     --early-break-on-signals    Enable breaking on conditions early.
 
   Generic options:
-    --before-hook <lisp-expr>   Evaluate a Lisp expression before scanning
+    --early-eval <lisp-expr>    Evaluate a Lisp expression before scanning
                                   interfaces.
     --core-multiplier <integer> Set core frequency multiplier.
     --list-platforms            List all known platforms and quit.
@@ -117,13 +117,13 @@
                                   found target devices and quit.
     --context <context-id>      After scanning interfaces activate target device
                                   context denoted by context-id.
+    --no-rc                     Do not load ~~/.comdbrc
+    --load <filename>           Execute commands from file.
+    --eval <lisp-expr>          Evaluate a Lisp expression
     --run-tests                 Run tests before doing anything.
                                   Abort on errors.
     --ignore-test-failures      Don't abort on test errors.
-    --quit-after-tests          Terminate after executing tests.
-    --no-rc                     Do not load ~~/.comdbrc
-    --load <filename>           Execute commands from file.
-    --quit-after-load           Quit after file execution.
+    --quit                      Terminate instead of continuing into debugger.
     --verbose                   During operation print out MORE STATUS.
                                   Implies --print-backtrace-on-errors.
     --version                   Print version and quit.
@@ -145,11 +145,11 @@
   (when *orgify*
     (write-string "#+END_EXAMPLE") (terpri)))
 
-(defvar *standard-parameters* '((:load :string) (:core-multiplier :decimal) :before-hook :context :platform :memory-detection-threshold))
+(defvar *standard-parameters* '((:load :string) (:core-multiplier :decimal) :early-eval :context :platform :memory-detection-threshold :eval))
 (defvar *standard-switches*   '(:no-rc :virtual :no-physical :no-usb :no-scan :no-platform-init
                                 :list-contexts :list-platforms :help :help-en :version :no-memory-detection
                                 :disable-debugger :print-backtrace-on-errors :early-break-on-signals :break-on-signals
-                                :run-tests :ignore-test-failure :quit-after-tests
+                                :run-tests :ignore-test-failure :quit
                                 ;; not documented
                                 :orgify :log-pipeline-crit))
 (defvar *panlevel-switches* '(:verbose)
@@ -169,10 +169,9 @@
      (setf sb-debug::*invoke-debugger-hook* #'comdb-debugger)
      (with-quit-restart
        (destructuring-bind (&rest args &key (verbose verbose)
-                                  (no-rc no-rc) before-hook
+                                  (no-rc no-rc) early-eval
                                   core-multiplier virtual no-physical no-usb no-scan (no-platform-init no-platform-init)
-                                  load quit-after-load
-                                  run-tests ignore-test-failures quit-after-tests
+                                  load eval run-tests ignore-test-failures quit
                                   log-pipeline-crit
                                   list-contexts context list-platforms platform
                                   early-break-on-signals break-on-signals help help-en orgify version
@@ -207,6 +206,9 @@
            (when disable-debugger
              #+sbcl
              (sb-ext:disable-debugger))
+           ;;
+           ;; Phase 0: non-core short-path functionality
+           ;;
            (when-let ((quitp (cond (list-platforms     (list-platforms) t)
                                    (version            (version) t)
                                    ((or list-contexts) nil)
@@ -215,40 +217,61 @@
            (appendf comdb:*initargs*
                     (when no-memory-detection `(:no-memory-detection t))
                     (when core-multiplier     `(:core-multiplier ,core-multiplier)))
-           (when before-hook
-             (funcall (compile nil `(lambda () ,before-hook))))
+           ;;
+           ;; Phase 1: inteface scanning
+           ;;
+           (when early-eval
+             (eval early-eval))
            (unless no-scan
              (with-retry-restarts ((retry () :report "Retry scanning interface busses."))
                (scan :physical (not no-physical) :virtual virtual
                      :skip-platform-init no-platform-init)
                (unless *current*
                  (error "~@<No devices were found attached to active busses.~:@>"))))
+           ;;
+           ;; Phase 1a: context querying
+           ;;
            (cond (list-contexts (list-contexts)
                                 (quit)))
+           ;;
+           ;; Phase 1b: context selection
+           ;;
            (when context
              (ctx context))
            (format t "~&~@<; ~@;~:[No current device context.~;~
                                    Current platform/core: ~A ~A~]~:@>~%"
                    *current* (type-of (target-platform *target*)) *core*)
+           ;;
+           ;; Phase 2: in-context actions
+           ;;
            (let ((*break-on-signals* break-on-signals))
              (setf *package* (find-package user-package))
+             ;;
+             ;; Phase 2a: run-control
+             ;;
              (unless no-rc
-               (let ((rc-pathname (subfile* (user-homedir-pathname) ".comdbrc")))
-                 (load rc-pathname :verbose verbose :print verbose :if-does-not-exist nil)))
-             (when load
-               (let ((successp (load load)))
-                 (when quit-after-load
-                   (quit (if successp 0 1)))))
-             (when run-tests
-               (let ((successp (run-tests)))
-                 (unless (or successp ignore-test-failures quit-after-tests)
-                   (error "~@<Some tests failed.~:@>"))
-                 (when quit-after-tests
-                   (quit (if successp 0 1)))))
-             (unless quit-after-load
-               (when verbose
-                 (format t "NOTE: executing application functionality~%"))
-               (apply fn other-args))
+               (load (subfile* (user-homedir-pathname) ".comdbrc")
+                     :verbose verbose :print verbose :if-does-not-exist nil))
+             (let (successp)
+               ;;
+               ;; Phase 2b: batch, expression and test execution
+               ;;
+               (when load
+                 (setf successp (load load)))
+               (when eval
+                 (eval eval))
+               (when run-tests
+                 (setf successp (run-tests))
+                 (unless (or successp ignore-test-failures quit)
+                   (error "~@<Some tests failed.~:@>")))
+               (when quit
+                 (quit (if successp 0 1))))
+             ;;
+             ;; Phase 2: main functionality
+             ;;
+             (when verbose
+               (format t "NOTE: executing application functionality~%"))
+             (apply fn other-args)
              (quit))))))))
 
 (defun opfr:opfr-prompt ()
