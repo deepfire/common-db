@@ -238,9 +238,10 @@
            ;;
            (when context
              (ctx context))
-           (format t "~&~@<; ~@;~:[No current device context.~;~
+           (when *current*
+             (format t "~&~@<; ~@;~:[No current device context.~;~
                                    Current platform/core: ~A ~A~]~:@>~%"
-                   *current* (type-of (target-platform *target*)) *core*)
+                     *current* (type-of (target-platform *target*)) *core*))
            ;;
            ;; Phase 2: in-context actions
            ;;
