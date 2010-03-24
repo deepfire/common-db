@@ -101,10 +101,12 @@ CTX optionally bound to successive contexts."
 При наличии параметра, интерпретировать его как номер контекста,
 если это число, либо идентификатор контекста, если это список,
 который следует сделать теукщим."
-  (etypecase id
-    (null    *target-contexts*)
-    (cons    (set-context (ctx-by-id id)))
-    (integer (set-context (nth id *target-contexts*)))))
+  (if id
+      (set-context (or (etypecase id
+                         (cons    (ctx-by-id id))
+                         (integer (nth id *target-contexts*)))
+                       (error "~@<No such context: ~S.~%~:@>" id)))
+      *target-contexts*))
 
 (defun display-list ()
   #+help-ru
