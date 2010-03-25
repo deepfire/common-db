@@ -79,10 +79,10 @@
   (memory-set memory-device offset value))
 
 (defgeneric merge-u8-extremity (memdev base vector length headp writep)
-  (:method ((o little-endian-memory-device) base vector length headp writep &aux
-            (width (memory-device-byte-width o)))
+  (:method ((o little-endian-memory-device) base vector length headp writep)
     (declare (type (vector (unsigned-byte 8)) vector))
-    (let ((extremity (if headp base (+ base length))))
+    (let ((width (memory-device-byte-width o))
+          (extremity (if headp base (+ base length))))
       (with-alignment (granule-base left right mask) width extremity
         (unless (= granule-base extremity)
           (let* ((exvec (make-array width :element-type '(unsigned-byte 8))))
@@ -93,10 +93,10 @@
                                       (lambda (g i) (setf (aref vector i) (aref exvec g)))))
             (when writep
               (setf (memory-ref o granule-base) (u8-vector-wordle exvec 0 width))))))))
-  (:method ((o big-endian-memory-device) base vector length headp writep &aux
-            (width (memory-device-byte-width o)))
+  (:method ((o big-endian-memory-device) base vector length headp writep)
     (declare (type (vector (unsigned-byte 8)) vector))
-    (let ((extremity (if headp base (+ base length))))
+    (let ((width (memory-device-byte-width o))
+          (extremity (if headp base (+ base length))))
       (with-alignment (granule-base left right mask) width extremity
         (unless (= granule-base extremity)
           (let* ((exvec (make-array width :element-type '(unsigned-byte 8))))
