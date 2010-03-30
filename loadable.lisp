@@ -70,8 +70,8 @@ custom FILENAME and ENTRY-POINT."
   "Print an one-line summary of SECTION into STREAM."
   (format stream "~A~26,1T~8,'.X at ~8,'0X~:[~;, MD5: ~:*~{~2,'0X~}~]~%"
           (elf:section-name section) (size section) (base section)
-          #-no-ironclad (coerce (ironclad:digest-sequence :md5 (extent-data section)) 'list)
-          #+no-ironclad (error "~@<Checksumming disabled at build time.~:@>")))
+          #-disable-ironclad (coerce (ironclad:digest-sequence :md5 (extent-data section)) 'list)
+          #+disable-ironclad (error "~@<Checksumming disabled at build time.~:@>")))
 
 (defun dump-section (stream section)
   "Print an one-line summary of SECTION and its dump into STREAM."

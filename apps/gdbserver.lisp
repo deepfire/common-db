@@ -154,8 +154,8 @@
                   (when *trace-comdb-calls*
                     (log-comdb 'write-block "~X, 0x~X bytes~:[~;, MD5: ~:*~{~2,'0X~}~]"
                                addr (length data)
-                               #+no-ironclad nil
-                               #-no-ironclad (coerce (ironclad:digest-sequence :md5 data) 'list))
+                               #+disable-ironclad nil
+                               #-disable-ironclad (coerce (ironclad:digest-sequence :md5 data) 'list))
                     (when *trace-comdb-memory-io*
                       (print-u8-sequence *trace-output* data :address addr)))
                   (write-block c addr data)
