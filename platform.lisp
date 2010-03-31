@@ -96,8 +96,7 @@ a warning of type PLATFORM-NO-USABLE-MEMORY-DETECTED is signalled instead."))
 ;;;;
 (defun device-type-valid-p (type)
   (and (find-class type nil)
-       (or (subtypep type 'device-model:device)
-           (subtypep type 'device-model:struct-device))))
+       (device-class type)))
 
 (defun merge-device-specs (primary complement)
   (cond
