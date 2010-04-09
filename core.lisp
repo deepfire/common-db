@@ -534,63 +534,6 @@ is performed."
                  :moment-changed moment-changed)
           :free)))
 
-(defun invoke-with-core-debugger (core fn &key segment address)
-  (labels ((reader (desc)
-             (format *debug-io* "Enter a positive integer for ~A: " desc)
-             (finish-output *debug-io*)
-             (let ((input (read *debug-io*)))
-               (if (and (integerp input) (plusp input))
-                   input
-                   (progn
-                     (format *debug-io* "~S is not a positive integer, please try again.~%" input)
-                     (finish-output *debug-io*)
-                     (reader desc)))))
-           (nvalue-reader (&rest descs)
-             (mapcar #'reader descs))
-           (reset-core ()
-             (reset-platform core)
-             (setf (state core) :debug)
-             t))
-    (loop (restart-case (funcall fn)
-            (cycle ()
-              :report "Recheck core status.")
-            (exit-and-continue ()
-              :report "Exit the debugger and continue execution."
-              (return))
-            (print-pipeline ()
-              :report "Print core pipeline."
-              (print-pipeline core *debug-io*))
-            (reset-and-abort ()
-              :report "Reset the core, enable debug mode and abort."
-              (reset-core)
-              (invoke-restart (find-restart 'abort)))
-            (reset-interface ()
-              :report "Reset the interface."
-              (interface:interface-reset (backend (backend core))))
-            (reset-target ()
-              :report "Reset the target and enable debug mode."
-              (reset-core))
-            (dump-memory (base size)
-              :report "Dump memory."
-              :interactive (lambda () (nvalue-reader "dump base" "dump size"))
-              (core-disassemble core base size :stream *debug-io*))
-            (disassemble-memory (base size)
-              :report "Disassemble memory."
-              :interactive (lambda () (nvalue-reader "disassemble base" "disassemble size"))
-              (core-disassemble core base size :stream *debug-io*))
-            (disassemble ()
-              :report "Disassemble the executed segment."
-              :test (lambda (c) (declare (ignore c)) segment)
-              (disassemble-and-print *debug-io*
-                                     (core-isa core)
-                                     (or address (when (typep segment 'pinned-segment) (pinned-segment-base segment)) 0)
-                                     (segment-active-vector segment)))))))
-
-(defmacro with-core-debugger ((core &key segment address) &body form)
-  `(invoke-with-core-debugger ,core (lambda () ,@form)
-                              ,@(when segment `(:segment ,segment))
-                              ,@(when address `(:address ,address))))
-
 (defun run-core-synchronous (core &key address (moment-changed (not (null address))) exit-state watch-fn watch-period (iteration-period 10000000)
                              segment iteration-limit (if-limit-reached :error) &aux
                              (watch-fn (or watch-fn #'values))
@@ -616,12 +559,11 @@ every WATCH-PERIOD such polls."
                       segment core address (* iteration-period iteration-limit)
                       (core-running-p core)))
                (:error
-                (with-core-debugger (core :address address :segment segment)
-                  (error "~@<While executing ~:[~;~:*~S ~]on ~S at #x~8,'0X:~_~
+                (error "~@<While executing ~:[~;~:*~S ~]on ~S at #x~8,'0X:~_~
                           ran out of execution time budget of ~D nanoseconds.~_~
                           Core is ~:[not running anymore~;still running~].~:@>"
-                         segment core address (* iteration-period iteration-limit)
-                         (core-running-p core))))))
+                       segment core address (* iteration-period iteration-limit)
+                       (core-running-p core)))))
             (t
              (setf (state core) (or exit-state old-state)))))))
 

@@ -506,8 +506,6 @@
    #:restore-instruction-counters
    #:reset-instruction-counters
    ;; execution
-   #:invoke-with-core-debugger
-   #:with-core-debugger
    #:trace-segment
    #:execute-segment
    #:with-executed-segment
