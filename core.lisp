@@ -209,7 +209,6 @@ might vary depending on situation."))
 (defgeneric set-core-insn-execution-limit (core ninsns))
 (defgeneric enable-trap (controlled-trap))
 (defgeneric disable-trap (controlled-trap))
-(defgeneric forget-volatile-trap (volatile-address-trap))
 (defgeneric set-trap-enabled (controlled-trap enabledp))
 (defsetf trap-enabled-p set-trap-enabled)
 (defgeneric add-sw-breakpoint (core address))
@@ -752,13 +751,10 @@ icache-related anomalies.")
 (defmethod coerce-to-trap ((o address-trap))
   o)
 
-(defmethod forget-volatile-trap ((o volatile-address-trap))
+(defmethod disable-breakpoint ((o volatile-address-trap))
   (when (trap-enabled-p o)
     (disable-trap o))
   (remove-trap (trap-core o) (trap-address o)))
-
-(defmethod disable-breakpoint ((o volatile-address-trap))
-  (forget-volatile-trap o))
 (defmethod disable-breakpoint ((o controlled-trap))
   (disable-trap o))
 
@@ -881,7 +877,7 @@ BREAKPOINT is released when the form is exited, by any means."
              (unless (stop-reason-expected-p)
                (handle-execution-error core 'unexpected-stop-reason
                                        (list :core core :segment segment :address address :actual (core-stop-reason core))))))
-      (mapc #'forget-volatile-trap swbreaks))))
+      (mapc #'disable-breakpoint swbreaks))))
 
 (defun invoke-with-execution-of-emitted-segment (emitter-fn core address &key trace report (iteration-period 100000) iteration-limit watch-fn watch-period)
   "Execute the code emitted by EMITTER-FN at ADDRESS on CORE,

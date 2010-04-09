@@ -463,7 +463,6 @@
    #:trap-id
    #:enable-trap
    #:disable-trap
-   #:forget-volatile-trap
    #:deduce-stop-reason
    #:breakpoint
    #:hardware-breakpoint

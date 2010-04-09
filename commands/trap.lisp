@@ -96,7 +96,7 @@
   "Удалить все программные точки останова."
   (do-core-traps (addr b *core*)
     (when (typep b 'core:software-breakpoint)
-      (forget-volatile-trap b)))
+      (disable-breakpoint b)))
   (values))
 
 (defun disable-breaks ()
