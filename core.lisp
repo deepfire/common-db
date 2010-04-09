@@ -1,8 +1,8 @@
 ;;; -*- Mode: LISP; Syntax: COMMON-LISP; Package: CORE; Base: 10; indent-tabs-mode: nil -*-
 ;;;
-;;;  (c) copyright 2007-2009, ГУП НПЦ "Элвис"
+;;;  (c) copyright 2007-2010, ГУП НПЦ "Элвис"
 ;;;
-;;;  (c) copyright 2007-2009 by
+;;;  (c) copyright 2007-2010 by
 ;;;           Samium Gromoff (_deepfire@feelingofgreen.ru)
 ;;;
 ;;; This library is free software; you can redistribute it and/or
@@ -203,9 +203,7 @@ might vary depending on situation."))
 (defgeneric core-call-stack (core))
 
 
-;;;;
-;;;; Breakpoint protocol
-;;;;
+;;; traps
 (defgeneric set-core-insn-execution-limit (core ninsns))
 (defgeneric enable-trap (controlled-trap))
 (defgeneric disable-trap (controlled-trap))
@@ -410,19 +408,52 @@ might vary depending on situation."))
 
 (defmacro with-retry-with-state-restart ((core state) &body body)
   `(invoke-with-retry-with-state-restart ,core ,state (lambda () ,@body)))
+;;; *** STATE ***
 
 ;;;;
 ;;;; Core protocol implementations
 ;;;;
 (defmethod initialize-instance :after ((o core) &key &allow-other-keys)
+  "Tie parent links."
   (do-core-hardware-breakpoints (b o)
     (setf (trap-core b) o))
   (do-core-vector-traps (v o)
     (setf (trap-core v) o)))
 
+(defmethod gpr-by-name ((o core) (gpr-name symbol))
+  (gpr o (optype-evaluate (isa-gpr-optype (core-isa o)) gpr-name)))
+
+(defmethod set-gpr-by-name ((o core) (gpr-name symbol) value)
+  (set-gpr o (optype-evaluate (isa-gpr-optype (core-isa o)) gpr-name) value))
+
 (defmethod core-slaves ((o general-purpose-core))
   (remove-if-not (of-type 'core) (master-device-slaves o)))
 
+;;;     RESET
+(defmethod reset-platform ((o core) &key &allow-other-keys))
+(defmethod reset-platform :around ((o core) &rest platform-args &key stop-cores-p &allow-other-keys)
+  (let ((target (backend o)))
+    (iface:interface-reset-target (backend target) stop-cores-p)
+    (mapc #'reset-core (target-devices-by-type target 'general-purpose-core))
+    (call-next-method)
+    (apply #'configure-target-platform target (target-platform target)
+           (remove-from-plist platform-args :stop-cores-p))))
+
+(defmethod reset-core :around ((o general-purpose-core))
+  (save-core-pipeline o :trail-important nil)
+  (mapc #'reset-core (core-slaves o))
+  (call-next-method))
+
+(defmethod reset-core :around ((o core))
+  (do-core-traps (addr b o)
+    (when (typep b 'hardware-breakpoint)
+      (setf (breakpoint-owned-p b) nil))
+    (disable-breakpoint b))
+  (setf (core-stop-reason o) nil)
+  (call-next-method))
+;;; *** RESET ***
+
+;;;     PIPELINE
 (defmethod set-core-moment :after ((o general-purpose-core) moment)
   (setf (core-moment-changed-p o) t
         (saved-core-trail o) (make-neutral-trail o)
@@ -442,35 +473,9 @@ might vary depending on situation."))
 (defmethod (setf pc) :before (value (o core))
   "The moment we change PC knowingly, CORE's stop reason ceases to matter."
   (setf (core-stop-reason o) nil))
+;;; *** PIPELINE ***
 
-(defmethod gpr-by-name ((o core) (gpr-name symbol))
-  (gpr o (optype-evaluate (isa-gpr-optype (core-isa o)) gpr-name)))
-
-(defmethod set-gpr-by-name ((o core) (gpr-name symbol) value)
-  (set-gpr o (optype-evaluate (isa-gpr-optype (core-isa o)) gpr-name) value))
-
-(defmethod reset-core :around ((o general-purpose-core))
-  (save-core-pipeline o :trail-important nil)
-  (mapc #'reset-core (core-slaves o))
-  (call-next-method))
-
-(defmethod reset-core :around ((o core))
-  (do-core-traps (addr b o)
-    (when (typep b 'hardware-breakpoint)
-      (setf (breakpoint-owned-p b) nil))
-    (disable-breakpoint b))
-  (setf (core-stop-reason o) nil)
-  (call-next-method))
-
-(defmethod reset-platform ((o core) &key &allow-other-keys))
-(defmethod reset-platform :around ((o core) &rest platform-args &key stop-cores-p &allow-other-keys)
-  (let ((target (backend o)))
-    (iface:interface-reset-target (backend target) stop-cores-p)
-    (mapc #'reset-core (target-devices-by-type target 'general-purpose-core))
-    (call-next-method)
-    (apply #'configure-target-platform target (target-platform target)
-           (remove-from-plist platform-args :stop-cores-p))))
-
+;;;     STATE
 (defmethod poll-core-interruptible ((core core) &optional (watch-fn #'values) (watch-period 1) (iteration-period 10000000) run-iteration-limit)
   (busywait-interruptible-executing (not (core-running-p core)) (funcall watch-fn core *standard-output*)
                                     :watch-period watch-period :iteration-period iteration-period :run-time run-iteration-limit))
@@ -486,16 +491,10 @@ might vary depending on situation."))
   (case (poll-core-interruptible o watch-fn watch-period iteration-period iteration-limit)
     (:timeout :timeout)
     ((t nil) (setf (state o) :stop))))
+;;; *** STATE ***
 
 (defmethod reset-instruction-counters :after ((o core))
   (setf (core-instruction-counter o) 0))
-
-(defmethod add-sw-breakpoint ((o core) address)
-  (lret ((bp (or (let ((b (trap o address :if-does-not-exist :continue)))
-                   (when (typep b 'software-breakpoint)
-                     b))
-                 (make-instance (core-default-sw-breakpoint-type o) :core o :address address))))
-    (setf (trap-enabled-p bp) t)))
 
 ;;;;
 ;;;; Core protocol -based toolkit
@@ -757,6 +756,13 @@ icache-related anomalies.")
   (remove-trap (trap-core o) (trap-address o)))
 (defmethod disable-breakpoint ((o controlled-trap))
   (disable-trap o))
+
+(defmethod add-sw-breakpoint ((o core) address)
+  (lret ((bp (or (let ((b (trap o address :if-does-not-exist :continue)))
+                   (when (typep b 'software-breakpoint)
+                     b))
+                 (make-instance (core-default-sw-breakpoint-type o) :core o :address address))))
+    (setf (trap-enabled-p bp) t)))
 
 (defmethod setup-hw-breakpoint ((b hardware-breakpoint) address skipcount &key &allow-other-keys)
   b)
