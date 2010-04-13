@@ -39,6 +39,7 @@
 (define-protocol-device-class core :core (generic:memory-device)
   (;; generic properties
    (isa :accessor core-isa :initarg :isa)
+   (nopcode :reader core-nopcode)
    (insn-execution-limit :accessor core-insn-execution-limit :initarg :insn-instruction-limit)
    ;; constituents
    (traps :accessor core-traps :type hash-table :initarg :traps :documentation "All address traps, by address.")
@@ -201,7 +202,6 @@ might vary depending on situation."))
 
 ;;; misc
 (defgeneric core-call-stack (core))
-
 
 ;;; traps
 (defgeneric set-core-insn-execution-limit (core ninsns))
@@ -410,8 +410,9 @@ might vary depending on situation."))
 ;;;;
 ;;;; Core protocol implementations
 ;;;;
-(defmethod initialize-instance :after ((o core) &key &allow-other-keys)
+(defmethod initialize-instance :after ((o core) &key isa &allow-other-keys)
   "Tie parent links."
+  (setf (slot-value o 'nopcode) (isa-nopcode isa))
   (do-core-hardware-breakpoints (b o)
     (setf (trap-core b) o))
   (do-core-vector-traps (v o)

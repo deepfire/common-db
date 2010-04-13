@@ -369,6 +369,7 @@
    ;; core classes and accessors
    #:core
    #:core-isa
+   #:core-nopcode
    #:core-instruction-counter
    #:core-stop-reason
    #:saved-core-moment
