@@ -210,7 +210,6 @@ might vary depending on situation."))
 (defgeneric set-trap-enabled (controlled-trap enabledp))
 (defsetf trap-enabled-p set-trap-enabled)
 (defgeneric add-sw-breakpoint (core address))
-(defgeneric disable-breakpoint (breakpoint))
 (defgeneric setup-hw-breakpoint (breakpoint address skip-count &key &allow-other-keys))
 (defgeneric add-hw-breakpoint (core address &optional skip-count))
 (defgeneric add-cell-watchpoint (core address &optional skip-count))
@@ -448,7 +447,7 @@ might vary depending on situation."))
   (do-core-traps (addr b o)
     (when (typep b 'hardware-breakpoint)
       (setf (breakpoint-owned-p b) nil))
-    (disable-breakpoint b))
+    (disable-trap b))
   (setf (core-stop-reason o) nil)
   (call-next-method))
 ;;; *** RESET ***
@@ -735,21 +734,16 @@ icache-related anomalies.")
       (enable-trap o)
       (disable-trap o))
   enabledp)
-(defmethod enable-trap   :after ((o controlled-trap)) (setf (slot-value o 'enabled) t))
-(defmethod disable-trap  :after ((o controlled-trap)) (setf (slot-value o 'enabled) nil))
+(defmethod enable-trap  :after ((o controlled-trap))       (setf (slot-value o 'enabled) t))
+(defmethod disable-trap :after ((o controlled-trap))       (setf (slot-value o 'enabled) nil))
+(defmethod disable-trap :after ((o volatile-address-trap)) (remove-trap (trap-core o) (trap-address o)))
+
 (defmethod initialize-instance :after ((o address-trap) &key core address &allow-other-keys)
   (when (and core address)
     (setf (trap core address) o)))
 
 (defmethod coerce-to-trap ((o address-trap))
   o)
-
-(defmethod disable-breakpoint ((o volatile-address-trap))
-  (when (trap-enabled-p o)
-    (disable-trap o))
-  (remove-trap (trap-core o) (trap-address o)))
-(defmethod disable-breakpoint ((o controlled-trap))
-  (disable-trap o))
 
 (defmethod add-sw-breakpoint ((o core) address)
   (lret ((bp (or (let ((b (trap o address :if-does-not-exist :continue)))
@@ -758,17 +752,12 @@ icache-related anomalies.")
                  (make-instance (core-default-sw-breakpoint-type o) :core o :address address))))
     (setf (trap-enabled-p bp) t)))
 
-(defmethod setup-hw-breakpoint ((b hardware-breakpoint) address skipcount &key &allow-other-keys)
-  b)
-
 (defmethod setup-hw-breakpoint :before ((o hardware-breakpoint) address skipcount &key &allow-other-keys)
   (setf (trap-address o) address))
-
+(defmethod setup-hw-breakpoint ((b hardware-breakpoint) address skipcount &key &allow-other-keys)
+  b)
 (defmethod setup-hw-breakpoint :after ((o hardware-breakpoint) address skipcount &key &allow-other-keys)
   (setf (trap-enabled-p o) (not (null address))))
-
-(defmethod add-hw-breakpoint ((core core) address &optional (skipcount 0))
-  (setup-hw-breakpoint (allocate-hardware-breakpoint core) address skipcount))
 
 (defun allocate-hardware-breakpoint (core &optional (if-no-free-breakpoints :error))
   (or (do-core-hardware-breakpoints (b core)
@@ -780,6 +769,9 @@ icache-related anomalies.")
                        (do-core-hardware-breakpoints (b core)
                          (collect (trap-address b)))))
         (:continue))))
+
+(defmethod add-hw-breakpoint ((core core) address &optional (skipcount 0))
+  (setup-hw-breakpoint (allocate-hardware-breakpoint core) address skipcount))
 
 (defun release-hardware-breakpoint (b)
   (setf (breakpoint-owned-p b) nil))
@@ -877,7 +869,7 @@ BREAKPOINT is released when the form is exited, by any means."
              (unless (stop-reason-expected-p)
                (handle-execution-error core 'unexpected-stop-reason
                                        (list :core core :segment segment :address address :actual (core-stop-reason core))))))
-      (mapc #'disable-breakpoint swbreaks))))
+      (mapc #'disable-trap swbreaks))))
 
 (defun invoke-with-execution-of-emitted-segment (emitter-fn core address &key trace report (iteration-period 100000) iteration-limit watch-fn watch-period)
   "Execute the code emitted by EMITTER-FN at ADDRESS on CORE,

@@ -87,7 +87,7 @@
   "Удалить точку останова, будь то программную или аппаратную, установленную
 на ADDRESS."
   (if-let ((b (trap *core* address :if-does-not-exist :continue)))
-          (disable-breakpoint b)
+          (disable-trap b)
           (error 'no-core-breakpoint :core *core* :address address))
   (values))
 
@@ -96,7 +96,7 @@
   "Удалить все программные точки останова."
   (do-core-traps (addr b *core*)
     (when (typep b 'core:software-breakpoint)
-      (disable-breakpoint b)))
+      (disable-trap b)))
   (values))
 
 (defun disable-breaks ()
