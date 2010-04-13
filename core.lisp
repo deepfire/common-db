@@ -207,6 +207,7 @@ might vary depending on situation."))
 (defgeneric set-core-insn-execution-limit (core ninsns))
 (defgeneric enable-trap (controlled-trap))
 (defgeneric disable-trap (controlled-trap))
+(defgeneric recognise-sw-breakpoint (core address))
 (defgeneric add-sw-breakpoint (core address))
 (defgeneric setup-hw-breakpoint (breakpoint address skip-count &key &allow-other-keys))
 (defgeneric add-hw-breakpoint (core address &optional skip-count))
@@ -738,6 +739,11 @@ icache-related anomalies.")
 
 (defmethod coerce-to-trap ((o address-trap))
   o)
+
+(defmethod recognise-sw-breakpoint ((o core) address)
+  (lret ((trap (make-instance (core-default-sw-breakpoint-type o) :core o :address address :saved-insn (core-nopcode o))))
+    (setf (trap o address) trap
+          (slot-value trap 'enabled-p) t)))
 
 (defmethod add-sw-breakpoint ((o core) address)
   (lret ((bp (or (let ((b (trap o address :if-does-not-exist :continue)))

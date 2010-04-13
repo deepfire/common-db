@@ -473,6 +473,7 @@
    #:set-core-insn-execution-limit
    #:invoke-with-traps
    #:with-traps
+   #:recognise-sw-breakpoint
    #:add-sw-breakpoint
    #:setup-hw-breakpoint
    #:add-hw-breakpoint
