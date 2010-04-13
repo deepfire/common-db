@@ -413,7 +413,10 @@ might vary depending on situation."))
 ;;;;
 (defmethod initialize-instance :after ((o core) &key isa &allow-other-keys)
   "Tie parent links."
-  (setf (slot-value o 'nopcode) (isa-nopcode isa))
+  (when isa
+    ;; Don't be aggressive: not all cores currently specify an ISA.
+    ;; In future, we might actually start to enforce that.
+    (setf (slot-value o 'nopcode) (isa-nopcode isa)))
   (do-core-hardware-breakpoints (b o)
     (setf (trap-core b) o))
   (do-core-vector-traps (v o)
