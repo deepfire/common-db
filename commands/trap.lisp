@@ -103,7 +103,7 @@
   #+help-ru
   "Отключить все точки останова."
   (do-core-traps (addr b *core*)
-    (setf (trap-enabled-p b) nil))
+    (disable-trap b))
   (values))
 
 (defun describe-breaks ()
