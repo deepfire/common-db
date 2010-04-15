@@ -45,9 +45,11 @@ DSP-CORE-OR-ID в ADDRESS, если последний не-NIL.  В проти�
   (check-address-alignment 4 address)
   (let* ((dsp-core (coerce-to-dsp dsp-core-or-id))
          (breakpoint (hwbreak dsp-core n)))
-    (setf (values (trap-enabled-p breakpoint) (trap-address breakpoint))
-          (when address
-            (values t address)))
+    (if address
+        (disable-trap breakpoint)
+        (progn
+          (setf (trap-address breakpoint) address)
+          (enable-trap breakpoint)))
     (values)))
 
 (defun dspreset (dsp-core-or-id)
