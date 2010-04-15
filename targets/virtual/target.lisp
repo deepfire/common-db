@@ -46,6 +46,7 @@
   (when *virtual-target-enabled*
     :virt))
 
+#-disable-virtcore
 (defmethod interface-target-discrimination-tree ((o virtif-interface))
   (make-discrimination-tree
    (node :root #'discriminate-by-target-enabledness

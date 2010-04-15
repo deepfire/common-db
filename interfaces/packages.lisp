@@ -1,5 +1,6 @@
 ;;; -*- Mode: Lisp; indent-tabs-mode: nil -*-
 
+#-disable-virtcore
 (cl:defpackage #:interface-virtual
   (:use :common-lisp :alexandria :iterate :pergamum :setc :bitmop :device-model
         :portability :options :bus :interface)

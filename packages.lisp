@@ -240,7 +240,7 @@
   (:shadowing-import-from :bitmop #:space)
   (:export
    #:interface-bus
-   #:virtif-bus
+   #-disable-virtcore #:virtif-bus
    #:parport-bus
    #:ezusb-bus
    #:interface
