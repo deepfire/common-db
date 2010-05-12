@@ -22,7 +22,7 @@
 
 (defpackage #:gdb
   (:use :common-lisp :alexandria :pergamum :iterate :isa :isa-mips :assem :assem-mips :setc :bitmop :device-model
-        :options :portability :spaces :generic :platform :target :core :who)
+        :options :portability :spaces :generic :platform :tgt :core :who)
   (:shadow #:step)
   (:shadowing-import-from :bitmop #:space)
   (:shadowing-import-from :isa #:disassemble)

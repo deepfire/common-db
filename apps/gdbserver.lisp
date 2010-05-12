@@ -23,7 +23,7 @@
 (defpackage :common-db-gdbserver
   (:nicknames :comgdbsrv)
   (:use :common-lisp :alexandria :iterate :pergamum :custom-harness :setc :bitmop :device-model :isa :isa-mips :assem :assem-mips :blitz.debug.gdb-remote :binary-types
-        :portability :options :spaces :bus :address-map :loadable :generic :interface :platform :target :core :sysdev
+        :portability :options :spaces :bus :address-map :loadable :generic :interface :platform :tgt :core :sysdev
         :mips :dsp :flash
         :common-db)
   (:shadowing-import-from :isa #:disassemble)

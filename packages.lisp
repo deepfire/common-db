@@ -303,8 +303,7 @@
    #:configure-platform-memory
    #:platform-address-region))
 
-(defpackage #:target ;; needed by platform, core, system, common-db, test-hardware
-  (:nicknames :tgt) 
+(defpackage #:tgt ;; needed by platform, core, system, common-db, test-hardware
   (:use :common-lisp :alexandria :pergamum :iterate :discrimination :isa :isa-mips :assem :assem-mips :setc :bitmop :device-model
         :options :portability :spaces :generic :platform :interface)
   (:shadow #:step)
@@ -344,7 +343,7 @@
 
 (defpackage #:core ;; needed by mips, common-db, test-hardware
   (:use :common-lisp :alexandria :pergamum :iterate :setc :bitmop :device-model :environment :allocation-pool :isa :isa-mips :assem :assem-mips
-        :options :portability :spaces :platform :target)
+        :options :portability :spaces :platform :tgt)
   (:shadowing-import-from :bitmop #:space)
   (:shadowing-import-from :isa #:disassemble)
   (:export
@@ -528,7 +527,7 @@
 
 (defpackage #:sysdev ;; needed by common-db
   (:use :common-lisp :alexandria :pergamum :iterate :discrimination :isa :isa-mips :assem :assem-mips :setc :bitmop :device-model
-        :options :portability :spaces :generic :platform :interface :target)
+        :options :portability :spaces :generic :platform :interface :tgt)
   (:shadow #:step)
   (:shadowing-import-from :bitmop #:space)
   (:shadowing-import-from :isa #:disassemble)
@@ -551,7 +550,7 @@
 
 (defpackage #:mips ;; needed by common-db, test-hardware
   (:use :common-lisp :alexandria :pergamum :iterate :setc :bitmop :device-model :isa :isa-mips :assem :assem-mips :address-map
-        :options :spaces :generic :interface :target :core)
+        :options :spaces :generic :interface :tgt :core)
   (:shadowing-import-from :bitmop #:space)
   (:shadowing-import-from :isa #:disassemble)
   (:export
@@ -638,7 +637,7 @@
 
 (defpackage #:dsp ;; needed by common-db, test-hardware
   (:use :common-lisp :alexandria :pergamum :iterate :setc :bitmop :device-model :isa :isa-mips :assem :assem-mips :address-map
-        :options :spaces :generic :interface :target :core)
+        :options :spaces :generic :interface :tgt :core)
   (:shadowing-import-from :bitmop #:space)
   (:shadowing-import-from :isa #:disassemble)
   (:export
@@ -654,7 +653,7 @@
         :environment
         :isa :isa-mips :assem :assem-mips
         :setc :bitmop :device-model
-        :portability :options :spaces :bus :address-map :loadable :generic :interface :platform :target :core
+        :portability :options :spaces :bus :address-map :loadable :generic :interface :platform :tgt :core
         :mips :sysdev)
   (:shadowing-import-from :bitmop #:space)
   (:shadowing-import-from :isa #:disassemble)
@@ -676,7 +675,7 @@
         :pergamum
         :isa :isa-mips :assem :assem-mips
         :setc :bitmop :device-model
-        :portability :options :spaces :bus :address-map :loadable :generic :interface :platform :target :core :mips)
+        :portability :options :spaces :bus :address-map :loadable :generic :interface :platform :tgt :core :mips)
   (:shadowing-import-from :bitmop #:space)
   (:shadowing-import-from :isa #:disassemble)
   (:export
@@ -700,12 +699,12 @@
   (:nicknames :platdefs)
   (:use :common-lisp
         :pergamum
-        :spaces :platform :target :sysdev :mips))
+        :spaces :platform :tgt :sysdev :mips))
 
 (defpackage #:common-db ;; needed by test-hardware
   (:nicknames :comdb)
   (:use :common-lisp :alexandria :iterate :pergamum :custom-harness :setc :bitmop :device-model :isa :isa-mips :assem :assem-mips
-        :portability :options :spaces :bus :address-map :loadable :generic :interface :platform :target :core :sysdev
+        :portability :options :spaces :bus :address-map :loadable :generic :interface :platform :tgt :core :sysdev
         :mips :dsp :flash)
   (:shadowing-import-from :isa #:disassemble)
   (:shadowing-import-from :bitmop #:space #:*space*)
@@ -739,7 +738,7 @@
 (defpackage #:test-hardware ;; standalone
   (:nicknames :testhw)
   (:use :common-lisp :alexandria :pergamum :iterate :setc :bitmop :device-model :isa :isa-mips :assem :assem-mips :custom-harness
-        :options :spaces :generic :platform :interface :target :core :sysdev :mips :dsp
+        :options :spaces :generic :platform :interface :tgt :core :sysdev :mips :dsp
         :common-db)
   (:shadowing-import-from :bitmop #:space)
   (:shadowing-import-from :isa #:disassemble)
@@ -780,7 +779,7 @@
   (:shadowing-import-from :isa #:disassemble)
   (:shadowing-import-from :common-db #:get #:set #:reset #:trace #:catch #:step)
   (:use :common-lisp :alexandria :pergamum :iterate :setc :bitmop :device-model :isa :isa-mips :assem :assem-mips
-        :options :spaces :generic :platform :interface :target :core :mips :dsp
+        :options :spaces :generic :platform :interface :tgt :core :mips :dsp
         :common-db))
 
 (defpackage #:mdb-emulation

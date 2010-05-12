@@ -7,7 +7,7 @@
         :isa :isa-mips :assem :assem-mips
         :setc :bitmop :device-model
         :bintype
-        :portability :options :spaces :bus :generic :interface :platform :target :core :sysdev :mips
+        :portability :options :spaces :bus :generic :interface :platform :tgt :core :sysdev :mips
         :interface-virtual)
   (:shadowing-import-from :isa #:disassemble)
   (:shadowing-import-from :bitmop #:space)
