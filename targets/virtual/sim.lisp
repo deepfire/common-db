@@ -107,4 +107,5 @@
             (subseq vector (+ start headlen corelen))))))
 
 (defmethod detect-platform-memory-size ((o virtual-platform) base &key &allow-other-keys)
+  (declare (ignore base))
   #x1000000)

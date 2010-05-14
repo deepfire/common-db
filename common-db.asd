@@ -39,6 +39,7 @@
              ;;
 	     #-disable-virtcore
              (:file "virtif" :depends-on ("packages"))
+	     #-disable-parport
              (:file "parport" :depends-on ("packages" "elvees"))
              #+linux
              (:file "ezusb-elvees-linux" :depends-on ("packages" "elvees"))

@@ -430,6 +430,7 @@ such kind of thing.")
           (set-gpr-by-name o (evaluate-mips-gpr reg-name) value))))
 
 (defun disasm-trans-zone (core cenv &optional print-bbnet-instead-of-raw)
+  (declare (ignore print-bbnet-instead-of-raw))
   (with-compilation-environment cenv
     (let ((*segment* (first (cenv-segments cenv)))
           (tags (mapcar #'cdr (env:env-mapping (env-global-frame *tag-domain*)))))

@@ -404,6 +404,8 @@ otherwise."
                                       (target (backend o))
                                       (core (target-device target '(general-purpose-core 0)))
                                       (dataseg (as-data (flash-as o))))
+  #+disable-ironclad
+  (declare (ignore print-csums))
   (let ((io-chunk (min (size dataseg) (size extent)))
         (*log-state-changes* nil))
     (iter (for piece-offset from 0 below (size extent) by io-chunk)
@@ -501,8 +503,8 @@ When PRESERVE-HOLES is non-nil, the area around extents is preserved."
 ;;; Implementation: AMD/Spansion
 ;;;   works for: SST38VF6401B
 ;;;
-(defmethod lock ((f amd-cmdset-flash) exspec))
-(defmethod unlock ((f amd-cmdset-flash) exspec))
+(defmethod lock ((f amd-cmdset-flash) exspec) (declare (ignore exspec)))
+(defmethod unlock ((f amd-cmdset-flash) exspec) (declare (ignore exspec)))
 
 (defmethod emit-flash-region-writer ((f amd-cmdset-flash) base &aux (*poison-mips-stack* *poison-flash-writer-stack*))
   (with-bioable-mips-segment ((backend f) base)
@@ -581,12 +583,12 @@ When PRESERVE-HOLES is non-nil, the area around extents is preserved."
 ;;; Implementations: Intel
 ;;;   works for: MT28F640J3
 ;;;
-(defmethod lock ((f intel-cmdset-flash) exspec))
-(defmethod unlock ((f intel-cmdset-flash) exspec))
+(defmethod lock ((f intel-cmdset-flash) exspec) (declare (ignore exspec)))
+(defmethod unlock ((f intel-cmdset-flash) exspec) (declare (ignore exspec)))
 
 ;;; An ugly fixup.
 (defmethod write-u8-extents :after ((o intel-cmdset-flash) extents &key preserve-holes before-fn stream)
-  (declare (ignore preserve-holes before-fn stream))
+  (declare (ignore extents preserve-holes before-fn stream))
   (flash-write o 0 :read-array))
 
 (defmethod emit-flash-region-writer ((f intel-cmdset-flash) base &aux (*poison-mips-stack* *poison-flash-writer-stack*))

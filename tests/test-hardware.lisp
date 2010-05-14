@@ -88,7 +88,7 @@
                                                                                (memory-region-extent (target-device (backend core) '(internal-memory 0))))))
          (*log-state-changes* nil))
     (handler-case (trans-funcall* core cenv address-space :call-marker-placer base)
-      (core:unexpected-stop-reason (c)
+      (core:unexpected-stop-reason ()
         #+nil
         (expect-core-fetch-address core (fetch ...)
             (breakpoint-not-reached :breakpoint #x80000044))))

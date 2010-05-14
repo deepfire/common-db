@@ -142,9 +142,9 @@
    #:port-bits
    #:get-permission
    #:clear-epp-timeout
-   #:parport-error
-   #:parport-insufficient-privileges-error
-   #:parport-reset-error))
+   #-disable-parport #:parport-error
+   #-disable-parport #:parport-insufficient-privileges-error
+   #-disable-parport #:parport-reset-error))
 
 (defpackage #:eltext ;; standalone
   (:use :common-lisp :alexandria :iterate :pergamum
@@ -241,7 +241,7 @@
   (:export
    #:interface-bus
    #-disable-virtcore #:virtif-bus
-   #:parport-bus
+   #-disable-parport  #:parport-bus
    #:ezusb-bus
    #:interface
    #:iface-name

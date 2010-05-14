@@ -47,6 +47,7 @@
 (defgeneric describe-core (core reginstance-cb)
   (:method-combination most-specific-last)
   (:method ((o core) reginstance-cb)
+    (declare (ignore reginstance-cb))
     (concatenate 'string
                  (with-html-output-to-string (s)
                    (:architecture (str (string-downcase (string (isa-name (core-isa o))))))
@@ -55,6 +56,7 @@
 
 (defgeneric describe-register (device name bitsize regnum group)
   (:method ((o device) name bitsize regnum group)
+    (declare (ignore regnum))
     (format nil "<reg name='~(~A~)' bitsize='~D'~:[~; regnum='~D'~] group='~(~A~)'/>~%"
             name bitsize #+nil regnum nil group)))
 

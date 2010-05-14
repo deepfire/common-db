@@ -167,9 +167,9 @@
         (emit* :eret)
         (emit* :nop)))))
   
-(defun core-state-restorer (state &key (entry-point #x1fc00000))
-  "Produce a memory extent list suitable for reproduction of STATE, including memory (because we can!).
-   ENTRY-POINT specifies the extent list's restoration routine entry point."
+(defun core-state-restorer (core state &key (entry-point #x1fc00000))
+  "Produce a memory extent list suitable for reproduction of STATE on CORE, including memory (because we can!).
+ENTRY-POINT specifies the extent list's restoration routine entry point."
   (declare (type (or null (unsigned-byte 32)) entry-point))
   (with-slots (tlb virtual-pages phys-pages page-size) state
     (append
@@ -178,14 +178,14 @@
        (unless page-size
          (error "Cannot emit virtual page restore: page size not specified."))
        ;; XXX: virtual pages!
-       (mapcar (curry #'rebase ) (tlb-address-map tlb page-size) virtual-pages))
+       (mapcar (curry #'rebase ) (tlb-address-map core tlb page-size) virtual-pages))
      (list phys-pages))))
 
-(defun write-core-state-restorer-eltext (state filename &key (entry-point #x0) (emit-trampoline t))
+(defun write-core-state-restorer-eltext (core state filename &key (entry-point #x0) (emit-trampoline t))
   (eltext:write-extents-eltext
    filename
    (append
-    (list (core-state-restorer state :entry-point (logandc1 #x80000000 entry-point)))
+    (list (core-state-restorer core state :entry-point (logandc1 #x80000000 entry-point)))
     (when emit-trampoline
       (list (make-extent 'extent #xbfc00000
                          (segment-active-vector

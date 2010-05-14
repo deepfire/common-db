@@ -248,9 +248,10 @@
 (defun clear-epp-timeout (base)
   (declare (type (unsigned-byte 16) base))
   (or (not (port-bit base :spp-status :epp-tmout))
-      (let ((status (port base :spp-status)))
-        (setc status (port base :spp-status)                            ; To clear tmout some chips require dbl read
-              (port-bit base :spp-status :epp-tmout :write-only t) t    ; Some reset by writing 1
+      (progn
+        (port base :spp-status)
+        (port base :spp-status) ; To clear tmout some chips require dbl read
+        (setc (port-bit base :spp-status :epp-tmout :write-only t) t ; Some reset by writing 1
               (port-bit base :spp-status :epp-tmout :write-only t) nil) ; Some by writing 0
         (not (port-bit base :spp-status :epp-tmout)))))
 
@@ -372,7 +373,7 @@
                :iteration-period +generic-delay+)))
 
 (defun tap-shift-dr-path (array iface bits lie &aux (port-base (parport-interface-epp-base iface)))
-  (declare (type (simple-array (unsigned-byte 8)) array) (type parport-interface iface) (type (unsigned-byte 32) bits)
+  (declare (type (simple-array (unsigned-byte 8)) array) (type (unsigned-byte 32) bits)
            (type (unsigned-byte 16) port-base) (type (unsigned-byte 1) lie) 
            (optimize (debug 0) (safety 0)))
   (setc (state-transition port-base iface) (:rti-capturedr-pausedr :pausedr)
@@ -402,7 +403,7 @@
   (values))
 
 (defun (setf tap-ir) (insn iface null &aux (port-base (parport-interface-epp-base iface)))
-  (declare (type unsigned-byte insn) (ignore null) (type parport-interface iface) (type (unsigned-byte 16) port-base))
+  (declare (type unsigned-byte insn) (ignore null) (type (unsigned-byte 16) port-base))
   (let ((ioarr (make-array 1 :element-type '(unsigned-byte 8) :initial-element insn)))
     (tap-write-ir-vector ioarr port-base +oncd-ir-length+)
     (setc (iface-ircache iface) insn)
@@ -410,7 +411,7 @@
 
 (let ((ioarr (make-array 5 :element-type '(unsigned-byte 8))))
   (defun tap-write-dr-path-integer (val interface selector read-only &aux (port-base (parport-interface-epp-base interface)))
-    (declare (type (unsigned-byte 32) val) (type parport-interface interface) (type (unsigned-byte 16) port-base) (fixnum selector) (boolean read-only))
+    (declare (type (unsigned-byte 32) val) (type (unsigned-byte 16) port-base) (fixnum selector) (boolean read-only))
     (setf (aref ioarr 0) (logior selector (bits :rdonly/push-irdec read-only))
           (u8-vector-word32le ioarr 1) val)
     (let ((reglen (+ +oncd-ird-length+ (the (unsigned-byte 6) (aref (aref (the (simple-array (simple-array t)) (device-extensions interface)) selector) 1)))))
@@ -421,7 +422,7 @@
   (defun (setf parport-tap-ird) (val iface null &aux (port-base (parport-interface-epp-base iface)))
     "Used in interface-reset, interface-reset-target, (setf core-running-p),
 step-core-asynchronous and exec-raw."
-    (declare (type (unsigned-byte 32) val) (type (unsigned-byte 16) port-base) (type parport-interface iface) (ignore null))
+    (declare (type (unsigned-byte 32) val) (type (unsigned-byte 16) port-base) (ignore null))
     (let* ((bitlen (max +oncd-ird-length+ (integer-length val)))
            (bytelen (ceiling bitlen 8)))
       (setf (u8-vector-wordle ioarr 0) val)

@@ -128,16 +128,23 @@ ERROR-RETURN-FORM."
 (defmethod interface-close ((o interface)) t)
 
 (defun scan-interface-busses (&key force-rescan virtual (physical t))
+  #+disable-virtcore
+  (declare (ignore virtual))
   #-disable-virtcore
   (let ((*virtual-interface-enabled* virtual)
         (*virtual-target-enabled* virtual))
     (bus-scan (or (root-bus 'virtif :if-does-not-exist :continue) (make-instance 'virtif-bus :name 'virtif)) force-rescan))
   (when physical
+    #-disable-parport
     (bus-scan (or (root-bus 'parport :if-does-not-exist :continue) (make-instance 'parport-bus :name 'parport)) force-rescan)
     (unless *disable-usb-interfaces*
       (bus-scan (or (root-bus 'ezusb :if-does-not-exist :continue) (make-instance 'ezusb-bus :name 'ezusb)) force-rescan))))
 
 (defun interfaces ()
   "Return the list of all active interfaces."
-  (append (bus-devices (root-bus 'parport)) (bus-devices (root-bus 'ezusb))))
+  (append #-disable-virtcore
+          (bus-devices (root-bus 'virtif))
+          #-disable-parport
+          (bus-devices (root-bus 'parport))
+          (bus-devices (root-bus 'ezusb))))
 

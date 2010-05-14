@@ -211,7 +211,8 @@ SECONDS могут быть любым неотрицательным реаль
                        #-help-ru "You can choose a category either by its long name, or by the short one (shown in parentheses).~%"))))
     
     (unless what                        ; do some consistency checks
-      (let ((categorised (remove-duplicates (iter (for ((name title . rest) . symbols) in *documentation-categories*)
+      (let ((categorised (remove-duplicates (iter (for ((nil nil . nil) . symbols) in *documentation-categories*)
+                                                  ;; ((name title . rest) . symbols)
                                                   (appending symbols)))))
         (when-let ((stale (set-difference categorised known-commands)))
           (format t "~@<WARNING: ~@;stale categories:~{ ~A~}~:@>~%" stale))

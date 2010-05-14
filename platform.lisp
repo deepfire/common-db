@@ -65,6 +65,7 @@
 (defmethod initialize-instance :before ((o platform) &key &allow-other-keys)
   (unless (platform (class-name (class-of o)) :if-does-not-exist :continue)
     (setf (platform (class-name (class-of o))) o)))
+
 ;;;
 ;;; The PLATFORM's :AFTER method on INITIALIZE-INSTANCE is used by target.lisp,
 ;;; and is described in terms of system.lisp

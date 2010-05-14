@@ -52,7 +52,4 @@
   ()
   (:layouts (:vtimer mapped-ref (setf mapped-ref))))
 
-(define-protocol-device-class system :platform (virtual-mapped-device) ()
-  (:default-initargs :enumeration-class 'system))
-
-(define-device-class virtsys :platform (system) ())
+(define-device-class virtsys :platform (system virtual-mapped-device) ())

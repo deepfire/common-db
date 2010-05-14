@@ -85,7 +85,9 @@ The secondary value, when non-NIL, represents a bus ID."))
 (defgeneric bus-id-at-address (bus address)
   (:documentation
    "Retrieve the bus ID of a device residing on BUS at ADDRESS.")
-  (:method ((bus bus) device) t)
+  (:method ((bus bus) device)
+    (declare (ignore device))
+    t)
   (:method ((o probe-discovery-bus) address)
     (gethash address (bus-probe-time-bus-ids o))))
 
@@ -93,7 +95,9 @@ The secondary value, when non-NIL, represents a bus ID."))
   (:documentation
    "Determine whether ID1 and ID2 are sufficiently same, 
 so as not to require a device reinitialisation.")
-  (:method ((bus bus) id1 id2) t))
+  (:method ((bus bus) id1 id2)
+    (declare (ignore id1 id2))
+    t))
 
 (defgeneric bus-occupied-addresses (bus)
   (:documentation
@@ -113,7 +117,9 @@ of apparently surviving devices.")
   (:method ((o bus) (d bus-device)) t))
 
 (defgeneric bus-add (bus device)
-  (:method ((bus bus) device) t)
+  (:method ((bus bus) device)
+    (declare (ignore device))
+    t)
   (:method :after ((bus bus) device)
     (setf (bus-device bus (device-bus-address device)) device)))
 
@@ -123,13 +129,16 @@ of apparently surviving devices.")
 appearing on it.
 The primary must return the new device, if any.")
   (:method :around ((o bus) address)
+    (declare (ignore address))
     (when-let ((device (call-next-method)))
       (handler-case (bus-add o device)
         (error (c)
           (syncformat *error-output* "~@<ERROR: ~@;encountered error while adding ~S to bus:~%~3T~A~:@>~%" o c))))))
 
 (defgeneric bus-remove (bus device)
-  (:method ((bus bus) device) t)
+  (:method ((bus bus) device)
+    (declare (ignore device))
+    t)
   (:method :before ((bus bus) device)
     (remove-bus-device bus (device-bus-address device))))
 

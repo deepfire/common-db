@@ -25,4 +25,5 @@
 
 ;;; Layering violation?
 (defmethod comdb:default-display-list ((platform virtual-platform) interface target core)
+  (declare (ignore interface target core))
   (list :fetch :dec :exec :mem :writeback :insn))

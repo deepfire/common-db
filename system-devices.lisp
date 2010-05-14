@@ -26,6 +26,9 @@
 (define-namespace :platform
   (:documentation "Platform devices"))
 
+(define-protocol-device-class system :platform () ()
+  (:default-initargs :enumeration-class 'system))
+
 (define-device-class cache :platform (platform-memory-region slave-memory-region)
     ()
   (:default-initargs :enumeration-class 'cache-memory))

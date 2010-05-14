@@ -260,26 +260,6 @@ might vary depending on situation."))
     ((tlb-entries-nr :reader core-tlb-entries-nr :initarg :tlb-entries-nr)))
 
 ;;;;
-;;;; Containers
-;;;;
-(define-subcontainer trap :container-slot traps :type address-trap :iterator do-core-traps :remover remove-trap :if-exists :error
-                     :iterator-bind-key t)
-(define-subcontainer hwbreak :container-slot hw-breakpoints :type hardware-breakpoint :iterator do-core-hardware-breakpoints :if-exists :error)
-
-(defmacro do-core-controlled-traps ((o core) &body body)
-  (with-gensyms (addr)
-    `(do-core-traps (,addr ,o ,core)
-       (when (typep ,o 'controlled-trap) ,@body))))
-(defmacro do-core-vector-traps ((o core) &body body)
-  (with-gensyms (addr)
-    `(do-core-traps (,addr ,o ,core)
-       (when (typep ,o 'vector-trap) ,@body))))
-(defmacro do-core-software-breakpoints ((o core) &body body)
-  (with-gensyms (addr)
-    `(do-core-traps (,addr ,o ,core)
-       (when (typep ,o 'software-breakpoint) ,@body))))
-
-;;;;
 ;;;; Printing
 ;;;;
 (define-print-object-method ((o core) id backend)
@@ -409,6 +389,250 @@ might vary depending on situation."))
 ;;; *** STATE ***
 
 ;;;;
+;;;; Core stop reasoning
+;;;;
+(define-protocol-class core-stop-reason () ())
+
+(define-protocol-class trap (core-stop-reason)
+  ((core :accessor trap-core :initarg :core)))
+
+(define-protocol-class controlled-trap (trap)
+  ((enabled :reader trap-enabled-p :initarg :enabled))
+  (:default-initargs
+   :enabled nil))
+
+(define-protocol-class address-trap (controlled-trap)
+  ((address :accessor trap-address :initarg :address))
+  (:default-initargs
+   :address nil))
+
+(define-protocol-class skippable-trap (controlled-trap)
+  ((skipcount :accessor trap-skipcount :type (unsigned-byte 32) :initarg :skipcount))
+  (:default-initargs
+   :skipcount 0))
+
+(define-protocol-class enumerated-trap (controlled-trap)
+  ((id :accessor trap-id :initarg :id)))
+
+(define-protocol-class volatile-address-trap (address-trap) ())
+
+;;;;
+;;;;    The Grand Scheme of Things.
+;;;;
+;;; +---------------+---------------------+
+;;; | Legend:       | cGRE Protocol class |
+;;; +---------------+---------------------+
+;;;
+;;;  +-----------------------+  +-------------------+
+;;;  | cGRE core-stop-reason +->| user-interruption |
+;;;  +--------+--------------+  +-------------------+
+;;;           |
+;;;           V
+;;;     +-----------+      +----------------+
+;;;     | cGRE trap +----->| intercore-trap |
+;;;     +-----+-----+      +----------------+
+;;;           |
+;;;           |                     +------------------------+
+;;;           |        /----------->| instruction-count-trap |
+;;;           |        |            +------------------------+
+;;;           V        |
+;;;  +-----------------+----+       +---------------------+
+;;;  | cGRE controlled-trap +------>| cGRE skippable-trap |
+;;;  +--------+--------+----+       +---------------------+
+;;;           |        |
+;;;           |        |            +----------------------+
+;;;           |        \----------->| cGRE enumerated-trap |
+;;;           |                     +----------------------+
+;;;           |
+;;;           |                     +-------------+
+;;;           |      /------------->| vector-trap |
+;;;           |      |              +-------------+
+;;;           V      |
+;;; +----------------+--+           +--------------------+
+;;; | cGRE address-trap +---------->| memory-access-trap |
+;;; +---------+------+--+           +--------------------+
+;;;           |      |
+;;;           |      |              +------------+
+;;;           |      \------------->| breakpoint |
+;;;           |                     +------+-----+
+;;;           V                            |
+;;; +----------------------------+    /----+------------\
+;;; | cGRE volatile-address-trap |    |                 |
+;;; +---------+------------------+    |                 V
+;;;           |                       |      +----------+----------+
+;;;           \------------------+----/      | hardware-breakpoint |
+;;;                              |           +---------------------+
+;;;                              V
+;;;                   +---------------------+
+;;;                   | software-breakpoint |
+;;;                   +---------------------+
+;;;
+
+(defclass user-interruption (core-stop-reason) ())
+
+(defclass intercore-trap (trap) 
+  ((trapping-core :accessor trap-causing-core :initarg :trapping-core)))
+
+(defclass instruction-count-trap (controlled-trap) 
+  ((instruction-limit :accessor trap-instruction-limit)))
+
+(defclass vector-trap (address-trap) ())
+(defclass memory-access-trap (address-trap) ())
+
+(defclass breakpoint (address-trap)
+  ()
+  (:default-initargs
+   :address #x0
+   :skipcount 1))
+
+(defclass hardware-breakpoint (breakpoint)
+  ((owned :accessor breakpoint-owned-p :initarg :owned))
+  (:default-initargs
+   :owned nil))
+(defclass software-breakpoint (volatile-address-trap breakpoint)
+  ((saved-insn :accessor software-breakpoint-saved-insn :initform 0 :initarg :saved-insn :type (unsigned-byte 32))))
+
+;;;;
+;;;; Core trap containers
+;;;;
+(define-subcontainer trap :container-slot traps :type address-trap :iterator do-core-traps :remover remove-trap :if-exists :error
+                     :iterator-bind-key t)
+(define-subcontainer hwbreak :container-slot hw-breakpoints :type hardware-breakpoint :iterator do-core-hardware-breakpoints :if-exists :error)
+
+(defmacro do-core-controlled-traps ((o core) &body body)
+  `(do-core-traps (nil ,o ,core)
+     (when (typep ,o 'controlled-trap) ,@body)))
+(defmacro do-core-vector-traps ((o core) &body body)
+  `(do-core-traps (nil ,o ,core)
+     (when (typep ,o 'vector-trap) ,@body)))
+(defmacro do-core-software-breakpoints ((o core) &body body)
+  `(do-core-traps (nil ,o ,core)
+     (when (typep ,o 'software-breakpoint) ,@body)))
+
+(define-print-object-method ((o trap)) "")
+(define-print-object-method ((o intercore-trap) trapping-core)
+    " trapping core: ~S" trapping-core)
+(define-print-object-method ((o controlled-trap) enabled)
+    " ~:[dis~;en~]abled" enabled)
+(define-print-object-method ((o address-trap) enabled address)
+    " ~:[dis~;en~]abled, address: 0x~X" enabled address)
+(define-print-object-method ((b hardware-breakpoint) address trigcount id)
+    "~8,'0X trigcount: ~D id: ~D" address trigcount id)
+(define-print-object-method ((b software-breakpoint) address trigcount saved-insn)
+    "~8,'0X insn: 0x~8,'0X" address saved-insn)
+
+(defmethod enable-trap  :after ((o controlled-trap))       (setf (slot-value o 'enabled) t))
+(defmethod disable-trap :after ((o controlled-trap))       (setf (slot-value o 'enabled) nil))
+(defmethod disable-trap :after ((o volatile-address-trap)) (remove-trap (trap-core o) (trap-address o)))
+
+(defmethod initialize-instance :after ((o address-trap) &key core address &allow-other-keys)
+  (when (and core address)
+    (setf (trap core address) o)))
+
+(defmethod coerce-to-trap ((o address-trap))
+  o)
+
+(defmethod recognise-sw-breakpoint ((o core) address)
+  (lret ((trap (make-instance (core-default-sw-breakpoint-type o) :core o :address address :saved-insn (core-nopcode o))))
+    (setf (trap o address) trap
+          (slot-value trap 'enabled-p) t)))
+
+(defmethod add-sw-breakpoint ((o core) address)
+  (lret ((bp (or (let ((b (trap o address :if-does-not-exist :continue)))
+                   (when (typep b 'software-breakpoint)
+                     b))
+                 (make-instance (core-default-sw-breakpoint-type o) :core o :address address))))
+    (enable-trap bp)))
+
+(defmethod setup-hw-breakpoint :before ((o hardware-breakpoint) address skipcount &key &allow-other-keys)
+  (declare (ignore skipcount))
+  (setf (trap-address o) address))
+(defmethod setup-hw-breakpoint ((b hardware-breakpoint) address skipcount &key &allow-other-keys)
+  (declare (ignore address skipcount))
+  b)
+(defmethod setup-hw-breakpoint :after ((o hardware-breakpoint) address skipcount &key &allow-other-keys)
+  (declare (ignore skipcount))
+  (if address
+      (enable-trap o)
+      (disable-trap o)))
+
+(defun allocate-hardware-breakpoint (core &optional (if-no-free-breakpoints :error))
+  (or (do-core-hardware-breakpoints (b core)
+        (unless (breakpoint-owned-p b)
+          (setf (breakpoint-owned-p b) t)
+          (return b)))
+      (ecase if-no-free-breakpoints
+        (:error (error "~@<No free breakpoints.  Used:~{ ~8,'0X~}~:@>"
+                       (do-core-hardware-breakpoints (b core)
+                         (collect (trap-address b)))))
+        (:continue))))
+
+(defmethod add-hw-breakpoint ((core core) address &optional (skipcount 0))
+  (setup-hw-breakpoint (allocate-hardware-breakpoint core) address skipcount))
+
+(defun release-hardware-breakpoint (b)
+  (setf (breakpoint-owned-p b) nil))
+
+(defun allocate-hardware-breakpoints (core n)
+  (iter (repeat n)
+        (collect (allocate-hardware-breakpoint core))))
+
+(defun invoke-with-maybe-free-hardware-breakpoints (maybe core fn addresses skipcount
+                                                    &rest breakpoint-setup-args &key &allow-other-keys)
+  (if maybe
+      (let ((breakpoints (allocate-hardware-breakpoints core (length addresses))))
+        (unwind-protect (progn
+                          (iter (for b in breakpoints)
+                                (for a in addresses)
+                                (when a
+                                  (apply #'setup-hw-breakpoint b a skipcount breakpoint-setup-args)))
+                          (apply fn breakpoints))
+          (dolist (b breakpoints)
+            (release-hardware-breakpoint b)
+            (disable-trap b))))
+      (funcall fn nil)))
+
+(eval-when (:compile-toplevel :load-toplevel)
+  (defun parse-defaulting-binding-list (binding-list &optional default)
+    (iter (for binding in binding-list)
+          (collect (if (consp binding) (first binding) binding) into vars)
+          (collect (if (consp binding) (second binding) default) into values)
+          (finally (return (values vars values))))))
+
+(defmacro with-maybe-free-hardware-breakpoints ((maybe core &optional (skipcount 0) &rest breakpoint-args &key &allow-other-keys)
+                                                (&rest breakpoint-bindings)
+                                                &body body)
+  "Execute BODY with BREAKPOINT bound to a free hardware breakpoint.
+BREAKPOINT is released when the form is exited, by any means."
+  (multiple-value-bind (vars addresses) (parse-defaulting-binding-list breakpoint-bindings)
+    `(invoke-with-maybe-free-hardware-breakpoints ,maybe ,core (lambda ,vars
+                                                                 (declare (ignorable ,@vars))
+                                                                 ,@body)
+                                                  (list ,@addresses) ,skipcount ,@breakpoint-args)))
+
+(defmacro with-free-hardware-breakpoints ((core &optional (skipcount 0) &rest breakpoint-args &key &allow-other-keys)
+                                          (&rest breakpoint-bindings)
+                                          &body body)
+  "Execute BODY with BREAKPOINT bound to a free hardware breakpoint.
+BREAKPOINT is released when the form is exited, by any means."
+  `(with-maybe-free-hardware-breakpoints (t ,core ,skipcount ,@breakpoint-args) ,breakpoint-bindings
+     ,@body))
+
+(defun invoke-with-traps (traps fn &aux
+                          (traps (mapcar #'coerce-to-trap traps)))
+  "Call FN with TRAPS enabled within the dynamic extent of the call."
+  (dolist (trap traps)
+    (enable-trap trap))
+  (unwind-protect (funcall fn)
+    (dolist (trap traps)
+      (disable-trap trap))))
+
+;;; XXX: this corelessness seriously ain't good
+(defmacro with-traps ((&rest traps) &body body)
+  "Execute BODY with TRAPS enabled."
+  `(invoke-with-traps (list ,@traps) (lambda () ,@body)))
+
+;;;;
 ;;;; Core protocol implementations
 ;;;;
 (defmethod initialize-instance :after ((o core) &key isa &allow-other-keys)
@@ -447,7 +671,7 @@ might vary depending on situation."))
   (call-next-method))
 
 (defmethod reset-core :around ((o core))
-  (do-core-traps (addr b o)
+  (do-core-traps (nil b o)
     (when (typep b 'hardware-breakpoint)
       (setf (breakpoint-owned-p b) nil))
     (disable-trap b))
@@ -457,14 +681,17 @@ might vary depending on situation."))
 
 ;;;     PIPELINE
 (defmethod set-core-moment :after ((o general-purpose-core) moment)
+  (declare (ignore moment))
   (setf (core-moment-changed-p o) t
         (saved-core-trail o) (make-neutral-trail o)
         (core-trail-important-p o) nil))
 
 (defmethod (setf saved-core-moment) :after (moment (o general-purpose-core))
+  (declare (ignore moment))
   (setf (core-moment-changed-p o) t))
 
 (defmethod (setf saved-core-trail) :after (trail (o general-purpose-core))
+  (declare (ignore trail))
   (setf (core-trail-important-p o) t))
 
 (defmethod save-core-pipeline ((o general-purpose-core) &key (trail-important t))
@@ -474,6 +701,7 @@ might vary depending on situation."))
 
 (defmethod (setf pc) :before (value (o core))
   "The moment we change PC knowingly, CORE's stop reason ceases to matter."
+  (declare (ignore value))
   (setf (core-stop-reason o) nil))
 ;;; *** PIPELINE ***
 
@@ -617,230 +845,6 @@ icache-related anomalies.")
     (error (apply #'make-condition condition-type condition-args))))
 
 ;;;;
-;;;; Core stop reasoning
-;;;;
-(define-protocol-class core-stop-reason () ())
-
-(define-protocol-class trap (core-stop-reason)
-  ((core :accessor trap-core :initarg :core)))
-
-(define-protocol-class controlled-trap (trap)
-  ((enabled :reader trap-enabled-p :initarg :enabled))
-  (:default-initargs
-   :enabled nil))
-
-(define-protocol-class address-trap (controlled-trap)
-  ((address :accessor trap-address :initarg :address))
-  (:default-initargs
-   :address nil))
-
-(define-protocol-class skippable-trap (controlled-trap)
-  ((skipcount :accessor trap-skipcount :type (unsigned-byte 32) :initarg :skipcount))
-  (:default-initargs
-   :skipcount 0))
-
-(define-protocol-class enumerated-trap (controlled-trap)
-  ((id :accessor trap-id :initarg :id)))
-
-(define-protocol-class volatile-address-trap (address-trap) ())
-
-;;;;
-;;;;    The Grand Scheme of Things.
-;;;;
-;;; +---------------+---------------------+
-;;; | Legend:       | cGRE Protocol class |
-;;; +---------------+---------------------+
-;;;
-;;;  +-----------------------+  +-------------------+
-;;;  | cGRE core-stop-reason +->| user-interruption |
-;;;  +--------+--------------+  +-------------------+
-;;;           |
-;;;           V
-;;;     +-----------+      +----------------+
-;;;     | cGRE trap +----->| intercore-trap |
-;;;     +-----+-----+      +----------------+
-;;;           |
-;;;           |                     +------------------------+
-;;;           |        /----------->| instruction-count-trap |
-;;;           |        |            +------------------------+
-;;;           V        |
-;;;  +-----------------+----+       +---------------------+
-;;;  | cGRE controlled-trap +------>| cGRE skippable-trap |
-;;;  +--------+--------+----+       +---------------------+
-;;;           |        |
-;;;           |        |            +----------------------+
-;;;           |        \----------->| cGRE enumerated-trap |
-;;;           |                     +----------------------+
-;;;           |
-;;;           |                     +-------------+
-;;;           |      /------------->| vector-trap |
-;;;           |      |              +-------------+
-;;;           V      |
-;;; +----------------+--+           +--------------------+
-;;; | cGRE address-trap +---------->| memory-access-trap |
-;;; +---------+------+--+           +--------------------+
-;;;           |      |
-;;;           |      |              +------------+
-;;;           |      \------------->| breakpoint |
-;;;           |                     +------+-----+
-;;;           V                            |
-;;; +----------------------------+    /----+------------\
-;;; | cGRE volatile-address-trap |    |                 |
-;;; +---------+------------------+    |                 V
-;;;           |                       |      +----------+----------+
-;;;           \------------------+----/      | hardware-breakpoint |
-;;;                              |           +---------------------+
-;;;                              V
-;;;                   +---------------------+
-;;;                   | software-breakpoint |
-;;;                   +---------------------+
-;;;
-
-(defclass user-interruption (core-stop-reason) ())
-
-(defclass intercore-trap (trap) 
-  ((trapping-core :accessor trap-causing-core :initarg :trapping-core)))
-
-(defclass instruction-count-trap (controlled-trap) 
-  ((instruction-limit :accessor trap-instruction-limit)))
-
-(defclass vector-trap (address-trap) ())
-(defclass memory-access-trap (address-trap) ())
-
-(defclass breakpoint (address-trap)
-  ()
-  (:default-initargs
-   :address #x0
-   :skipcount 1))
-
-(defclass hardware-breakpoint (breakpoint)
-  ((owned :accessor breakpoint-owned-p :initarg :owned))
-  (:default-initargs
-   :owned nil))
-(defclass software-breakpoint (volatile-address-trap breakpoint)
-  ((saved-insn :accessor software-breakpoint-saved-insn :initform 0 :initarg :saved-insn :type (unsigned-byte 32))))
-
-(define-print-object-method ((o trap)) "")
-(define-print-object-method ((o intercore-trap) trapping-core)
-    " trapping core: ~S" trapping-core)
-(define-print-object-method ((o controlled-trap) enabled)
-    " ~:[dis~;en~]abled" enabled)
-(define-print-object-method ((o address-trap) enabled address)
-    " ~:[dis~;en~]abled, address: 0x~X" enabled address)
-(define-print-object-method ((b hardware-breakpoint) address trigcount id)
-    "~8,'0X trigcount: ~D id: ~D" address trigcount id)
-(define-print-object-method ((b software-breakpoint) address trigcount saved-insn)
-    "~8,'0X insn: 0x~8,'0X" address saved-insn)
-
-(defmethod enable-trap  :after ((o controlled-trap))       (setf (slot-value o 'enabled) t))
-(defmethod disable-trap :after ((o controlled-trap))       (setf (slot-value o 'enabled) nil))
-(defmethod disable-trap :after ((o volatile-address-trap)) (remove-trap (trap-core o) (trap-address o)))
-
-(defmethod initialize-instance :after ((o address-trap) &key core address &allow-other-keys)
-  (when (and core address)
-    (setf (trap core address) o)))
-
-(defmethod coerce-to-trap ((o address-trap))
-  o)
-
-(defmethod recognise-sw-breakpoint ((o core) address)
-  (lret ((trap (make-instance (core-default-sw-breakpoint-type o) :core o :address address :saved-insn (core-nopcode o))))
-    (setf (trap o address) trap
-          (slot-value trap 'enabled-p) t)))
-
-(defmethod add-sw-breakpoint ((o core) address)
-  (lret ((bp (or (let ((b (trap o address :if-does-not-exist :continue)))
-                   (when (typep b 'software-breakpoint)
-                     b))
-                 (make-instance (core-default-sw-breakpoint-type o) :core o :address address))))
-    (enable-trap bp)))
-
-(defmethod setup-hw-breakpoint :before ((o hardware-breakpoint) address skipcount &key &allow-other-keys)
-  (setf (trap-address o) address))
-(defmethod setup-hw-breakpoint ((b hardware-breakpoint) address skipcount &key &allow-other-keys)
-  b)
-(defmethod setup-hw-breakpoint :after ((o hardware-breakpoint) address skipcount &key &allow-other-keys)
-  (if address
-      (enable-trap o)
-      (disable-trap o)))
-
-(defun allocate-hardware-breakpoint (core &optional (if-no-free-breakpoints :error))
-  (or (do-core-hardware-breakpoints (b core)
-        (unless (breakpoint-owned-p b)
-          (setf (breakpoint-owned-p b) t)
-          (return b)))
-      (ecase if-no-free-breakpoints
-        (:error (error "~@<No free breakpoints.  Used:~{ ~8,'0X~}~:@>"
-                       (do-core-hardware-breakpoints (b core)
-                         (collect (trap-address b)))))
-        (:continue))))
-
-(defmethod add-hw-breakpoint ((core core) address &optional (skipcount 0))
-  (setup-hw-breakpoint (allocate-hardware-breakpoint core) address skipcount))
-
-(defun release-hardware-breakpoint (b)
-  (setf (breakpoint-owned-p b) nil))
-
-(defun allocate-hardware-breakpoints (core n)
-  (iter (repeat n)
-        (collect (allocate-hardware-breakpoint core))))
-
-(defun invoke-with-maybe-free-hardware-breakpoints (maybe core fn addresses skipcount
-                                                    &rest breakpoint-setup-args &key &allow-other-keys)
-  (if maybe
-      (let ((breakpoints (allocate-hardware-breakpoints core (length addresses))))
-        (unwind-protect (progn
-                          (iter (for b in breakpoints)
-                                (for a in addresses)
-                                (when a
-                                  (apply #'setup-hw-breakpoint b a skipcount breakpoint-setup-args)))
-                          (apply fn breakpoints))
-          (dolist (b breakpoints)
-            (release-hardware-breakpoint b)
-            (disable-trap b))))
-      (funcall fn nil)))
-
-(eval-when (:compile-toplevel :load-toplevel)
-  (defun parse-defaulting-binding-list (binding-list &optional default)
-    (iter (for binding in binding-list)
-          (collect (if (consp binding) (first binding) binding) into vars)
-          (collect (if (consp binding) (second binding) default) into values)
-          (finally (return (values vars values))))))
-
-(defmacro with-maybe-free-hardware-breakpoints ((maybe core &optional (skipcount 0) &rest breakpoint-args &key &allow-other-keys)
-                                                (&rest breakpoint-bindings)
-                                                &body body)
-  "Execute BODY with BREAKPOINT bound to a free hardware breakpoint.
-BREAKPOINT is released when the form is exited, by any means."
-  (multiple-value-bind (vars addresses) (parse-defaulting-binding-list breakpoint-bindings)
-    `(invoke-with-maybe-free-hardware-breakpoints ,maybe ,core (lambda ,vars
-                                                                 (declare (ignorable ,@vars))
-                                                                 ,@body)
-                                                  (list ,@addresses) ,skipcount ,@breakpoint-args)))
-
-(defmacro with-free-hardware-breakpoints ((core &optional (skipcount 0) &rest breakpoint-args &key &allow-other-keys)
-                                          (&rest breakpoint-bindings)
-                                          &body body)
-  "Execute BODY with BREAKPOINT bound to a free hardware breakpoint.
-BREAKPOINT is released when the form is exited, by any means."
-  `(with-maybe-free-hardware-breakpoints (t ,core ,skipcount ,@breakpoint-args) ,breakpoint-bindings
-     ,@body))
-
-(defun invoke-with-traps (traps fn &aux
-                          (traps (mapcar #'coerce-to-trap traps)))
-  "Call FN with TRAPS enabled within the dynamic extent of the call."
-  (dolist (trap traps)
-    (enable-trap trap))
-  (unwind-protect (funcall fn)
-    (dolist (trap traps)
-      (disable-trap trap))))
-
-;;; XXX: this corelessness seriously ain't good
-(defmacro with-traps ((&rest traps) &body body)
-  "Execute BODY with TRAPS enabled."
-  `(invoke-with-traps (list ,@traps) (lambda () ,@body)))
-
-;;;;
 ;;;; Assembly & snippet execution
 ;;;;
 (defun trace-segment (core segment &key continuep)
@@ -851,6 +855,7 @@ BREAKPOINT is released when the form is exited, by any means."
                                  (derive-moment (saved-core-moment core) (pinned-segment-base segment))
                                  (make-neutral-moment core (pinned-segment-base segment))))
     ;; shall we use OTC/TRACE-MODE here, instead (wouldn't that be a lie)?
+    #+nil
     (iter (repeat count)
           (while (prog1 (step-core-synchronous core)
                    (dolist (slave (core-slaves core))
@@ -896,7 +901,7 @@ with optional nanosecond-granular ITERATION-LIMIT and WATCH-FN."
 
 (defmethod trans-funcall :around ((o core) (cenv compilation-environment) (as address-space) function-name args
                                   &key (disasm *disasm-trans-calls*) (trace *trace-trans-calls*) &allow-other-keys)
-  (declare (ignore trace disasm))
+  (declare (ignore function-name args trace disasm))
   (with-compilation-environment cenv
     (call-next-method)))
 

@@ -113,7 +113,7 @@
   (build-vec-pkt blkwrite-data       0 :block-write   t   t   :size-32 t   :dr (bits (:regsel :rdonly/push-irdec) :omdr t))
   (build-vec-pkt blkwrite-end        0 :idcode/endblk t   t   :size-32 t   :dr (bits (:regsel :rdonly/push-irdec) :omdr t))
   (defun (setf ezusb-tap-ird) (val iface null &aux (handle (ezusb-interface-handle iface)))
-    (declare (type (unsigned-byte 32) val) (type ezusb-interface iface) (ignore null))
+    (declare (type (unsigned-byte 32) val) (ignore null))
     (let* ((bitlen (max +oncd-ird-length+ (integer-length val)))
            (bytelen (cond ((> bitlen 16) 5)
                           (t 3))))
@@ -251,6 +251,7 @@
   (ezusb-debug-enable o))
 
 (defmethod interface-reset-target ((o ezusb-interface) stop-cores-p)
+  (declare (ignore stop-cores-p))
   (ezusb-target-reset o)
   (interface-stop-target o)
   (interface-attach-target o))

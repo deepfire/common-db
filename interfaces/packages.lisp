@@ -10,6 +10,7 @@
    #:*virtual-interface-stop-during-reset*
    ))
 
+#-disable-parport
 (cl:defpackage #:interface-parport
   (:use :common-lisp :alexandria :iterate :pergamum :setc :bitmop :device-model
         :portability :options :bus :interface)

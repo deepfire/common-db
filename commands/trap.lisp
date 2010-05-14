@@ -59,8 +59,7 @@
 векторных ловушек, и активировать их, сбросив неуказанные."
   (let* ((core *core*)
          (catches (mapcar (curry #'trap core) addresses)))
-    (iter (for addr in addresses)
-          (for catch in catches)
+    (iter (for catch in catches)
           (unless catch (collect catch into missing))
           (unless (typep catch 'vector-trap) (collect catch into uncatches))
           (finally
@@ -94,7 +93,7 @@
 (defun clear-sw-breaks ()
   #+help-ru
   "Удалить все программные точки останова."
-  (do-core-traps (addr b *core*)
+  (do-core-traps (nil b *core*)
     (when (typep b 'core:software-breakpoint)
       (disable-trap b)))
   (values))
@@ -102,7 +101,7 @@
 (defun disable-breaks ()
   #+help-ru
   "Отключить все точки останова."
-  (do-core-traps (addr b *core*)
+  (do-core-traps (nil b *core*)
     (disable-trap b))
   (values))
 
@@ -113,5 +112,5 @@
     (do-core-traps (addr b *core*)
       (when (trap-enabled-p b)
         (format t "~A~%~4T" b)
-        (addr (trap-address b)))))
+        (addr addr))))
   (values))

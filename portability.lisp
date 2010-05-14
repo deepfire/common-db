@@ -48,20 +48,26 @@
 (in-package :portability)
 
 (defun set-and-activate-repl-fun (fn)
-  #-(or sbcl ecl clisp) (not-implemented 'set-and-activate-repl-fun)
+  #-(or sbcl ecl ccl clisp) (declare (ignore fn))
+  #-(or sbcl ecl ccl clisp) (not-implemented 'set-and-activate-repl-fun)
   #+sbcl (progn
            (setf sb-impl::*repl-fun-generator*
                  (constantly (lambda (x)
                                (declare (ignore x))
                                (funcall fn))))
            (sb-impl::toplevel-repl nil))
+  #+ccl (progn
+          (ccl:%set-toplevel fn)
+          (ccl:toplevel))
   #+(or ecl clisp) (funcall fn))
 
 (defun argv ()
-  #-(or sbcl ecl clisp) (not-implemented 'argv)
+  #-(or sbcl ccl ecl clisp allegro) (not-implemented 'argv)
   #+sbcl sb-ext:*posix-argv*
+  #+ccl ccl:*command-line-argument-list*
   #+ecl (si::command-args)
-  #+clisp (ext:argv))
+  #+clisp (ext:argv)
+  #+allegro (sys:command-line-arguments))
 
 (defun argv0-executable-name ()
   "Return the name of the executable."
@@ -73,23 +79,34 @@
   (setf
    #+sbcl sb-ext:*posix-argv*
    #+ecl (si::command-args)
+   #-(or sbcl ecl) (values)
    value))
 
 (defun getenv (name)
-  #-(or sbcl ecl) (not-implemented 'getenv)
+  #-(or sbcl ccl ecl) (declare (ignore name))
+  #-(or sbcl ccl ecl) (not-implemented 'getenv)
   #+sbcl (sb-posix:getenv name)
+  #+ccl (ccl::getenv name)
   #+ecl (si:getenv name))
 
 (defun function-arglist (function-name)
-  #-sbcl nil
+  #-sbcl (declare (ignore function-name))
   #+sbcl (sb-kernel:%simple-fun-arglist (fdefinition function-name)))
+
+#+ccl
+(cffi:defcfun ("exit" exit) :void (return-value :unsigned-int))
 
 (defun quit (&optional (status 0))
   "Exit."
-  #-(or sbcl ecl clisp) (not-implemented 'quit)
+  #-(or sbcl ecl clisp ccl) (declare (ignore status))
+  #-(or sbcl ecl clisp ccl) (not-implemented 'quit)
   #+sbcl (sb-ext:quit :unix-status status)
   #+clisp (ext:quit status)
-  #+ecl (si:quit status))
+  #+ecl (si:quit status)
+  #+ccl (progn
+          ;; #'CCL:QUIT has a tendency to hang and busyloop.
+          (finish-output)
+          (exit status)))
 
 (defmacro with-quit-restart (&body body)
   "Execute BODY with a QUIT restart, whose activation will quit the Lisp."
@@ -99,8 +116,8 @@
        (quit))))
 
 (defmacro handle-sigint (form &body when-sigint-body)
-  #+(not (or ecl (and sbcl (not win32)))) ;; No implementation.
-  form
+  #+(not (or ecl (and sbcl (not win32)))) (declare (ignore when-sigint-body))
+  #+(not (or ecl (and sbcl (not win32)))) form
   #+ecl
   `(handler-case ,form
      (si::interactive-interrupt ()
@@ -125,57 +142,67 @@
          (return-from ,sigint-block ,sigint-val)))))
 
 (defun class-finalized-p (class)
+  #-(or sbcl clisp ecl) (declare (ignore class))
   #+sbcl (sb-mop:class-finalized-p class)
   #+clisp (clos:class-finalized-p class)
   #+ecl (clos:class-finalized-p class))
 
 (defun finalize-inheritance (class)
+  #-(or sbcl clisp ecl) (declare (ignore class))
   #+sbcl (sb-mop:finalize-inheritance class)
   #+clisp (clos:finalize-inheritance class)
   #+ecl (clos:finalize-inheritance class))
 
 (defun class-prototype (class)
+  #-(or sbcl clisp ecl) (declare (ignore class))
   #+sbcl (sb-mop:class-prototype class)
   #+clisp (clos:class-prototype class)
   #+ecl (clos:class-prototype class))
 
 (defun class-direct-subclasses (class)
+  #-(or sbcl clisp ecl) (declare (ignore class))
   #+sbcl (sb-mop:class-direct-subclasses class)
   #+clisp (clos:class-direct-subclasses class)
   #+ecl (clos:class-direct-subclasses class))
 
 (defun function-lambda-list (function)
+  #-(and sbcl (not oldsbcl)) (declare (ignore function))
   #-(and sbcl (not oldsbcl)) (not-implemented 'function-lambda-list)
   #+(and sbcl (not oldsbcl)) (sb-introspect:function-lambda-list function))
 
 (defmacro with-pinned-objects ((object) &body body)
-  #-sbcl
-  `(progn ,@body)
-  #+sbcl
-  `(sb-sys:with-pinned-objects (,object)
-     ,@body))
+  #-sbcl (declare (ignore object))
+  #-sbcl `(progn ,@body)
+  #+sbcl `(sb-sys:with-pinned-objects (,object)
+            ,@body))
 
 (defmacro without-gcing-and-interrupts (&body body)
-  #-sbcl
-  `(progn ,@body)
-  #+sbcl
-  `(sb-sys:without-interrupts
-     (sb-sys:without-gcing
-       ,@body)))
+  #-sbcl `(progn ,@body)
+  #+sbcl `(sb-sys:without-interrupts
+            (sb-sys:without-gcing
+              ,@body)))
 
-#+(and ecl mingw32)
+#+(or (and ecl mingw32)
+      (and ccl win32-target))
 (cffi:defcfun ("Sleep" win32-sleep) :void (milliseconds :unsigned-int))
 
 #+(or) (declaim (ftype (function ((unsigned-byte 30)) (values)) nanosleep))
 (defun nanosleep (nsecs)
-  (declare (optimize (speed 3) (debug 0) (safety 0)) (type (unsigned-byte 30) nsecs))
+  (declare (optimize (speed 3) (debug 0) (safety 0)) (type (unsigned-byte 30) nsecs)
+           #+(not (or (and sbcl (or unix windows))
+                      (and ecl (or unix mingw32))
+                      ccl))
+           (ignore nsecs))
   #+(not (or (and sbcl (or unix windows))
-             (and ecl (or unix mingw32))))
+             (and ecl (or unix mingw32))
+             ccl))
   (not-implemented 'nanosleep)
   ;; #+(and sbcl unix) (nanosleep-fast nsecs)
   #+(and sbcl unix) (sb-unix:nanosleep 0 nsecs)
   #+(and sbcl windows) (sb-win32:millisleep (truncate nsecs 1000000))
-  #+(and ecl mingw32) (win32-sleep (truncate nsecs 1000000))
+  #+(and ccl (not win32-target)) (ccl::%nanosleep 0 nsecs)
+  #+(or (and ecl mingw32)
+        (and ccl win32-target)) (win32-sleep (truncate nsecs 1000000))
   #+(and ecl unix) (sleep (/ nsecs 1000000000))
   (values))
 

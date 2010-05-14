@@ -71,7 +71,7 @@
    (gpr :reader virtcore-gpr :initarg :gpr)
    (fpr :reader virtcore-fpr :initarg :fpr)
    (cop0 :reader virtcore-cop0 :initarg :cop0)
-   (cop1 :reader virtcore-cop1 :initarg :cop0)
+   (cop1 :reader virtcore-cop1 :initarg :cop1)
    (hilo :reader virtcore-hilo :initarg :hilo))
   (:default-initargs
    :pcf #xbfc00000
@@ -182,6 +182,7 @@
 ;;;; Target API
 ;;;;
 (defmethod reset-target-using-interface ((o virtual-target) interface)
+  (declare (ignore interface))
   (when-let ((core (target-device o '(general-purpose-core 0) :continue)))
     (setf (virtcore-pcf core) #xbfc00000
           (virtcore-pcd core) 0
@@ -191,6 +192,7 @@
           (virtcore-insn core) 0)))
 
 (defmethod stop-target-using-interface ((o virtual-target) interface)
+  (declare (ignore interface))
   (when-let ((core (target-device o '(general-purpose-core 0) :continue)))
     (setf (virtcore-state core)
           (if (or *virtual-interface-stop-during-reset*
@@ -202,10 +204,10 @@
 ;;;; Core API implementation
 ;;;;
 (defmethod gpr ((core virtcore) gpr)
-  )
+  (declare (ignore gpr)))
 
 (defmethod set-gpr ((core virtcore) gpr val)
-  )
+  (declare (ignore gpr val)))
 
 (defmethod finish-core-pipeline ((o virtcore))
   )

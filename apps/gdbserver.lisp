@@ -70,6 +70,7 @@
 ;;;;
 ;;;; This is definitive: explain our capabilities
 (defmethod gdb-handle-query ((o common-db-gdbserver) (q (eql :supported)) args)
+  (declare (ignore args))
   "QStartNoAckMode+;PacketSize=4000;qXfer:features:read+;qXfer:memory-map:read+;qXfer:spu:read+")
 
 ;;;;
@@ -96,6 +97,7 @@
           (setf (u8-vector-word32le regvec offt) (reginstance-value ri)))))
 
 (defmethod gdb-set-target-registers-from-vector ((o common-db-gdbserver) vector)
+  (declare (ignore vector))
   (when *trace-comdb-calls*
     (log-comdb '(setf reginstance-value) "~A" (map 'list #'name *gdb-register-instance-vector*)))
   (lret ((regvec (make-array (* 4 (length *gdb-register-instance-vector*)) :element-type '(unsigned-byte 8))))
@@ -237,6 +239,7 @@
       ""))
 
 (defmethod gdb-extended-command ((o common-db-gdbserver) (c (eql :kill)) arguments)
+  (declare (ignore arguments))
   (gdb-kill o))
 
 ;;;;
@@ -275,7 +278,7 @@
 (defmethod gdb-detach ((o common-db-gdbserver) &aux
                        (core (ctx-core o)))
   (dolist (core (cons core (master-device-slaves core)))
-    (do-core-traps (addr b core)
+    (do-core-traps (nil b core)
       (when *trace-comdb-calls*
         (log-comdb 'disable-trap "~X" (trap-address b)))
       (disable-trap b)))
@@ -305,12 +308,14 @@
 ;;;;
 ;;;; Stubs
 (defmethod gdb-set-thread ((o common-db-gdbserver) domain thread)
+  (declare (ignore domain))
   (if (or (= thread -1)
           (= thread 0))
       "OK"
       "E00"))
 
 (defmethod gdb-handle-query ((o common-db-gdbserver) (q (eql :attached)) args)
+  (declare (ignore args))
   "0")
 
 ;;;;
