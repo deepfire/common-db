@@ -115,12 +115,45 @@
        :report "Quit Lisp."
        (quit))))
 
+#+ccl
+(in-package :ccl)
+
+#+ccl
+(progn
+  (setq *warn-if-redefine-kernel* nil)
+  (define-condition interactive-interrupt (serious-condition)
+    ())
+  (defun force-break-in-listener (p)
+    (process-interrupt p
+                       #'(lambda ()
+                           (signal 'interactive-interrupt)
+                           #+nil
+                           (let* ((condition (condition-arg "interrupt signal" nil 'simple-condition)))
+                             (ignoring-without-interrupts
+                               (when *invoke-debugger-hook-on-interrupt*
+                                 (let* ((hook *debugger-hook*)
+                                        (*debugger-hook* nil))
+                                   (when hook
+                                     (funcall hook condition hook))))
+                               (%break-in-frame
+                                #+ppc-target *fake-stack-frames*
+                                #+x86-target (or (let* ((xcf (%current-xcf)))
+                                                   (if xcf
+                                                       (%%frame-backlink xcf)))
+                                                 (%get-frame-ptr))
+                                condition)
+                               (clear-input *terminal-io*))))))
+
+  (in-package :portability))
+
 (defmacro handle-sigint (form &body when-sigint-body)
-  #+(not (or ecl (and sbcl (not win32)))) (declare (ignore when-sigint-body))
-  #+(not (or ecl (and sbcl (not win32)))) form
-  #+ecl
+  #+(not (or ecl ccl (and sbcl (not win32)))) (declare (ignore when-sigint-body))
+  #+(not (or ecl ccl (and sbcl (not win32)))) form
+  #+(or ecl ccl)
   `(handler-case ,form
-     (si::interactive-interrupt ()
+     (#+ecl si::interactive-interrupt
+      #+ccl ccl::interactive-interrupt
+       ()
        ,@when-sigint-body))
   #+(and sbcl (not win32))
   (let ((old-sigint (gensym)))
