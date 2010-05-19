@@ -43,11 +43,11 @@
              (:file "parport" :depends-on ("packages" "elvees"))
              #+linux
              (:file "ezusb-elvees-linux" :depends-on ("packages" "elvees"))
-             #+(or win32 mingw32)
+             #+(or win32 mingw32 windows-target)
              (:file "ezusb-elvees-win32" :depends-on ("packages" "elvees"))
              (:file "ezusb-elvees" :depends-on (#+linux
                                                 "ezusb-elvees-linux"
-                                                #+(or win32 mingw32)
+                                                #+(or win32 mingw32 windows-target)
                                                 "ezusb-elvees-win32"))
              ))
    ;;

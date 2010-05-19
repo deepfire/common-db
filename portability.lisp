@@ -71,7 +71,7 @@
 
 (defun argv0-executable-name ()
   "Return the name of the executable."
-  (subseq (first (argv)) (let ((slash-posn (position #+win32 #\\ #-win32 #\/ (first (argv)) :from-end t)))
+  (subseq (first (argv)) (let ((slash-posn (position #+windows #\\ #-windows #\/ (first (argv)) :from-end t)))
                            (if slash-posn (1+ slash-posn) 0))))
 
 (defun (setf argv) (value)
@@ -216,7 +216,7 @@
               ,@body)))
 
 #+(or (and ecl mingw32)
-      (and ccl win32-target))
+      (and ccl windows))
 (cffi:defcfun ("Sleep" win32-sleep) :void (milliseconds :unsigned-int))
 
 #+(or) (declaim (ftype (function ((unsigned-byte 30)) (values)) nanosleep))
@@ -233,9 +233,9 @@
   ;; #+(and sbcl unix) (nanosleep-fast nsecs)
   #+(and sbcl unix) (sb-unix:nanosleep 0 nsecs)
   #+(and sbcl windows) (sb-win32:millisleep (truncate nsecs 1000000))
-  #+(and ccl (not win32-target)) (ccl::%nanosleep 0 nsecs)
+  #+(and ccl (not windows)) (ccl::%nanosleep 0 nsecs)
   #+(or (and ecl mingw32)
-        (and ccl win32-target)) (win32-sleep (truncate nsecs 1000000))
+        (and ccl windows)) (win32-sleep (truncate nsecs 1000000))
   #+(and ecl unix) (sleep (/ nsecs 1000000000))
   (values))
 

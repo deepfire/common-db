@@ -167,6 +167,8 @@
      (in-package :comdb)
      #+sbcl
      (setf sb-debug::*invoke-debugger-hook* #'comdb-debugger)
+     #+windows
+     (interface-parport:bind-to-parport-access-library)     
      (with-quit-restart
        (destructuring-bind (&rest args &key (verbose verbose)
                                   (no-rc no-rc) early-eval

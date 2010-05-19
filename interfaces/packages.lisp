@@ -16,6 +16,7 @@
         :portability :options :bus :interface)
   (:shadowing-import-from :bitmop #:space)
   (:export
+   #:bind-to-parport-access-library
    #:parport-interface
    #:lpt1-base
    #:lpt2-base

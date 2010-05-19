@@ -217,7 +217,7 @@
               (interface-reset iface))))))
 
 (define-device-class ezusb-interface :interface (interface)
-  ((handle :accessor ezusb-interface-handle :type (or null #-win32 stream #+win32 integer) :initarg :handle))
+  ((handle :accessor ezusb-interface-handle :type (or null #-windows stream #+windows integer) :initarg :handle))
   (:layouts (:tap-ird nil (setf ezusb-tap-ird))        ;; wronly, not enforced
             (:tap-idcode ezusb-tap-idcode nil)
             (:tap-dr ezusb-tap-dr (setf ezusb-tap-dr)) ;; want pass
@@ -235,7 +235,7 @@
         (ezusb-oncd-reset o)
         (prog1 (devbit-decode o :idcode :oncd-version)
           (setf (iface-version o) (ezusb-firmware-version o))))
-    #+win32
+    #+windows
     (:common (c)
       (call-next-recourse-and-retry)
       (error 'persistent-interface-error :interface o :error c))

@@ -100,51 +100,9 @@
   (:report (port) "~S operation timeout." port))
 
 ;;;;
-;;;; Port permissions
+;;;; Port permissions & IO
 ;;;;
-#+(and (not windows) (or ecl sbcl))
-(cffi:defcfun iopl :int (uid :int))
 
-#+(and windows ecl)
-(cffi:define-foreign-library model3-comdb-gate
-  (t (:or "MCDevice/model3-comdb-gate.dll" "model3-comdb-gate.dll")))
-
-#+(and windows ecl)
-(defun bind-to-model3-comdb-gate ()
-  (cffi:use-foreign-library model3-comdb-gate)
-  (cffi:defcfun "get_winnt_lpt_access" :int))
-
-#+(and windows ecl)
-(cffi:defcfun "get_winnt_lpt_access" :int)
-
-#+(and windows sbcl)
-(progn
-  (cffi:define-foreign-library liblptaccess
-    (t (:default "liblptaccess")))
-  (cffi:use-foreign-library liblptaccess)
-  (cffi:defcfun "get_winnt_lpt_access" :int))
-
-;;; XXX: should pass *verbose-interface-init* to G-W-L-A
-(defun set-epp-port-perm ()
-  (let ((status (case #+windows (get-winnt-lpt-access)
-                      #-windows (iopl 3)
-                      (0 nil)
-                      (-1 "EACCESS")
-                      (-2 "EBADSVCNAME")
-                      (-3 "ESVCINSTALL")
-                      (-4 "ESVCACCESS")
-                      (-5 "ESVCPURGEERROR")
-                      (-6 "EUNKNOWN")
-                      (-7 "ESVCSTARTINVALIDFN")
-                      (-8 "ESVCSTARTNOSVCFILE")
-                      (t "EREALLYUNKNOWN"))))
-    (when status
-      (format t "SET-EPP-PORT-PERM: ~A() returned ~A.~%" #+windows "get_winnt_lpt_access" #-windows "iopl" status))
-    (null status)))
-
-;;;;
-;;;; Port I/O
-;;;;
 #+ecl
 (defun inb (port)
   (ffi:c-inline (port) (:unsigned-short) (values :unsigned-byte)
@@ -194,6 +152,71 @@
 (defun outb (val addr)
   (declare (optimize speed (safety 0) (debug 0)))
   (sb-vm::%set-port-byte addr val))
+
+#-(or ecl sbcl (and ccl windows))
+(defun outb (val addr)
+  (declare (ignore val addr))
+  (error 'not-implemented :name 'outb))
+
+#-(or ecl sbcl (and ccl windows))
+(defun inb (addr)
+  (declare (ignore addr))
+  (error 'not-implemented :name 'inb))
+
+#+(and (not windows) (or ecl sbcl ccl))
+(cffi:defcfun iopl :int (uid :int))
+
+#+windows
+(progn
+  (defun bind-to-parport-access-library ()
+    #+ecl
+    (cffi:use-foreign-library model3-comdb-gate)
+    #+ccl
+    (cffi:use-foreign-library libportaccess)
+    #+(or ecl)
+    (cffi:defcfun "get_winnt_lpt_access" :int)
+    #+(or)
+    (progn
+      (cffi:defcfun "inb" :unsigned-char (port :unsigned-short))
+      (cffi:defcfun "outb" :void (value :unsigned-char) (port :unsigned-short))))
+  #+ecl
+  (progn
+    (cffi:define-foreign-library model3-comdb-gate
+      (t (:or "MCDevice/model3-comdb-gate.dll" "model3-comdb-gate.dll")))
+    (cffi:defcfun "get_winnt_lpt_access" :int))
+  #+sbcl
+  (progn
+    (cffi:define-foreign-library liblptaccess
+      (t (:default "liblptaccess")))
+    (cffi:use-foreign-library liblptaccess)
+    (cffi:defcfun "get_winnt_lpt_access" :int))
+  #+ccl
+  (progn
+    (cffi:define-foreign-library libportaccess
+      (t (:default "libportaccess")))
+    (cffi:use-foreign-library libportaccess)
+    (cffi:defcfun "get_winnt_lpt_access" :int)
+    (cffi:defcfun "inb" :unsigned-char (port :unsigned-short))
+    (cffi:defcfun "outb" :void (value :unsigned-char) (port :unsigned-short))))
+
+
+;;; XXX: should pass *verbose-interface-init* to G-W-L-A
+(defun set-epp-port-perm ()
+  (let ((status (case #+windows (get-winnt-lpt-access)
+                      #-windows (iopl 3)
+                      (0 nil)
+                      (-1 "EACCESS")
+                      (-2 "EBADSVCNAME")
+                      (-3 "ESVCINSTALL")
+                      (-4 "ESVCACCESS")
+                      (-5 "ESVCPURGEERROR")
+                      (-6 "EUNKNOWN")
+                      (-7 "ESVCSTARTINVALIDFN")
+                      (-8 "ESVCSTARTNOSVCFILE")
+                      (t "EREALLYUNKNOWN"))))
+    (when status
+      (format t "SET-EPP-PORT-PERM: ~A() returned ~A.~%" #+windows "get_winnt_lpt_access" #-windows "iopl" status))
+    (null status)))
 
 ;;;;
 ;;;; Bit-banging
