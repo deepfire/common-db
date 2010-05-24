@@ -339,7 +339,7 @@
                                  '(:start-swank :single-shot :trace-comdb-calls :trace-comdb-memory-io)
                                  :no-memory-detection t))
 
-(defun gdbserver (&key (target-context *current*) (address "127.0.0.1") (port 9000) single-shot
+(defun gdbserver (&key verbose (target-context *current*) (address "127.0.0.1") (port 9000) single-shot
                   start-swank trace-comdb-calls trace-comdb-memory-io trace-exchange &aux
                   (core (if target-context
                             (ctx-core target-context)
