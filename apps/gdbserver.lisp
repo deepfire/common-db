@@ -32,6 +32,7 @@
   (:export
    #:*poll-interval*
    #:*trace-comdb-calls*
+   #:*trace-even-noisy-comdb-calls*
    #:*trace-comdb-memory-io*
    #:gdbserver
    #:gdbserver-toplevel))
@@ -44,7 +45,10 @@
   "How often to query target for its state.")
 
 (defvar *trace-comdb-calls* nil
-  "Whether to trace COMMON-DB calls.")
+  "Whether to trace COMMON-DB calls, except noisy ones.")
+
+(defvar *trace-even-noisy-comdb-calls* nil
+  "Whether to trace noisy COMMON-DB calls as well.")
 
 (defvar *trace-comdb-memory-io* nil
   "Whether to trace target memory I/O COMMON-DB calls.")
@@ -209,7 +213,8 @@
      ;; breakpoint.
      (let ((int? (check-interrupt o))
            (db? (not (core-running-p core))))
-       (when *trace-comdb-calls*
+       (when (and *trace-comdb-calls*
+                  *trace-even-noisy-comdb-calls*)
          (log-comdb 'core-running-p "~:[running~;stopped~]" db?))
        (when (or int? db?)
          (when *trace-comdb-calls*
@@ -326,7 +331,9 @@
                                   Defaults to 127.0.0.1.
     --port <integer>            Number of the TCP port to accept connections on.
                                   Defaults to 9000.
-    --trace-comdb-calls         Trace all common-db API calls.
+    --trace-comdb-calls         Trace all common-db API calls, except noisy.
+    --trace-even-noisy-comdb-calls
+                                Trace noisy common-db API calls as well.
     --trace-comdb-memory-io     Trace all memory IO.
     --trace-exchange            Trace gdbserver protocol exchange.
     --single-shot               Exit after the first connection terminates.")
@@ -336,17 +343,18 @@
         common-db::*additional-help-ru* common-db::*gdbserver-help-ru*)
   (comdb::comdb-toplevel-wrapper #'gdbserver
                                  '((:address :string) :port :trace-exchange)
-                                 '(:start-swank :single-shot :trace-comdb-calls :trace-comdb-memory-io)
+                                 '(:start-swank :single-shot :trace-comdb-calls :trace-even-noisy-comdb-calls :trace-comdb-memory-io)
                                  :no-memory-detection t))
 
 (defun gdbserver (&key verbose (target-context *current*) (address "127.0.0.1") (port 9000) single-shot
-                  start-swank trace-comdb-calls trace-comdb-memory-io trace-exchange &aux
+                  start-swank trace-comdb-calls trace-even-noisy-comdb-calls trace-comdb-memory-io trace-exchange &aux
                   (core (if target-context
                             (ctx-core target-context)
                             (error "~@<No active target context: cannot start GDB server.~:@>"))))
   (change-class target-context 'common-db-gdbserver)
   (let ((ri-names (gdb:core-register-order core))
         (*trace-comdb-calls* trace-comdb-calls)
+        (*trace-even-noisy-comdb-calls* trace-even-noisy-comdb-calls)
         (*trace-comdb-memory-io* trace-comdb-memory-io))
     (setf *gdb-register-instance-vector*
           (make-array (length ri-names)
