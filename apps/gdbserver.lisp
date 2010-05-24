@@ -336,11 +336,11 @@
         common-db::*additional-help-ru* common-db::*gdbserver-help-ru*)
   (comdb::comdb-toplevel-wrapper #'gdbserver
                                  '((:address :string) :port :trace-exchange)
-                                 '(:single-shot :trace-comdb-calls :trace-comdb-memory-io)
+                                 '(:start-swank :single-shot :trace-comdb-calls :trace-comdb-memory-io)
                                  :no-memory-detection t))
 
 (defun gdbserver (&key (target-context *current*) (address "127.0.0.1") (port 9000) single-shot
-                  trace-comdb-calls trace-comdb-memory-io trace-exchange &aux
+                  start-swank trace-comdb-calls trace-comdb-memory-io trace-exchange &aux
                   (core (if target-context
                             (ctx-core target-context)
                             (error "~@<No active target context: cannot start GDB server.~:@>"))))
@@ -353,6 +353,11 @@
                       :initial-contents (mapcar (curry #'device-register-instance core) ri-names))
           *gdb-id-to-register-instance-map*
           (make-hash-table))
+    (when start-swank
+      #-with-swank
+      (format t "; Swank server start requested, but swank wasn't compiled in, ignoring.~%")
+      #+with-swank
+      (swank:create-server :dont-close t))
     (iter (format t "; Accepting connections on ~A:~D~:[~;, tracing exchanges, up to ~:*~X bytes~]~%" address port trace-exchange)
           (setf (slot-value target-context 'gdbremote::no-ack-mode) nil)
           (reset :core core)
