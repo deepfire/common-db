@@ -28,7 +28,7 @@
    "DSP namespace."))
 
 (defclass dsp-software-breakpoint (software-breakpoint) ())
-(defclass dsp-hardware-breakpoint (hardware-breakpoint) ())
+(defclass dsp-hardware-breakpoint (hardware-trap) ())
 
 (define-protocol-device-class dsp nil (core slave-device)
   ()

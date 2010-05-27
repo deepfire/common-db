@@ -204,15 +204,42 @@ might vary depending on situation."))
 (defgeneric core-call-stack (core))
 
 ;;; traps
-(defgeneric set-core-insn-execution-limit (core ninsns))
-(defgeneric enable-trap (controlled-trap))
-(defgeneric disable-trap (controlled-trap))
-(defgeneric recognise-sw-breakpoint (core address))
-(defgeneric add-sw-breakpoint (core address))
-(defgeneric setup-hw-breakpoint (breakpoint address skip-count &key &allow-other-keys))
-(defgeneric add-hw-breakpoint (core address &optional skip-count))
-(defgeneric add-cell-watchpoint (core address &optional skip-count))
-(defgeneric coerce-to-trap (trap-specifier))
+(defgeneric set-core-insn-execution-limit (core ninsns)
+  (:documentation
+   "Arrange things, so that CORE stops after executing NINSNS instructions."))
+(defgeneric enable-trap (controlled-trap)
+  (:documentation
+   "Make CONTROLLED-TRAP effective."))
+(defgeneric disable-trap (controlled-trap)
+  (:documentation
+   "Make CONTROLLED-TRAP ineffective, without dealing away with it."))
+(defgeneric recognise-sw-breakpoint (core address)
+  (:documentation
+   "Register a software breakpoint, which appeared for reasons external
+to COMMON-DB, e.g. user manually inserting a trap instruction in source code."))
+(defgeneric add-sw-breakpoint (core address)
+  (:documentation
+   "Register a new software breakpoint at ADDRESS."))
+(defgeneric setup-hw-trap (breakpoint address skip-count &key &allow-other-keys)
+  (:documentation
+   "Reconfigure the hardware BREAKPOINT, so that it triggers after SKIP-COUNT
+references to ADDRESS, with the nature of reference dependent on the specific
+type of BREAKPOINT.  The type of BREAKPOINT also governs which additional
+keywords might be specified."))
+(defgeneric add-hw-breakpoint (core address &optional skip-count)
+  (:documentation
+   "Allocate a hardware from a free pool, and configure it, by the means of
+SETUP-HW-TRAP.  The breakpoint returned is meant to be released, once
+it is no longer used, by calling RELEASE-HARDWARE-BREAKPOINT."))
+(defgeneric add-cell-watchpoint (core address &optional skip-count)
+  (:documentation
+   "Allocate a hardware from a free pool, and configure it, by the means of
+SETUP-HW-TRAP.  The breakpoint returned is meant to be released, once
+it is no longer used, by calling RELEASE-HARDWARE-BREAKPOINT."))
+(defgeneric coerce-to-trap (trap-specifier)
+  (:documentation
+   "Given a TRAP-SPECIFIER, that is, either a trap number, or a trap,
+return the corresponding trap."))
 
 ;;;;
 ;;;; Moments of core, and trails thereof.
@@ -414,6 +441,11 @@ might vary depending on situation."))
 (define-protocol-class enumerated-trap (controlled-trap)
   ((id :accessor trap-id :initarg :id)))
 
+(define-protocol-class hardware-trap (address-trap)
+  ((owned :accessor trap-owned-p :initarg :owned))
+  (:default-initargs
+   :owned nil))
+
 (define-protocol-class volatile-address-trap (address-trap) ())
 
 ;;;;
@@ -485,10 +517,6 @@ might vary depending on situation."))
    :address #x0
    :skipcount 1))
 
-(defclass hardware-breakpoint (breakpoint)
-  ((owned :accessor breakpoint-owned-p :initarg :owned))
-  (:default-initargs
-   :owned nil))
 (defclass software-breakpoint (volatile-address-trap breakpoint)
   ((saved-insn :accessor software-breakpoint-saved-insn :initform 0 :initarg :saved-insn :type (unsigned-byte 32))))
 
@@ -497,7 +525,7 @@ might vary depending on situation."))
 ;;;;
 (define-subcontainer trap :container-slot traps :type address-trap :iterator do-core-traps :remover remove-trap :if-exists :error
                      :iterator-bind-key t)
-(define-subcontainer hwbreak :container-slot hw-breakpoints :type hardware-breakpoint :iterator do-core-hardware-breakpoints :if-exists :error)
+(define-subcontainer hwbreak :container-slot hw-breakpoints :type hardware-trap :iterator do-core-hardware-breakpoints :if-exists :error)
 
 (defmacro do-core-controlled-traps ((o core) &body body)
   `(do-core-traps (nil ,o ,core)
@@ -516,7 +544,7 @@ might vary depending on situation."))
     " ~:[dis~;en~]abled" enabled)
 (define-print-object-method ((o address-trap) enabled address)
     " ~:[dis~;en~]abled, address: 0x~X" enabled address)
-(define-print-object-method ((b hardware-breakpoint) address trigcount id)
+(define-print-object-method ((b hardware-trap) address trigcount id)
     "~8,'0X trigcount: ~D id: ~D" address trigcount id)
 (define-print-object-method ((b software-breakpoint) address trigcount saved-insn)
     "~8,'0X insn: 0x~8,'0X" address saved-insn)
@@ -544,13 +572,13 @@ might vary depending on situation."))
                  (make-instance (core-default-sw-breakpoint-type o) :core o :address address))))
     (enable-trap bp)))
 
-(defmethod setup-hw-breakpoint :before ((o hardware-breakpoint) address skipcount &key &allow-other-keys)
+(defmethod setup-hw-trap :before ((o hardware-trap) address skipcount &key &allow-other-keys)
   (declare (ignore skipcount))
   (setf (trap-address o) address))
-(defmethod setup-hw-breakpoint ((b hardware-breakpoint) address skipcount &key &allow-other-keys)
+(defmethod setup-hw-trap ((b hardware-trap) address skipcount &key &allow-other-keys)
   (declare (ignore address skipcount))
   b)
-(defmethod setup-hw-breakpoint :after ((o hardware-breakpoint) address skipcount &key &allow-other-keys)
+(defmethod setup-hw-trap :after ((o hardware-trap) address skipcount &key &allow-other-keys)
   (declare (ignore skipcount))
   (if address
       (enable-trap o)
@@ -558,8 +586,8 @@ might vary depending on situation."))
 
 (defun allocate-hardware-breakpoint (core &optional (if-no-free-breakpoints :error))
   (or (do-core-hardware-breakpoints (b core)
-        (unless (breakpoint-owned-p b)
-          (setf (breakpoint-owned-p b) t)
+        (unless (trap-owned-p b)
+          (setf (trap-owned-p b) t)
           (return b)))
       (ecase if-no-free-breakpoints
         (:error (error "~@<No free breakpoints.  Used:~{ ~8,'0X~}~:@>"
@@ -568,10 +596,10 @@ might vary depending on situation."))
         (:continue))))
 
 (defmethod add-hw-breakpoint ((core core) address &optional (skipcount 0))
-  (setup-hw-breakpoint (allocate-hardware-breakpoint core) address skipcount))
+  (setup-hw-trap (allocate-hardware-breakpoint core) address skipcount))
 
 (defun release-hardware-breakpoint (b)
-  (setf (breakpoint-owned-p b) nil))
+  (setf (trap-owned-p b) nil))
 
 (defun allocate-hardware-breakpoints (core n)
   (iter (repeat n)
@@ -585,7 +613,7 @@ might vary depending on situation."))
                           (iter (for b in breakpoints)
                                 (for a in addresses)
                                 (when a
-                                  (apply #'setup-hw-breakpoint b a skipcount breakpoint-setup-args)))
+                                  (apply #'setup-hw-trap b a skipcount breakpoint-setup-args)))
                           (apply fn breakpoints))
           (dolist (b breakpoints)
             (release-hardware-breakpoint b)
@@ -672,8 +700,8 @@ BREAKPOINT is released when the form is exited, by any means."
 
 (defmethod reset-core :around ((o core))
   (do-core-traps (nil b o)
-    (when (typep b 'hardware-breakpoint)
-      (setf (breakpoint-owned-p b) nil))
+    (when (typep b 'hardware-trap)
+      (setf (trap-owned-p b) nil))
     (disable-trap b))
   (setf (core-stop-reason o) nil)
   (call-next-method))

@@ -467,7 +467,7 @@ such kind of thing.")
 ;;;; Breakpoints
 ;;;;
 (defclass mips-software-breakpoint (software-breakpoint) ())
-(defclass mips-hardware-breakpoint (hardware-breakpoint) ())
+(defclass mips-hardware-breakpoint (hardware-trap) ())
 
 ;;;;
 ;;;; TLB

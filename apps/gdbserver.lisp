@@ -351,6 +351,7 @@
                   (core (if target-context
                             (ctx-core target-context)
                             (error "~@<No active target context: cannot start GDB server.~:@>"))))
+  (declare (ignore verbose))
   (change-class target-context 'common-db-gdbserver)
   (let ((ri-names (gdb:core-register-order core))
         (*trace-comdb-calls* trace-comdb-calls)

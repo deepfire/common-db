@@ -514,7 +514,7 @@
            (settrace 1024)
            (watch 1 #x00001000)
            (run-core-synchronous core :address #x80000000)
-           (expect (and (typep (core-stop-reason core) 'hardware-breakpoint)
+           (expect (and (typep (core-stop-reason core) 'hardware-trap)
                         (= 1 (trap-id (core-stop-reason core))))
                (breakpoint-not-reached :expected '(:hardware-break-watch 1) :actual (core-stop-reason core) :breakpoint 1)))
          (with-subtest :watchpoint-0-fired
@@ -522,7 +522,7 @@
            (watch 1 nil)
            (watch 0 #x00000000)
            (run-core-synchronous core :address #x80000000)
-           (expect (and (typep (core-stop-reason core) 'hardware-breakpoint)
+           (expect (and (typep (core-stop-reason core) 'hardware-trap)
                         (= 0 (trap-id (core-stop-reason core))))
                (breakpoint-not-reached :expected '(:hardware-break-watch 0) :actual (core-stop-reason core) :breakpoint 0))))
     (hw-break 0 nil)

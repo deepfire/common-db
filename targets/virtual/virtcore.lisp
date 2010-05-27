@@ -271,7 +271,7 @@
 (define-print-object-method ((b virtcore-mips-hardware-breakpoint) core::address id memory-p read write condition)
     "~@<#<~;~A ~8,'0X id: ~D mem: ~S rw: ~B~B condition: ~S~;>~:@>" (type-of b) core::address id memory-p read write condition)
 
-(defmethod setup-hw-breakpoint ((b virtcore-mips-hardware-breakpoint) address skipcount &key (read t) (write nil) bound memory)
+(defmethod setup-hw-trap ((b virtcore-mips-hardware-breakpoint) address skipcount &key (read t) (write nil) bound memory)
   (declare (type (or null (unsigned-byte 32)) address))
   (setf (trap-skipcount b) skipcount
         (breakpoint-memory-p b) memory
@@ -281,7 +281,7 @@
   b)
 
 (defmethod add-cell-watchpoint ((core virtcore) address &optional (skipcount 0))
-  (setup-hw-breakpoint (allocate-hardware-breakpoint core) address skipcount :read t :write t :memory t))
+  (setup-hw-trap (allocate-hardware-breakpoint core) address skipcount :read t :write t :memory t))
 
 (defmethod enable-trap ((b virtcore-mips-software-breakpoint))
   (let ((target (backend (trap-core b)))

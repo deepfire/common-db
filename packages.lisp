@@ -465,8 +465,8 @@
    #:disable-trap
    #:deduce-stop-reason
    #:breakpoint
-   #:hardware-breakpoint
-   #:breakpoint-owned-p
+   #:hardware-trap
+   #:trap-owned-p
    #:software-breakpoint
    #:software-breakpoint-saved-insn
    #:set-core-insn-execution-limit
@@ -474,7 +474,7 @@
    #:with-traps
    #:recognise-sw-breakpoint
    #:add-sw-breakpoint
-   #:setup-hw-breakpoint
+   #:setup-hw-trap
    #:add-hw-breakpoint
    #:add-cell-watchpoint
    #:allocate-hardware-breakpoint

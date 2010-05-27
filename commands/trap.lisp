@@ -35,10 +35,10 @@
 аппаратной точки останова BREAK-OR-ID на адрес заданный через спецификатор
 адреса ADDRESS. Опциональный параметр SKIPCOUNT задаёт количество пропусков
 срабатывания."
-  (declare (type (or (integer 0 1) hardware-breakpoint) break-or-id))
+  (declare (type (or (integer 0 1) hardware-trap) break-or-id))
   (let ((breakpoint (xform-if (of-type 'integer) (curry #'hwbreak *core*) break-or-id)))
-    (setup-hw-breakpoint breakpoint (if address (coerce-to-address address)) skipcount
-                         :read t :write nil :bound bound :memory nil)) ; XXX: abstract out these flags
+    (setup-hw-trap breakpoint (if address (coerce-to-address address)) skipcount
+                   :read t :write nil :bound bound :memory nil)) ; XXX: abstract out these flags
   address)
 
 (defun watch (break-or-id address &optional (skipcount 0) &key (read t) write bound)
@@ -47,10 +47,10 @@
 аппаратной точки останова BREAK-OR-ID на адрес заданный через спецификатор
 адреса ADDRESS. Опциональный параметр SKIPCOUNT задаёт количество пропусков
 срабатывания."
-  (declare (type (or (integer 0 1) hardware-breakpoint) break-or-id))
+  (declare (type (or (integer 0 1) hardware-trap) break-or-id))
   (let ((breakpoint (xform-if (of-type 'integer) (curry #'hwbreak *core*) break-or-id)))
-    (setup-hw-breakpoint breakpoint (if address (coerce-to-address address)) skipcount
-                         :read read :write write :bound bound :memory t))
+    (setup-hw-trap breakpoint (if address (coerce-to-address address)) skipcount
+                   :read read :write write :bound bound :memory t))
   address)
 
 (defun catch (&rest addresses)
