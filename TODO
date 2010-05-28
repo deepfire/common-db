@@ -1,0 +1,11 @@
+;;; -*- Mode: Org; -*-
+
+* Traps
+  - Recognise the fact that hardware traps need different addressing pools, depending on:
+    1. whether the different types actually share the same resource pool in hardware, and
+    2. whether we need to address them differently, depending on the type, independently of point #1
+
+    This all really stems out of the fact that sometimes we are in exactly opposite situations:
+    1. we need same address pool for independently hardware-pooled resources (vector traps and hw breaks)
+    2. we need different address pools for resources from same hardware pool (hw breaks and hw watchpoints)
+
