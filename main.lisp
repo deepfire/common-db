@@ -60,8 +60,8 @@
 ;;;; Hooks into *CTX*, *CORE* etc
 ;;;;
 (defmethod coerce-to-trap ((o integer))
-  (if-let ((trap (trap *core* o :if-does-not-exist :continue)))
-    trap
+  (if-let ((traps (traps *core* o)))
+    (first traps)
     (error 'no-core-breakpoint :core *core* :address o)))
 
 ;;;;

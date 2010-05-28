@@ -58,7 +58,8 @@
   "Проинтерпретировать остаточный список параметров как набор адресов
 векторных ловушек, и активировать их, сбросив неуказанные."
   (let* ((core *core*)
-         (catches (mapcar (curry #'trap core) addresses)))
+         (catches (remove-if-not (of-type 'vector-trap)
+                                 (mappend (curry #'traps core) addresses))))
     (iter (for catch in catches)
           (unless catch (collect catch into missing))
           (unless (typep catch 'vector-trap) (collect catch into uncatches))
@@ -85,32 +86,34 @@
   #+help-ru
   "Удалить точку останова, будь то программную или аппаратную, установленную
 на ADDRESS."
-  (if-let ((b (trap *core* address :if-does-not-exist :continue)))
-          (disable-trap b)
+  (if-let ((bs (traps *core* address)))
+          (mapcar #'disable-trap bs)
           (error 'no-core-breakpoint :core *core* :address address))
   (values))
 
 (defun clear-sw-breaks ()
   #+help-ru
   "Удалить все программные точки останова."
-  (do-core-traps (nil b *core*)
-    (when (typep b 'core:software-breakpoint)
-      (disable-trap b)))
+  (do-core-traps (nil bs *core*)
+    (dolist (b bs)
+      (when (typep b 'core:software-breakpoint)
+        (disable-trap b))))
   (values))
 
 (defun disable-breaks ()
   #+help-ru
   "Отключить все точки останова."
-  (do-core-traps (nil b *core*)
-    (disable-trap b))
+  (do-core-traps (nil bs *core*)
+    (mapc #'disable-trap bs))
   (values))
 
 (defun describe-breaks ()
   #+help-ru
   "Описать все активные точки останова."
   (let ((*print-right-margin* 200))
-    (do-core-traps (addr b *core*)
-      (when (trap-enabled-p b)
-        (format t "~A~%~4T" b)
-        (addr addr))))
+    (do-core-traps (addr bs *core*)
+      (dolist (b bs)
+        (when (trap-enabled-p b)
+          (format t "~A~%~4T" b)
+          (addr addr)))))
   (values))

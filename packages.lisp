@@ -387,6 +387,7 @@
    #:do-core-hardware-breakpoints
    #:do-core-software-breakpoints
    #:coerce-to-trap
+   #:traps
    #:hwbreak
    ; over the id-keyed pool
    #:hw-breakpoint

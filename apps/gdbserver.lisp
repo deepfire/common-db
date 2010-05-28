@@ -270,11 +270,11 @@
 (defmethod gdb-remove-breakpoint ((o common-db-gdbserver) type address length &aux
                                   (core (ctx-core o)))
   (declare (ignore type length))
-  (if-let ((b (trap core address :if-does-not-exist :continue)))
+  (if-let ((bs (traps core address)))
           (progn
             (when *trace-comdb-calls*
               (log-comdb 'disable-trap "~X" address))
-            (disable-trap b)
+            (mapcar #'disable-trap bs)
             "OK")
           "ENoSuchBreakpoint"))
 
@@ -283,10 +283,11 @@
 (defmethod gdb-detach ((o common-db-gdbserver) &aux
                        (core (ctx-core o)))
   (dolist (core (cons core (master-device-slaves core)))
-    (do-core-traps (nil b core)
-      (when *trace-comdb-calls*
-        (log-comdb 'disable-trap "~X" (trap-address b)))
-      (disable-trap b)))
+    (do-core-traps (nil bs core)
+      (dolist (b bs)
+        (when *trace-comdb-calls*
+          (log-comdb 'disable-trap "~X" (trap-address b)))
+        (disable-trap b))))
   ;; Call next method to really terminate the connection.
   (call-next-method))
 

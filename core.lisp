@@ -523,19 +523,25 @@ return the corresponding trap."))
 ;;;;
 ;;;; Core trap containers
 ;;;;
-(define-subcontainer trap :container-slot traps :type address-trap :iterator do-core-traps :remover remove-trap :if-exists :error
+(define-subcontainer traps :container-slot traps :type address-trap :iterator do-core-traps :remover remove-trap :if-exists :continue :if-does-not-exist :continue
                      :iterator-bind-key t)
 (define-subcontainer hwbreak :container-slot hw-breakpoints :type hardware-trap :iterator do-core-hardware-breakpoints :if-exists :error)
 
 (defmacro do-core-controlled-traps ((o core) &body body)
-  `(do-core-traps (nil ,o ,core)
-     (when (typep ,o 'controlled-trap) ,@body)))
+  (with-gensyms (traplist)
+    `(do-core-traps (nil ,traplist ,core)
+       (dolist (,o ,traplist)
+         (when (typep ,o 'controlled-trap) ,@body)))))
 (defmacro do-core-vector-traps ((o core) &body body)
-  `(do-core-traps (nil ,o ,core)
-     (when (typep ,o 'vector-trap) ,@body)))
+  (with-gensyms (traplist)
+    `(do-core-traps (nil ,traplist ,core)
+       (dolist (,o ,traplist)
+         (when (typep ,o 'vector-trap) ,@body)))))
 (defmacro do-core-software-breakpoints ((o core) &body body)
-  `(do-core-traps (nil ,o ,core)
-     (when (typep ,o 'software-breakpoint) ,@body)))
+  (with-gensyms (traplist)
+    `(do-core-traps (nil ,traplist ,core)
+       (dolist (,o ,traplist)
+         (when (typep ,o 'software-breakpoint) ,@body)))))
 
 (define-print-object-method ((o trap)) "")
 (define-print-object-method ((o intercore-trap) trapping-core)
@@ -556,25 +562,27 @@ return the corresponding trap."))
 
 (defmethod initialize-instance :after ((o address-trap) &key core address &allow-other-keys)
   (when (and core address)
-    (setf (trap core address) o)))
+    (push o (traps core address))))
 
 (defmethod coerce-to-trap ((o address-trap))
   o)
 
 (defmethod recognise-sw-breakpoint ((o core) address)
   (lret ((trap (make-instance (core-default-sw-breakpoint-type o) :core o :address address :saved-insn (core-nopcode o))))
-    (setf (trap o address) trap
-          (slot-value trap 'enabled-p) t)))
+    (push trap (traps o address))
+    (setf (slot-value trap 'enabled-p) t)))
 
 (defmethod add-sw-breakpoint ((o core) address)
-  (lret ((bp (or (let ((b (trap o address :if-does-not-exist :continue)))
-                   (when (typep b 'software-breakpoint)
-                     b))
+  (lret ((bp (or (find-if (of-type 'software-breakpoint)
+                          (traps o address))
                  (make-instance (core-default-sw-breakpoint-type o) :core o :address address))))
     (enable-trap bp)))
 
 (defmethod setup-hw-trap :before ((o hardware-trap) address skipcount &key &allow-other-keys)
   (declare (ignore skipcount))
+  (if address
+      (push o (traps (trap-core o) address))
+      (removef (traps (trap-core o) address) o))
   (setf (trap-address o) address))
 (defmethod setup-hw-trap ((b hardware-trap) address skipcount &key &allow-other-keys)
   (declare (ignore address skipcount))
@@ -696,8 +704,8 @@ BREAKPOINT is released when the form is exited, by any means."
   (call-next-method))
 
 (defmethod reset-core :around ((o core))
-  (do-core-traps (nil b o)
-    (disable-trap b))
+  (do-core-traps (nil bs o)
+    (mapc #'disable-trap bs))
   (setf (core-stop-reason o) nil)
   (call-next-method))
 ;;; *** RESET ***
