@@ -164,121 +164,125 @@
   (declare (optimize debug))
   (portability:set-and-activate-repl-fun
    (lambda ()
-     (in-package :comdb)
-     #+ccl ;; XXX-CCL: there' some kind of a glitch there...
-     (when *globally-quitting*
-       (quit))
-     #+sbcl
-     (setf sb-debug::*invoke-debugger-hook* #'comdb-debugger)
-     #+windows
-     (interface-parport:bind-to-parport-access-library)     
-     (with-quit-restart
-       (destructuring-bind (&rest args &key (verbose verbose)
-                                  (no-rc no-rc) early-eval
-                                  core-multiplier virtual no-physical no-usb no-scan (no-platform-init no-platform-init)
-                                  load eval run-tests ignore-test-failures quit
-                                  log-pipeline-crit
-                                  list-contexts context list-platforms platform
-                                  early-break-on-signals break-on-signals help help-en orgify version
-                                  ;; customisable
-                                  (no-memory-detection (unless run-tests no-memory-detection))
-                                  (memory-detection-threshold memory-detection-threshold)
-                                  (disable-debugger disable-debugger)
-                                  (print-backtrace-on-errors print-backtrace-on-errors)
-                                  &allow-other-keys)
-           (read-args-safely (rest (argv))
-                             (append *standard-parameters* additional-parameters)
-                             (append *panlevel-switches* *standard-switches* additional-switches))
-         (when verbose
-           (format t "~@<NOTE: ~@;arguments:~{ ~(~S~) ~S~}~:@>~%" args))
-         (let* ((*break-on-signals* early-break-on-signals)
-                (other-args (apply #'remove-from-plist args (append (mapcar #'ensure-car *standard-parameters*) *standard-switches*)))
-                (*log-platform-processing* verbose)
-                (*log-system-configuration* verbose)
-                (discrimination:*discriminate-verbosely* verbose)
-                (*orgify* orgify)
-                (*disable-usb-interfaces* no-usb)
-                (*virtual-target-enabled* virtual)
-                (*forced-platform* (when platform
-                                     (or (find-symbol (string-upcase (string platform)) :platform-definitions)
-                                         (error "~@<Unknown platform \"~A\": use --list-platforms.~:@>" platform))))
-                (*log-core-pipeline-crit* log-pipeline-crit)
-                (*print-backtrace-on-errors* print-backtrace-on-errors)
-                (*print-base* #x10)
-                (*inhibit-memory-detection* no-memory-detection)
-                (*memory-detection-threshold* (or memory-detection-threshold *memory-detection-threshold*))
-                (help (or help help-en (funcall help-needed-discriminator args))))
-           (when disable-debugger
-             #+sbcl
-             (sb-ext:disable-debugger))
-           ;;
-           ;; Phase 0: non-core short-path functionality
-           ;;
-           (when-let ((quitp (cond (list-platforms     (list-platforms) t)
-                                   (version            (version) t)
-                                   ((or list-contexts) nil)
-                                   (help               (display-invocation-help help-en) t))))
-             (quit))
-           (appendf comdb:*initargs*
-                    (when no-memory-detection `(:no-memory-detection t))
-                    (when core-multiplier     `(:core-multiplier ,core-multiplier)))
-           ;;
-           ;; Phase 1: inteface scanning
-           ;;
-           (when early-eval
-             (eval early-eval))
-           (unless no-scan
-             (with-retry-restarts ((retry () :report "Retry scanning interface busses."))
-               (scan :physical (not no-physical) :virtual virtual
-                     :skip-platform-init no-platform-init)
-               (unless *current*
-                 (error "~@<No devices were found attached to active busses.~:@>"))))
-           ;;
-           ;; Phase 1a: context querying
-           ;;
-           (cond (list-contexts (list-contexts)
-                                (quit)))
-           ;;
-           ;; Phase 1b: context selection
-           ;;
-           (when context
-             (ctx context))
-           (when *current*
-             (format t "~&~@<; ~@;~:[No current device context.~;~
+     (handler-bind ((serious-condition (lambda (c)
+                                         "A nice reminder, for those implementations which don't have it."
+                                         #+ccl (syncformat t ">~%> To quit, type (QUIT).~%>~%")
+                                         (error c))))
+       (in-package :comdb)
+       #+ccl ;; XXX-CCL: there' some kind of a glitch there...
+       (when *globally-quitting*
+         (quit))
+       #+sbcl
+       (setf sb-debug::*invoke-debugger-hook* #'comdb-debugger)
+       #+windows
+       (interface-parport:bind-to-parport-access-library)     
+       (with-quit-restart
+         (destructuring-bind (&rest args &key (verbose verbose)
+                                    (no-rc no-rc) early-eval
+                                    core-multiplier virtual no-physical no-usb no-scan (no-platform-init no-platform-init)
+                                    load eval run-tests ignore-test-failures quit
+                                    log-pipeline-crit
+                                    list-contexts context list-platforms platform
+                                    early-break-on-signals break-on-signals help help-en orgify version
+                                    ;; customisable
+                                    (no-memory-detection (unless run-tests no-memory-detection))
+                                    (memory-detection-threshold memory-detection-threshold)
+                                    (disable-debugger disable-debugger)
+                                    (print-backtrace-on-errors print-backtrace-on-errors)
+                                    &allow-other-keys)
+             (read-args-safely (rest (argv))
+                               (append *standard-parameters* additional-parameters)
+                               (append *panlevel-switches* *standard-switches* additional-switches))
+           (when verbose
+             (format t "~@<NOTE: ~@;arguments:~{ ~(~S~) ~S~}~:@>~%" args))
+           (let* ((*break-on-signals* early-break-on-signals)
+                  (other-args (apply #'remove-from-plist args (append (mapcar #'ensure-car *standard-parameters*) *standard-switches*)))
+                  (*log-platform-processing* verbose)
+                  (*log-system-configuration* verbose)
+                  (discrimination:*discriminate-verbosely* verbose)
+                  (*orgify* orgify)
+                  (*disable-usb-interfaces* no-usb)
+                  (*virtual-target-enabled* virtual)
+                  (*forced-platform* (when platform
+                                       (or (find-symbol (string-upcase (string platform)) :platform-definitions)
+                                           (error "~@<Unknown platform \"~A\": use --list-platforms.~:@>" platform))))
+                  (*log-core-pipeline-crit* log-pipeline-crit)
+                  (*print-backtrace-on-errors* print-backtrace-on-errors)
+                  (*print-base* #x10)
+                  (*inhibit-memory-detection* no-memory-detection)
+                  (*memory-detection-threshold* (or memory-detection-threshold *memory-detection-threshold*))
+                  (help (or help help-en (funcall help-needed-discriminator args))))
+             (when disable-debugger
+               #+sbcl
+               (sb-ext:disable-debugger))
+             ;;
+             ;; Phase 0: non-core short-path functionality
+             ;;
+             (when-let ((quitp (cond (list-platforms     (list-platforms) t)
+                                     (version            (version) t)
+                                     ((or list-contexts) nil)
+                                     (help               (display-invocation-help help-en) t))))
+               (quit))
+             (appendf comdb:*initargs*
+                      (when no-memory-detection `(:no-memory-detection t))
+                      (when core-multiplier     `(:core-multiplier ,core-multiplier)))
+             ;;
+             ;; Phase 1: inteface scanning
+             ;;
+             (when early-eval
+               (eval early-eval))
+             (unless no-scan
+               (with-retry-restarts ((retry () :report "Retry scanning interface busses."))
+                 (scan :physical (not no-physical) :virtual virtual
+                       :skip-platform-init no-platform-init)
+                 (unless *current*
+                   (error "~@<No devices were found attached to active busses.~:@>"))))
+             ;;
+             ;; Phase 1a: context querying
+             ;;
+             (cond (list-contexts (list-contexts)
+                                  (quit)))
+             ;;
+             ;; Phase 1b: context selection
+             ;;
+             (when context
+               (ctx context))
+             (when *current*
+               (format t "~&~@<; ~@;~:[No current device context.~;~
                                    Current platform/core: ~A ~A~]~:@>~%"
-                     *current* (type-of (target-platform *target*)) *core*))
-           ;;
-           ;; Phase 2: in-context actions
-           ;;
-           (let ((*break-on-signals* break-on-signals))
-             (setf *package* (find-package user-package))
+                       *current* (type-of (target-platform *target*)) *core*))
              ;;
-             ;; Phase 2a: run-control
+             ;; Phase 2: in-context actions
              ;;
-             (unless no-rc
-               (load (subfile* (user-homedir-pathname) ".comdbrc")
-                     :verbose verbose :print verbose :if-does-not-exist nil))
-             (let (successp)
+             (let ((*break-on-signals* break-on-signals))
+               (setf *package* (find-package user-package))
                ;;
-               ;; Phase 2b: batch, expression and test execution
+               ;; Phase 2a: run-control
                ;;
-               (when load
-                 (setf successp (load load)))
-               (when eval
-                 (eval eval))
-               (when run-tests
-                 (setf successp (run-tests))
-                 (unless (or successp ignore-test-failures quit)
-                   (error "~@<Some tests failed.~:@>")))
-               (when quit
-                 (quit (if successp 0 1))))
-             ;;
-             ;; Phase 2: main functionality
-             ;;
-             (when verbose
-               (format t "NOTE: executing application functionality~%"))
-             (apply fn other-args)
-             (quit))))))))
+               (unless no-rc
+                 (load (subfile* (user-homedir-pathname) ".comdbrc")
+                       :verbose verbose :print verbose :if-does-not-exist nil))
+               (let (successp)
+                 ;;
+                 ;; Phase 2b: batch, expression and test execution
+                 ;;
+                 (when load
+                   (setf successp (load load)))
+                 (when eval
+                   (eval eval))
+                 (when run-tests
+                   (setf successp (run-tests))
+                   (unless (or successp ignore-test-failures quit)
+                     (error "~@<Some tests failed.~:@>")))
+                 (when quit
+                   (quit (if successp 0 1))))
+               ;;
+               ;; Phase 2: main functionality
+               ;;
+               (when verbose
+                 (format t "NOTE: executing application functionality~%"))
+               (apply fn other-args)
+               (quit)))))))))
 
 (defun opfr:opfr-prompt ()
   (let ((platform-type (when *target* (type-of (target-platform *target*))))
