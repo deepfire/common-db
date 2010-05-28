@@ -230,12 +230,12 @@ keywords might be specified."))
   (:documentation
    "Allocate a hardware from a free pool, and configure it, by the means of
 SETUP-HW-TRAP.  The breakpoint returned is meant to be released, once
-it is no longer used, by calling RELEASE-HARDWARE-BREAKPOINT."))
+it is no longer used, by calling DISABLE-TRAP."))
 (defgeneric add-cell-watchpoint (core address &optional skip-count)
   (:documentation
    "Allocate a hardware from a free pool, and configure it, by the means of
 SETUP-HW-TRAP.  The breakpoint returned is meant to be released, once
-it is no longer used, by calling RELEASE-HARDWARE-BREAKPOINT."))
+it is no longer used, by calling DISABLE-TRAP."))
 (defgeneric coerce-to-trap (trap-specifier)
   (:documentation
    "Given a TRAP-SPECIFIER, that is, either a trap number, or a trap,
@@ -551,6 +551,7 @@ return the corresponding trap."))
 
 (defmethod enable-trap  :after ((o controlled-trap))       (setf (slot-value o 'enabled) t))
 (defmethod disable-trap :after ((o controlled-trap))       (setf (slot-value o 'enabled) nil))
+(defmethod disable-trap :after ((o hardware-trap))         (setf (slot-value o 'owned) nil))
 (defmethod disable-trap :after ((o volatile-address-trap)) (remove-trap (trap-core o) (trap-address o)))
 
 (defmethod initialize-instance :after ((o address-trap) &key core address &allow-other-keys)
@@ -598,9 +599,6 @@ return the corresponding trap."))
 (defmethod add-hw-breakpoint ((core core) address &optional (skipcount 0))
   (setup-hw-trap (allocate-hardware-breakpoint core) address skipcount))
 
-(defun release-hardware-breakpoint (b)
-  (setf (trap-owned-p b) nil))
-
 (defun allocate-hardware-breakpoints (core n)
   (iter (repeat n)
         (collect (allocate-hardware-breakpoint core))))
@@ -616,7 +614,6 @@ return the corresponding trap."))
                                   (apply #'setup-hw-trap b a skipcount breakpoint-setup-args)))
                           (apply fn breakpoints))
           (dolist (b breakpoints)
-            (release-hardware-breakpoint b)
             (disable-trap b))))
       (funcall fn nil)))
 
@@ -700,8 +697,6 @@ BREAKPOINT is released when the form is exited, by any means."
 
 (defmethod reset-core :around ((o core))
   (do-core-traps (nil b o)
-    (when (typep b 'hardware-trap)
-      (setf (trap-owned-p b) nil))
     (disable-trap b))
   (setf (core-stop-reason o) nil)
   (call-next-method))

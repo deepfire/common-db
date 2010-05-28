@@ -478,7 +478,6 @@
    #:add-hw-breakpoint
    #:add-cell-watchpoint
    #:allocate-hardware-breakpoint
-   #:release-hardware-breakpoint
    #:invoke-with-maybe-free-hardware-breakpoints
    #:with-maybe-free-hardware-breakpoints
    #:with-free-hardware-breakpoints
