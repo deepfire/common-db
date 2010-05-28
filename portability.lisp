@@ -28,6 +28,7 @@
    #:argv0-executable-name
    #:getenv
    #:function-arglist
+   #:*globally-quitting*
    #:quit
    #:with-quit-restart
    #:sigint
@@ -96,10 +97,14 @@
 #+ccl
 (cffi:defcfun ("exit" exit) :void (return-value :unsigned-int))
 
+(defvar *globally-quitting* nil
+  "Whether or not we are leaving the executable.")
+
 (defun quit (&optional (status 0))
   "Exit."
   #-(or sbcl ecl clisp ccl) (declare (ignore status))
   #-(or sbcl ecl clisp ccl) (not-implemented 'quit)
+  (setf *globally-quitting* t)
   #+sbcl (sb-ext:quit :unix-status status)
   #+clisp (ext:quit status)
   #+ecl (si:quit status)

@@ -165,6 +165,9 @@
   (portability:set-and-activate-repl-fun
    (lambda ()
      (in-package :comdb)
+     #+ccl ;; XXX-CCL: there' some kind of a glitch there...
+     (when *globally-quitting*
+       (quit))
      #+sbcl
      (setf sb-debug::*invoke-debugger-hook* #'comdb-debugger)
      #+windows
