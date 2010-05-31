@@ -523,7 +523,7 @@ return the corresponding trap."))
 ;;;;
 ;;;; Core trap containers
 ;;;;
-(define-subcontainer traps :container-slot traps :type address-trap :iterator do-core-traps :remover remove-trap :if-exists :continue :if-does-not-exist :continue
+(define-subcontainer traps :container-slot traps :type list :iterator do-core-traps :remover remove-trap :if-exists :continue :if-does-not-exist :continue
                      :iterator-bind-key t)
 (define-subcontainer hwbreak :container-slot hw-breakpoints :type hardware-trap :iterator do-core-hardware-breakpoints :if-exists :error)
 
