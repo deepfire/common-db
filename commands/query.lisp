@@ -143,7 +143,7 @@ NAME-OR-ADDRESS.  В том случае если указано имя реги
          (cell (when address (memory-ref target address)))
          (decoded-insn (when address (decode-mips-insn cell)))
          (control (format nil "~~&~~A:~~12T~~8,'0X~~:[~~; ~~:*~~S~~]~~~
-                               ~~~DT~~~
+                               ~~~DT~
                                ~~:[~~;~~:*@phys #x~~8,'0X: ~~8,'0X   ~~(~~A~~{ ~~S~~}~~)~~]" postname-alignment)))
     (format *log-stream* control
             name value
