@@ -98,12 +98,18 @@
   (lret ((regvec (make-array (* 4 (length *gdb-register-instance-vector*)) :element-type '(unsigned-byte 8))))
     (iter (for ri in-vector *gdb-register-instance-vector*)
           (for offt from 0 by 4)
-          (setf (u8-vector-word32le regvec offt) (reginstance-value ri)))))
+          (setf (u8-vector-word32le regvec offt) (reginstance-value ri)))
+    (when *trace-comdb-calls*
+      (log-comdb 'reginstance-value "~A" (iter (for name in (map 'list #'name *gdb-register-instance-vector*))
+                                               (for offt from 0 by 4)
+                                               (collect (cons name (u8-vector-word32le regvec offt))))))))
 
 (defmethod gdb-set-target-registers-from-vector ((o common-db-gdbserver) vector)
   (declare (ignore vector))
   (when *trace-comdb-calls*
-    (log-comdb '(setf reginstance-value) "~A" (map 'list #'name *gdb-register-instance-vector*)))
+    (log-comdb '(setf reginstance-value) "~A" (iter (for name in (map 'list #'name *gdb-register-instance-vector*))
+                                                    (for offt from 0 by 4)
+                                                    (collect (cons name (u8-vector-word32le vector offt))))))
   (lret ((regvec (make-array (* 4 (length *gdb-register-instance-vector*)) :element-type '(unsigned-byte 8))))
     (iter (for ri in-vector *gdb-register-instance-vector*)
           (for offt from 0 by 4)
