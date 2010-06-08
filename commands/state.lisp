@@ -180,8 +180,8 @@ address to be different from ADDRESS."
   (apply #'run run-params)
   (values))
 
-(defun leave-frame (&rest run-params &aux
-                    (core *core*))
+(defun ret (&rest run-params &aux
+            (core *core*))
   #+help-ru
   "Установить точку останова в значение регистра R31, предположительно
 содержащий актуальный адрес возврата и выполнить команду RUN.

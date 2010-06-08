@@ -64,7 +64,7 @@ SECONDS могут быть любым неотрицательным реаль
      step trace
      dspreset dsprun dspstep dspstop
      explain
-     leave-frame)
+     ret)
     ((traps #-help-ru "Traps"
             #+help-ru "Ловушки")
      hw-break sw-break watch catch trace settrace
