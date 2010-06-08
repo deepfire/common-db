@@ -108,19 +108,32 @@ first symbol table in =*SYMS*=."
                       (sym:addr* table address-or-symbol))))
       (if addrs
           (let* ((sym (xform (not symp) #'addrsym address-or-symbol))
-                 (baseaddrs (if symp
-                                addrs
-                                (let ((candidates (sym:addr* table sym)))
-                                  (list (lastcar (sort (copy-list (remove-if (curry #'< address-or-symbol) candidates)) #'<))))))
+                 (baseaddrs (remove nil
+                                    (if symp
+                                        addrs
+                                        (let ((candidates (sym:addr* table sym)))
+                                          (list (lastcar (sort (copy-list (remove-if (curry #'< address-or-symbol) candidates)) #'<)))))))
                  (nextaddrs (mapcar #'nextaddr baseaddrs)))
             (if symp
                 (iter (for a in addrs)
                       (for n in nextaddrs)
                       (for l = (when (and a n) (- n a)))
                       (format t "~A: ~8,'0X-~8,'0X, total ~X~%" sym a (when l (+ a l)) l))
-                (format t "~8,'0X: ~X from start of ~A (~8,'0X-~8,'0X, total ~X)~%"
-                        (first addrs) (- (first addrs) (first baseaddrs)) sym
-                        (first baseaddrs) (first nextaddrs) (- (first nextaddrs) (first baseaddrs)))))
+                (cond ((and nextaddrs baseaddrs)
+                       (format t "~8,'0X: ~X from start of ~A (~8,'0X-~8,'0X, total ~X)~%"
+                               (first addrs) (- (first addrs) (first baseaddrs)) sym
+                               (first baseaddrs) (first nextaddrs) (- (first nextaddrs) (first baseaddrs))))
+                      (baseaddrs
+                       (format t "~8,'0X: ~X from start of ~A (~8,'0X-<unknown>)~%"
+                               (first addrs) (- (first addrs) (first baseaddrs)) sym
+                               (first baseaddrs)))
+                      (nextaddrs 
+                       (format t "~8,'0X: ~X before start of ~A (~8,'0X-<...>)~%"
+                               (first addrs) (- (first nextaddrs) (first addrs)) sym
+                               (first nextaddrs)))
+                      (t 
+                       (format t "~8,'0X: unknown location~%"
+                               (first addrs))))))
           (error "~@<Unknown symbol ~A.~:@>" address-or-symbol))))
   (values))
 
