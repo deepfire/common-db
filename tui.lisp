@@ -164,16 +164,15 @@
   (declare (optimize debug))
   (portability:set-and-activate-repl-fun
    (lambda ()
-     (handler-bind ((serious-condition (lambda (c)
+     (handler-bind (#+ccl
+                    (serious-condition (lambda (c)
                                          "A nice reminder, for those implementations which don't have it."
-                                         #+ccl (syncformat t ">~%> To quit, type (QUIT).~%>~%")
+                                         (syncformat t ">~%> To quit, type (QUIT).~%>~%")
                                          (error c))))
        (in-package :comdb)
        #+ccl ;; XXX-CCL: there' some kind of a glitch there...
        (when *globally-quitting*
          (quit))
-       #+sbcl
-       (setf sb-debug::*invoke-debugger-hook* #'comdb-debugger)
        #+windows
        (interface-parport:bind-to-parport-access-library)     
        (with-quit-restart
@@ -365,38 +364,7 @@ QUALIFIED-PACKAGES дополняются префиксом из коротко
 #+sbcl
 (progn
   (defmethod print-object ((o sb-sys:interactive-interrupt) stream)
-    (format stream "~@<Ctrl+C pressed.~:@>"))
-
-  (defun comdb-debugger (condition old-hook)
-    (declare (ignore old-hook))
-    (sb-impl::flush-standard-output-streams)
-    (let ((sb-debug::*debug-condition* condition)
-          (sb-debug::*debug-restarts* (compute-restarts condition))
-          (sb-debug::*nested-debug-condition* nil))
-      (handler-case (unless (typep condition 'sb-kernel::step-condition)
-                      (format *error-output* "~2&")
-                      (pprint-logical-block (*error-output* nil)
-                        (format *error-output* "~S: ~2I~_~A~%~%" (type-of condition) condition)))
-        (error (condition)
-          (setf sb-debug::*nested-debug-condition* condition)
-          (let ((ndc-type (type-of sb-debug::*nested-debug-condition*)))
-            (format *error-output* "~&~@<(A ~S was caught when trying to print ~S when ~
-                                        entering debugger. Printing was aborted and the ~
-                                        ~S was stored in ~S.)~@:>~%"
-                    ndc-type 'sb-debug::*debug-condition* ndc-type 'sb-debug::*nested-debug-condition*))
-          (when (typep sb-debug::*nested-debug-condition* 'cell-error)
-            ;; what we really want to know when it's e.g. an UNBOUND-VARIABLE:
-            (format *error-output* "~&(CELL-ERROR-NAME ~S) = ~S~%"
-                    'sb-debug::*nested-debug-condition* (cell-error-name sb-debug::*nested-debug-condition*)))))
-      (let ((background-p (sb-thread::debugger-wait-until-foreground-thread *debug-io*)))
-        (unwind-protect (let ((*standard-output* *standard-output*)
-                              (*error-output* *debug-io*))
-                          (format *debug-io* "Enter :HELP for help, QUIT to quit.~%~%")
-                          (unless (typep condition 'sb-kernel::step-condition)
-                            (sb-debug::show-restarts sb-debug::*debug-restarts* *debug-io*))
-                          (sb-debug::internal-debug))
-          (when background-p
-            (sb-thread::release-foreground)))))))
+    (format stream "~@<Ctrl+C pressed.~:@>")))
 
 #+sbcl (in-package :sb-debug)
 #+sbcl
