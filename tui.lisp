@@ -162,6 +162,7 @@
                                no-rc no-platform-init disable-debugger print-backtrace-on-errors
                                no-memory-detection memory-detection-threshold verbose)
   (declare (optimize debug))
+  (setf opfr:*opfr-repeat-on-return-key* t)
   (portability:set-and-activate-repl-fun
    (lambda ()
      (handler-bind (#+ccl
