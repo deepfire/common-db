@@ -61,7 +61,7 @@ SECONDS могут быть любым неотрицательным реаль
      reset
      dive rise
      run run-async run-until-stopped-by run-while-boring run-while-step-in
-     step trace
+     step stepw trace
      dspreset dsprun dspstep dspstop
      explain
      ret)

@@ -38,7 +38,7 @@
   (setf (state core) (shallower-state (state core)))
   (values))
 
-(defun step (&optional (count 1) &key (display *display*) &aux
+(defun step (&optional (count 1) &key (display *display*) (step-slaves t) &aux
              (core *core*))
   #+help-ru
   "Произвести COUNT шагов."
@@ -49,9 +49,90 @@
     ;; shall we use OTC/TRACE-MODE here, instead (wouldn't that be a lie)?
     (iter (repeat count)
           (while (prog1 (step-core-synchronous core)
-                   (dolist (slave (core-slaves core))
-                     (when (core-running-p slave)
-                       (step-core-debug slave))))))
+                   (when step-slaves
+                     (dolist (slave (core-slaves core))
+                       (when (core-running-p slave)
+                         (step-core-debug slave)))))))
+    (free-to-stop core))
+  (when display (display))    
+  (values))
+
+(defun callog (&optional target-symbol &key (core *core*) (step-slaves t) report-normal-returns skiplist)
+  #+help-ru
+  "Производить исполнение по шагам, регистрируя переходы между функциями,
+до попадания в функцию, чьё название задано параметром TARGET-SYMBOL.
+Функции, имена которых находятся в списке SKIPLIST исключаются из детального
+анализа и пропускаются в ускоренном режиме."
+  (declare (optimize debug))
+  (flet ((current-sym (&aux (fetch (moment-fetch (core-moment core))))
+           (values (addrsym fetch) fetch))
+         (frame-addr-match-p (f1 f2)
+           (= (cdr f1) (cdr f2)))
+         (frame-by-name (symstack name)
+           (find name symstack :key #'car))
+         (return-address-for-pc (pc skip-p)
+           (+ pc (* (if skip-p 3 2) (memory-device-byte-width (backend core)))))
+         (report-n-deep (n control-string &rest args)
+           (write-string ">>> ")
+           (iter (repeat n)
+                 (for i from 0)
+                 (write-string (if (evenp i) "... " ",,, ")))
+           (apply #'format t control-string args)
+           (terpri))
+         (skip-to-address (addr)
+           (with-free-hardware-breakpoints (core) ((b addr))
+             (run-core-synchronous core)))
+         (do-one-step ()
+           (step-core-synchronous core)
+           (when step-slaves
+             (dolist (slave (core-slaves core))
+               (when (core-running-p slave)
+                 (step-core-debug slave))))))
+    (with-temporary-state (core :stop)
+      (iter (with symstack = (list (cons (current-sym) 0)))
+            (with skip-to-addr)
+            (initially (report-n-deep 0 "~A" (caar symstack)))
+            (for from-fn-symbol first (caar symstack) then to-fn-symbol)
+            (for old-pc first 0 then pc)
+            (if skip-to-addr
+                (progn
+                  (skip-to-address skip-to-addr)
+                  (setf skip-to-addr nil))
+                (do-one-step))
+            (for (values to-fn-symbol pc) = (current-sym))
+            (until (and to-fn-symbol (eq to-fn-symbol target-symbol)))
+            (unless (eq to-fn-symbol from-fn-symbol)
+              (if-let ((return-depth (position (cons to-fn-symbol pc) symstack :test #'frame-addr-match-p)))
+                (setf symstack (nthcdr return-depth symstack)
+                      (values) (if (= 1 return-depth)
+                                   (when report-normal-returns
+                                     (report-n-deep (1- (length symstack)) "~A <== ~A" to-fn-symbol from-fn-symbol))
+                                   (report-n-deep (1- (length symstack)) "~A <= ~A (NLR ~D frame~:*~P)"
+                                                  to-fn-symbol from-fn-symbol return-depth)))
+                (let* ((skip-p (find to-fn-symbol skiplist))
+                       (return-addr (return-address-for-pc old-pc skip-p)))
+                  (cond (skip-p
+                         (setf (cdr (frame-by-name symstack (addrsym return-addr))) (+ return-addr (memory-device-byte-width (backend core))))
+                         (setf skip-to-addr return-addr))
+                        (t
+                         (setf (cdr (first symstack)) return-addr)))
+                  (report-n-deep (length symstack) "~A~:[~*~; ~8,'0X~]~:[~; (skipped)~]"
+                                 (caar (push (cons to-fn-symbol 0) symstack)) 
+                                 (null to-fn-symbol) pc
+                                 skip-p))))))))
+
+(defun stepw (&key (display *display*) (step-slaves t) report-normal-returns &aux
+              (core *core*))
+  #+help-ru
+  "Произвести COUNT шагов, пропуская вложенные вызовы."
+  (with-temporary-state (core :stop)
+    ;; re-implementing the stop-to-free protocol, what's to say...
+    (setf (core-moment core) (derive-moment (saved-core-moment core)
+                                            (or (moment-fetch (saved-core-moment core)) #xbfc00000)))
+    ;; shall we use OTC/TRACE-MODE here, instead (wouldn't that be a lie)?
+    (if-let ((start-fn-symbol (addrsym (moment-fetch (saved-core-moment core)))))
+            (callog start-fn-symbol :core core :step-slaves step-slaves :report-normal-returns report-normal-returns)
+            (write-line "Sorry, but the current PC doesn't resolve -- no function to step within."))
     (free-to-stop core))
   (when display (display))    
   (values))
