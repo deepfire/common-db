@@ -350,8 +350,7 @@
         common-db::*additional-help-ru* common-db::*gdbserver-help-ru*)
   (comdb::comdb-toplevel-wrapper #'gdbserver
                                  '((:address :string) :port :trace-exchange)
-                                 '(:start-swank :single-shot :trace-comdb-calls :trace-even-noisy-comdb-calls :trace-comdb-memory-io)
-                                 :no-memory-detection t))
+                                 '(:start-swank :single-shot :trace-comdb-calls :trace-even-noisy-comdb-calls :trace-comdb-memory-io)))
 
 (defun gdbserver (&key verbose (target-context *current*) (address "127.0.0.1") (port 9000) single-shot
                   start-swank trace-comdb-calls trace-even-noisy-comdb-calls trace-comdb-memory-io trace-exchange &aux
