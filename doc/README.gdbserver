@@ -6,5 +6,21 @@ For example, in Debian:
 
 	apt-get install texinfo bison flex libexpat1-dev
         cd gdb
-        ./configure --prefix=/usr --target=mips --with-expat
+        ./configure --prefix=/usr --target=mips
         make
+
+On MinGW, the following packages are enough for a successful build (as of July 2010):
+
+        bison-2.4.2-1-msys-1.0.13-bin
+        flex-2.5.35-2-msys-1.0.13-bin
+        libexpat-2.0.1-1-mingw32-dev
+        libexpat-2.0.1-1-mingw32-dll-1
+        libiconv-1.13.1-2-msys-1.0.13-dll-2
+        libintl-0.17-2-msys-dll-8
+        libregex-1.20090805-2-msys-1.0.13-dll-1
+        m4-1.4.14-1-msys-1.0.13-bin
+
+After getting the prerequisites, you'll have to configure gdb as follows:
+
+        ./configure --prefix=/usr --target=mips --disable-werror
+
