@@ -570,7 +570,7 @@ return the corresponding trap."))
 (defmethod recognise-sw-breakpoint ((o core) address)
   (lret ((trap (make-instance (core-default-sw-breakpoint-type o) :core o :address address :saved-insn (core-nopcode o))))
     (push trap (traps o address))
-    (setf (slot-value trap 'enabled-p) t)))
+    (setf (slot-value trap 'enabled) t)))
 
 (defmethod add-sw-breakpoint ((o core) address)
   (lret ((bp (or (find-if (of-type 'software-breakpoint)
