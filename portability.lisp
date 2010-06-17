@@ -204,9 +204,7 @@
   #+ecl (clos:class-direct-subclasses class))
 
 (defun function-lambda-list (function)
-  #-(and sbcl (not oldsbcl)) (declare (ignore function))
-  #-(and sbcl (not oldsbcl)) (not-implemented 'function-lambda-list)
-  #+(and sbcl (not oldsbcl)) (sb-introspect:function-lambda-list function))
+  #+sbcl (sb-introspect:function-lambda-list function))
 
 (defmacro with-pinned-objects ((object) &body body)
   #-sbcl (declare (ignore object))
