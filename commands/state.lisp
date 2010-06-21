@@ -89,37 +89,56 @@
                (when (core-running-p slave)
                  (step-core-debug slave))))))
     (with-temporary-state (core :stop)
-      (iter (with symstack = (list (cons (current-sym) 0)))
-            (with skip-to-addr)
-            (initially (report-n-deep 0 "~A" (caar symstack)))
-            (for from-fn-symbol first (caar symstack) then to-fn-symbol)
-            (for old-pc first 0 then pc)
-            (if skip-to-addr
-                (progn
-                  (skip-to-address skip-to-addr)
-                  (setf skip-to-addr nil))
-                (do-one-step))
-            (for (values to-fn-symbol pc) = (current-sym))
-            (until (and to-fn-symbol (eq to-fn-symbol target-symbol)))
-            (unless (eq to-fn-symbol from-fn-symbol)
-              (if-let ((return-depth (position (cons to-fn-symbol pc) symstack :test #'frame-addr-match-p)))
-                (setf symstack (nthcdr return-depth symstack)
-                      (values) (if (= 1 return-depth)
-                                   (when report-normal-returns
-                                     (report-n-deep (1- (length symstack)) "~A <== ~A" to-fn-symbol from-fn-symbol))
-                                   (report-n-deep (1- (length symstack)) "~A <= ~A (NLR ~D frame~:*~P)"
-                                                  to-fn-symbol from-fn-symbol return-depth)))
-                (let* ((skip-p (find to-fn-symbol skiplist))
-                       (return-addr (return-address-for-pc old-pc skip-p)))
-                  (cond (skip-p
-                         (setf (cdr (frame-by-name symstack (addrsym return-addr))) (+ return-addr (memory-device-byte-width (backend core))))
-                         (setf skip-to-addr return-addr))
-                        (t
-                         (setf (cdr (first symstack)) return-addr)))
-                  (report-n-deep (length symstack) "~A~:[~*~; ~8,'0X~]~:[~; (skipped)~]"
-                                 (caar (push (cons to-fn-symbol 0) symstack)) 
-                                 (null to-fn-symbol) pc
-                                 skip-p))))))))
+      (let ((symstack (list (cons (current-sym) 0)))
+            skip-to-addr
+            last-reported-call (last-call-repeat-count 0))
+        (report-n-deep 0 "~A" (caar symstack))
+        (iter (for from-fn-symbol first (caar symstack) then to-fn-symbol)
+              (for old-pc first 0 then pc)
+              (if skip-to-addr
+                  (progn
+                    (skip-to-address skip-to-addr)
+                    (setf skip-to-addr nil))
+                  (do-one-step))
+              (for (values to-fn-symbol pc) = (current-sym))
+              (until (and to-fn-symbol (eq to-fn-symbol target-symbol)))
+              (unless (eq to-fn-symbol from-fn-symbol)
+                ;; there is a potentially reportable change in location
+                ;; see if this is a return, or a call into a new location
+                (if-let ((return-depth (position (cons to-fn-symbol pc) symstack :test #'frame-addr-match-p)))
+                  (setf symstack (nthcdr return-depth symstack)
+                        (values) (if (= 1 return-depth)
+                                     (when report-normal-returns
+                                       (report-n-deep (1- (length symstack)) "~A <== ~A" to-fn-symbol from-fn-symbol))
+                                     (report-n-deep (1- (length symstack)) "~A <= ~A (NLR ~D frame~:*~P)"
+                                                    to-fn-symbol from-fn-symbol return-depth)))
+                  (let* ((skip-p (find to-fn-symbol skiplist))
+                         (return-addr (return-address-for-pc old-pc skip-p))
+                         (report-depth (length symstack)))
+                    ;; we might want to execute specific code subtrees at native speed, without tracing, termed "skipping"
+                    (cond (skip-p
+                           (setf (cdr (frame-by-name symstack (addrsym return-addr))) (+ return-addr (memory-device-byte-width (backend core))))
+                           (setf skip-to-addr return-addr))
+                          (t
+                           (setf (cdr (first symstack)) return-addr)))
+                    (push (cons to-fn-symbol 0) symstack)
+                    ;; report call, abbreviating repeated call sequences
+                    ;; XXX: somewhat misrepresents the self-recursion
+                    (if (eq to-fn-symbol last-reported-call)
+                        (incf last-call-repeat-count)
+                        (let ((compressed-call-p (plusp last-call-repeat-count)))
+                          ;; in case the call is compressed, this is the tail part abbreviation,
+                          ;; with the jumped-to call to be reported later
+                          (report-n-deep report-depth "~:[~*~;~D more call~:*~P to ~]~A~:[~*~; ~8,'0X~]~:[~; (skipped)~]"
+                                         (and compressed-call-p (not (= 1 last-call-repeat-count))) last-call-repeat-count
+                                         (if compressed-call-p last-reported-call to-fn-symbol)
+                                         (and (not compressed-call-p) (null to-fn-symbol)) pc skip-p)
+                          (setf last-reported-call to-fn-symbol)
+                          (when compressed-call-p
+                            ;; now, report the actual call
+                            (report-n-deep report-depth "~A~:[~*~; ~8,'0X~]~:[~; (skipped)~]"
+                                           to-fn-symbol (null to-fn-symbol) pc skip-p)
+                            (setf last-call-repeat-count 0))))))))))))
 
 (defun stepw (&key (display *display*) (step-slaves t) report-normal-returns &aux
               (core *core*))
