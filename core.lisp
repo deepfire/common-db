@@ -128,7 +128,7 @@ to return an atomic picture of pipeline when CORE is running."))
 ;;; state
 (defgeneric core-running-p (core))
 (defgeneric (setf core-running-p) (run-p core))
-(defgeneric step-core-asynchronous (core))
+(defgeneric step-core-asynchronous (core &optional step-slaves))
 (defgeneric step-core-debug (core))
 (defgeneric reset-platform (core &key &allow-other-keys)
   (:documentation
@@ -760,11 +760,11 @@ BREAKPOINT is released when the form is exited, by any means."
 ;;;;
 ;;;; Core protocol -based toolkit
 ;;;;
-(defun step-core-synchronous (core)
+(defun step-core-synchronous (core &optional (step-slaves t))
   "Perform steps necessary to make CORE do one step, and wait until it stops.
 The return value is T, except when execution is interrupted by SIGINT, 
 in which case it is NIL."
-  (step-core-asynchronous core)
+  (step-core-asynchronous core step-slaves)
   (busywait-interruptible-executing (not (core-running-p core)) nil))
 
 (defun prime-core-executable (core loadable &key check report checksum dump)

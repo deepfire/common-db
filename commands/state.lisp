@@ -48,7 +48,7 @@
                                             (or (moment-fetch (saved-core-moment core)) #xbfc00000)))
     ;; shall we use OTC/TRACE-MODE here, instead (wouldn't that be a lie)?
     (iter (repeat count)
-          (while (prog1 (step-core-synchronous core)
+          (while (prog1 (step-core-synchronous core step-slaves)
                    (when step-slaves
                      (dolist (slave (core-slaves core))
                        (when (core-running-p slave)
@@ -83,7 +83,7 @@
            (with-free-hardware-breakpoints (core) ((b addr))
              (run-core-synchronous core)))
          (do-one-step ()
-           (step-core-synchronous core)
+           (step-core-synchronous core step-slaves)
            (when step-slaves
              (dolist (slave (core-slaves core))
                (when (core-running-p slave)

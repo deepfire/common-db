@@ -229,9 +229,9 @@
         (saved-core-trail core) (core-trail core))
   nil)
 
-(defmethod step-core-asynchronous ((core virtcore))
+(defmethod step-core-asynchronous ((core virtcore) &optional step-slaves)
+  (declare (ignore step-slaves))
   (freeze-core-slaves core)
-  
   (thaw-core-slaves core))
 
 ;;;;
