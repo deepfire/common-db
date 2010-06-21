@@ -57,7 +57,7 @@
   (when display (display))    
   (values))
 
-(defun callog (&optional target-symbol &key (core *core*) (step-slaves t) report-normal-returns skiplist)
+(defun callog (&optional target-symbol &key (core *core*) step-slaves report-normal-returns skiplist)
   #+help-ru
   "Производить исполнение по шагам, регистрируя переходы между функциями,
 до попадания в функцию, чьё название задано параметром TARGET-SYMBOL.
