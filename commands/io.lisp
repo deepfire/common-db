@@ -145,22 +145,28 @@ ADDRESS-OR-SYMBOL в контексте активной таблицы симв
     (addr address-or-symbol))
   (memory-ref *target* (coerce-to-address address-or-symbol)))
 
-(defun print-memory (address length)
+(defun print-memory (address length &optional (stream *standard-output*))
   #+help-ru
   "Напечатать содержимое диапазона ячеек памяти начиная с ADDRESS и
 длиной LENGTH, как текст."
   #-help-ru
   "Print a LENGTH bytest long region of TARGET's memory, starting from ADDRESS."
   (let* ((ioaddr (coerce-to-address address))
-         (iovec (make-array length :element-type '(unsigned-byte 8))))
+         (iovec (make-array length :element-type '(unsigned-byte 8)))
+         (output (or stream (make-string-output-stream))))
     (read-block *target* ioaddr iovec)
-    (let* ((end (position 0 iovec))
+    (let* ((end (or (position 0 iovec) length))
            (textvec (make-array end :element-type 'character)))
       (map-into textvec #'code-char (subseq iovec 0 end))
-      (format t "~&===== Printing ~4,' X bytes:  ~8,'0X..~8,'0X ==========~%" end address (+ address end))
-      (write-string textvec)
-      (format t "~&=========================================================~%")
-      (values))))
+      (when stream
+        (format output "~&===== Printing ~4,' X bytes:  ~8,'0X..~8,'0X =====================================~%"
+                end address (+ address end)))
+      (write-string textvec output)
+      (when stream
+        (format output "~&====================================================================================~%"))
+      (if stream
+          (values)
+          (get-output-stream-string output)))))
 
 (defun saveeltext (filename address length &aux
                    (target *target*))
