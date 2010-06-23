@@ -345,6 +345,9 @@ such kind of thing.")
 ;;;;
 ;;;; Core API implementation
 ;;;;
+(defmethod default-core-pc ((o mips-core))
+  #xbfc00000)
+
 (defmethod capture-instruction-counters ((o mips-core))
   (setf (core-instruction-counter o) (devreg o :count))
   (dolist (slave (core-slaves o))

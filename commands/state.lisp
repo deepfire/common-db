@@ -43,9 +43,8 @@
   #+help-ru
   "Произвести COUNT шагов."
   (with-temporary-state (core :stop)
-    ;; re-implementing the stop-to-free protocol, what's to say...
-    (setf (core-moment core) (derive-moment (saved-core-moment core)
-                                            (or (moment-fetch (saved-core-moment core)) #xbfc00000)))
+    ;; it'd be nice if we could reuse the state machine here...
+    (reinstate-saved-moment core)
     ;; shall we use OTC/TRACE-MODE here, instead (wouldn't that be a lie)?
     (iter (repeat count)
           (while (prog1 (step-core-synchronous core step-slaves)

@@ -68,6 +68,7 @@ to the concrete classes.")
 (defsetf core-moment set-core-moment)
 (defgeneric make-neutral-moment (core address))
 (defgeneric derive-moment (moment address))
+(defgeneric default-core-pc (core))
 
 (defgeneric core-trail (core))
 (defgeneric set-core-trail (core trail))
@@ -258,6 +259,13 @@ return the corresponding trap."))
 (defmethod derive-moment ((m moment) (address integer))
   (make-moment 'moment address (moment-opcode m)))
 
+(defun reinstate-saved-moment (core &optional address)
+  (setf (core-moment core) (if (or address (not (moment-fetch (saved-core-moment core))))
+                               (derive-moment (saved-core-moment core) (or address
+                                                                           (default-core-pc core)))
+                               (saved-core-moment core)))
+  (orf (core-moment-changed-p core) (not (null address))))
+
 (define-protocol-class trail () ())
 
 ;;;;
@@ -357,11 +365,9 @@ return the corresponding trap."))
                    (decode-insn (core-isa core) (moment-opcode (saved-core-moment core))))))
   (when iel-specified
     (setf (core-insn-execution-limit core) insn-execution-limit))
-  (setc (core-moment core) (if address
-                               (derive-moment (saved-core-moment core) address)
-                               (saved-core-moment core))
-        (core-moment-changed-p core) (or (and address t) moment-changed)
-        (core-running-p core) t))
+  (reinstate-saved-moment core address)
+  (orf (core-moment-changed-p core) moment-changed)
+  (setc (core-running-p core) t))
 
 (defun deeper-state (state)
   (ecase state

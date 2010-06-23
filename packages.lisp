@@ -358,6 +358,7 @@
    #:set-core-moment
    #:make-neutral-moment
    #:derive-moment
+   #:reinstate-saved-moment
    ;; trail
    #:trail
    #:core-trail
@@ -414,6 +415,7 @@
    #:finish-core-pipeline
    #:patch-core-pipeline-reginstances
    #:core-pipeline-addresses
+   #:default-core-pc
    #:print-pipeline
    #:print-pipeline-terse
    ;; initialisation
