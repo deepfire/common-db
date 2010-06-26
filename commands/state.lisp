@@ -56,88 +56,141 @@
   (when display (display))    
   (values))
 
-(defun callog (&optional target-symbol &key (core *core*) step-slaves report-normal-returns skiplist)
+(defun callog (&key target-symbol (core *core*) step-slaves report-normal-returns skiplist handlers debug qualified-symbols)
   #+help-ru
   "Производить исполнение по шагам, регистрируя переходы между функциями,
 до попадания в функцию, чьё название задано параметром TARGET-SYMBOL.
 Функции, имена которых находятся в списке SKIPLIST исключаются из детального
 анализа и пропускаются в ускоренном режиме."
   (declare (optimize debug))
-  (flet ((current-sym (&aux (fetch (moment-fetch (core-moment core))))
-           (values (addrsym fetch) fetch))
-         (frame-addr-match-p (f1 f2)
-           (= (cdr f1) (cdr f2)))
-         (frame-by-name (symstack name)
-           (find name symstack :key #'car))
-         (return-address-for-pc (pc skip-p)
-           (+ pc (* (if skip-p 3 2) (memory-device-byte-width (backend core)))))
-         (report-n-deep (n control-string &rest args)
-           (write-string ">>> ")
-           (iter (repeat n)
-                 (for i from 0)
-                 (write-string (if (evenp i) "... " ",,, ")))
-           (apply #'format t control-string args)
-           (terpri))
-         (skip-to-address (addr)
-           (with-free-hardware-breakpoints (core) ((b addr))
-             (run-core-synchronous core)))
-         (do-one-step ()
-           (step-core-synchronous core step-slaves)
-           (when step-slaves
-             (dolist (slave (core-slaves core))
-               (when (core-running-p slave)
-                 (step-core-debug slave))))))
-    (with-temporary-state (core :stop)
-      (let ((symstack (list (cons (current-sym) 0)))
-            skip-to-addr
-            last-reported-call (last-call-repeat-count 0))
-        (report-n-deep 0 "~A" (caar symstack))
-        (iter (for from-fn-symbol first (caar symstack) then to-fn-symbol)
-              (for old-pc first 0 then pc)
-              (if skip-to-addr
-                  (progn
-                    (skip-to-address skip-to-addr)
-                    (setf skip-to-addr nil))
-                  (do-one-step))
-              (for (values to-fn-symbol pc) = (current-sym))
-              (until (and to-fn-symbol (eq to-fn-symbol target-symbol)))
-              (unless (eq to-fn-symbol from-fn-symbol)
-                ;; there is a potentially reportable change in location
-                ;; see if this is a return, or a call into a new location
-                (if-let ((return-depth (position (cons to-fn-symbol pc) symstack :test #'frame-addr-match-p)))
-                  (setf symstack (nthcdr return-depth symstack)
-                        (values) (if (= 1 return-depth)
-                                     (when report-normal-returns
-                                       (report-n-deep (1- (length symstack)) "~A <== ~A" to-fn-symbol from-fn-symbol))
-                                     (report-n-deep (1- (length symstack)) "~A <= ~A (NLR ~D frame~:*~P)"
-                                                    to-fn-symbol from-fn-symbol return-depth)))
-                  (let* ((skip-p (find to-fn-symbol skiplist))
-                         (return-addr (return-address-for-pc old-pc skip-p))
-                         (report-depth (length symstack)))
-                    ;; we might want to execute specific code subtrees at native speed, without tracing, termed "skipping"
-                    (cond (skip-p
-                           (setf (cdr (frame-by-name symstack (addrsym return-addr))) (+ return-addr (memory-device-byte-width (backend core))))
-                           (setf skip-to-addr return-addr))
-                          (t
-                           (setf (cdr (first symstack)) return-addr)))
-                    (push (cons to-fn-symbol 0) symstack)
-                    ;; report call, abbreviating repeated call sequences
-                    ;; XXX: somewhat misrepresents the self-recursion
-                    (if (eq to-fn-symbol last-reported-call)
-                        (incf last-call-repeat-count)
-                        (let ((compressed-call-p (plusp last-call-repeat-count)))
-                          ;; in case the call is compressed, this is the tail part abbreviation,
-                          ;; with the jumped-to call to be reported later
-                          (report-n-deep report-depth "~:[~*~;~D more call~:*~P to ~]~A~:[~*~; ~8,'0X~]~:[~; (skipped)~]"
-                                         (and compressed-call-p (not (= 1 last-call-repeat-count))) last-call-repeat-count
-                                         (if compressed-call-p last-reported-call to-fn-symbol)
-                                         (and (not compressed-call-p) (null to-fn-symbol)) pc skip-p)
-                          (setf last-reported-call to-fn-symbol)
-                          (when compressed-call-p
-                            ;; now, report the actual call
-                            (report-n-deep report-depth "~A~:[~*~; ~8,'0X~]~:[~; (skipped)~]"
-                                           to-fn-symbol (null to-fn-symbol) pc skip-p)
-                            (setf last-call-repeat-count 0))))))))))))
+  (let (moment-invaded-p
+        (insn-width (memory-device-byte-width (backend core))))
+    (labels ((current-sym (&aux (fetch (moment-fetch (core-moment core))))
+               (values (addrsym fetch) fetch))
+             (frame-addr-match-p (pc return-addr)
+               ;; XXX: wiggle room, happens to be needed in some cases
+               (or (= pc return-addr)
+                   (= pc (+ return-addr insn-width))         ; some function calls
+                   (= pc (+ return-addr (* 2 insn-width))))) ; some instruction faults (FPU emulation)
+             (return-addr-for-pc-change (from to)
+               (flet ((user->kernel-p ()
+                        "This one is MIPS32-specific."
+                        (and (zerop (logand #x80000000 from))
+                             (plusp (logand #x80000000 to))))
+                      (classify-event ()
+                        (case to
+                          (#x80000000 :tlb-fault)
+                          (#x80000180 :exception))))
+                 (let ((event (classify-event)))
+                   (values (case event
+                             (:tlb-fault (devreg core :epc))
+                             (:exception (devreg core :epc))
+                             (t          (+ from (* 2 insn-width))))
+                           event
+                           (when (eq event :tlb-fault)
+                             (devreg core :badvaddr))))))
+             (report-n-deep (n control-string &rest args)
+               (write-string ">>> ")
+               (iter (repeat n)
+                     (for i from 0)
+                     (write-string (if (evenp i) "... " ",,, ")))
+               (apply #'format t control-string args)
+               (terpri))
+             (report-entry-or-tail (report-depth repeat-count symbol qualify-p kind old-pc pc ret-pc fault-addr skip-p handler-output)
+               (report-n-deep report-depth "~:[~;~:*~D more call~:*~P to ~]~
+                                            ~A~
+                                            ~:[~3*~; ~:[~*~;~8,'0X => ~]~8,'0X~]~
+                                            ~:[~; (skipped)~]~
+                                            ~:[~2*~;    ******* ~:*~A *******  return pc: ~8,'0X~:[~;, fault addr: ~:*~8,'0X~]~]~
+                                            ~:[~; ~:*~A~]"
+                              repeat-count
+                              symbol
+                              qualify-p kind old-pc pc
+                              skip-p
+                              kind ret-pc fault-addr
+                              handler-output))
+             (exit-quick-step ()
+               (free-to-stop core)
+               (setf moment-invaded-p t))
+             (skip-to-address (addr)
+               ;; XXX: this looks like it needs yet lighter state...
+               (exit-quick-step)
+               (with-free-hardware-breakpoints (core) ((b addr))
+                 (run-core-synchronous core)))
+             (qualify-symbol-p (x)
+               (or (null x) (member x qualified-symbols)))
+             (quick-step ()
+               (when moment-invaded-p
+                 ;; restore peace in the tubes...
+                 (reinstate-saved-moment core)
+                 (setf moment-invaded-p nil))
+               (step-core-synchronous core step-slaves)
+               (when step-slaves
+                 (dolist (slave (core-slaves core))
+                   (when (core-running-p slave)
+                     (step-core-debug slave))))))
+      (with-temporary-state (core :stop)
+        (let ((symstack (list (cons (current-sym) 0)))
+              skip-to-addr
+              last-reported-call (last-call-repeat-count 0))
+          (report-n-deep 0 "~A" (caar symstack))
+          (iter (for from-fn-symbol first (caar symstack) then to-fn-symbol)
+                (for old-pc first 0 then pc)
+                (if skip-to-addr
+                    (progn
+                      (skip-to-address skip-to-addr)
+                      (setf skip-to-addr nil))
+                    (quick-step))
+                (for (values to-fn-symbol pc) = (current-sym))
+                (until (and to-fn-symbol (eq to-fn-symbol target-symbol)))
+                (unless (eq to-fn-symbol from-fn-symbol)
+                  (when debug
+                    (format t "~{~8,'0X ~}| ~8,'0X => ~8,'0X~%" (mapcar #'cdr symstack) old-pc pc))
+                  ;; there is a potentially reportable change in location
+                  ;; see if this is a return, or a call into a new location
+                  (if-let ((return-depth (position pc symstack :test #'frame-addr-match-p :key #'cdr)))
+                    (setf symstack (prog1 (nthcdr return-depth symstack)
+                                     (setf (cdr (first symstack)) 0))
+                          (values) (when debug
+                                     (format nil "RET @ stack posn ~D~%" return-depth))
+                          (values) (if (= 1 return-depth)
+                                       (when report-normal-returns
+                                         (report-n-deep (1- (length symstack)) "~A <== ~A" to-fn-symbol from-fn-symbol))
+                                       (report-n-deep (1- (length symstack)) "~A~:[~*~; ~8,'0X~] <= ~A (NLR ~D frame~:*~P)"
+                                                      to-fn-symbol (qualify-symbol-p to-fn-symbol) pc from-fn-symbol return-depth)))
+                    (multiple-value-bind (return-addr kind fault-addr) (return-addr-for-pc-change old-pc pc)
+                      (let* ((skip-p (find to-fn-symbol skiplist))
+                             (report-depth (length symstack))
+                             (handler-output (when-let ((handler (cadr (assoc to-fn-symbol handlers))))
+                                               ;; the handler might do anything, so let's obey the state protocol...
+                                               (exit-quick-step)
+                                               (funcall handler to-fn-symbol pc))))
+                        (setf (cdr (first symstack)) return-addr)
+                        (when skip-p
+                          (setf skip-to-addr return-addr))
+                        (push (cons to-fn-symbol 0) symstack)
+                        ;; report call, abbreviating repeated call sequences (unless it's of a non-trivial kind)
+                        ;; XXX: somewhat misrepresents the self-recursion
+                        (if (and (eq to-fn-symbol last-reported-call)
+                                 (not kind))
+                            (incf last-call-repeat-count)
+                            (let ((compressed-call-p (plusp last-call-repeat-count)))
+                              ;; in case the call is compressed, this is the tail part abbreviation,
+                              ;; with the jumped-to call to be reported later
+                              (report-entry-or-tail report-depth
+                                                    (and compressed-call-p (not (= 1 last-call-repeat-count)) last-call-repeat-count)
+                                                    (if compressed-call-p last-reported-call to-fn-symbol)
+                                                    (and (not compressed-call-p) (qualify-symbol-p to-fn-symbol)) kind old-pc pc return-addr fault-addr
+                                                    skip-p handler-output)
+                              (setf last-reported-call to-fn-symbol)
+                              (when compressed-call-p
+                                ;; now, report the actual call
+                                (report-entry-or-tail report-depth
+                                                      nil
+                                                      to-fn-symbol
+                                                      (and (not compressed-call-p) (qualify-symbol-p to-fn-symbol)) kind old-pc pc return-addr fault-addr
+                                                      skip-p handler-output)
+                                (setf last-call-repeat-count 0))))))))))))))
 
 (defun stepw (&key (display *display*) (step-slaves t) report-normal-returns &aux
               (core *core*))
@@ -149,7 +202,7 @@
                                             (or (moment-fetch (saved-core-moment core)) #xbfc00000)))
     ;; shall we use OTC/TRACE-MODE here, instead (wouldn't that be a lie)?
     (if-let ((start-fn-symbol (addrsym (moment-fetch (saved-core-moment core)))))
-            (callog start-fn-symbol :core core :step-slaves step-slaves :report-normal-returns report-normal-returns)
+            (callog :target-symbol start-fn-symbol :core core :step-slaves step-slaves :report-normal-returns report-normal-returns)
             (write-line "Sorry, but the current PC doesn't resolve -- no function to step within."))
     (free-to-stop core))
   (when display (display))    
