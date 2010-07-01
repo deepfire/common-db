@@ -115,13 +115,21 @@ to return an atomic picture of pipeline when CORE is running."))
 (defgeneric print-pipeline (core stream))
 (defgeneric print-pipeline-terse (core stream))
 
-;;; assets
+;;; GPR
 (defgeneric gpr (core gpr))
 (defgeneric set-gpr (core i val))
 (defsetf gpr set-gpr)
 (defgeneric gpr-by-name (core gpr))
 (defgeneric set-gpr-by-name (core gpr value))
 (defsetf gpr-by-name set-gpr-by-name)
+;;; FPR
+(defgeneric fpr (core fpr))
+(defgeneric set-fpr (core i val))
+(defsetf fpr set-fpr)
+(defgeneric fpr-by-name (core fpr))
+(defgeneric set-fpr-by-name (core fpr value))
+(defsetf fpr-by-name set-fpr-by-name)
+;;; TLB
 (defgeneric tlb-entry (core i))
 (defgeneric set-tlb-entry (core i val))
 (defsetf tlb-entry set-tlb-entry)
@@ -285,7 +293,7 @@ return the corresponding trap."))
    (machine :accessor core-machine :initarg :machine)
    (executable :accessor core-executable :initarg :executable))
   (:documentation
-   "Cores which define GPR/(SETF GPR)")
+   "Cores which obey the moment/trail/gpr/fpr/state protocols")
   (:default-initargs
    :enumeration-class 'general-purpose-core
    :moment nil
@@ -696,6 +704,12 @@ BREAKPOINT is released when the form is exited, by any means."
 
 (defmethod set-gpr-by-name ((o core) (gpr-name symbol) value)
   (set-gpr o (optype-evaluate (isa-gpr-optype (core-isa o)) gpr-name) value))
+
+(defmethod fpr-by-name ((o core) (fpr-name symbol))
+  (fpr o (optype-evaluate (isa-fpr-optype (core-isa o)) fpr-name)))
+
+(defmethod set-fpr-by-name ((o core) (fpr-name symbol) value)
+  (set-fpr o (optype-evaluate (isa-fpr-optype (core-isa o)) fpr-name) value))
 
 (defmethod core-slaves ((o general-purpose-core))
   (remove-if-not (of-type 'core) (master-device-slaves o)))

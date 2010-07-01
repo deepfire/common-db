@@ -412,6 +412,11 @@
    #:set-gpr
    #:gpr-by-name
    #:set-gpr-by-name
+   ;; FPR
+   #:fpr
+   #:set-fpr
+   #:fpr-by-name
+   #:set-fpr-by-name
    ;; pipeline
    #:save-core-pipeline
    #:finish-core-pipeline
