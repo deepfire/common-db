@@ -136,66 +136,68 @@
               skip-to-addr
               last-reported-call (last-call-repeat-count 0))
           (report-n-deep 0 "~A" (caar symstack))
-          (iter (for from-fn-symbol first (caar symstack) then to-fn-symbol)
-                (for old-pc first 0 then pc)
-                (if skip-to-addr
-                    (progn
-                      (skip-to-address skip-to-addr)
-                      (setf skip-to-addr nil))
-                    (quick-step))
-                (for (values to-fn-symbol pc) = (current-sym))
-                (until (typecase until
-                         (null nil)
-                         (integer (= pc until))
-                         (symbol (eq to-fn-symbol until))))
-                (unless (eq to-fn-symbol from-fn-symbol)
-                  (when debug
-                    (format t "~{~8,'0X ~}| ~8,'0X => ~8,'0X~%" (mapcar #'cdr symstack) old-pc pc))
-                  ;; there is a potentially reportable change in location
-                  ;; see if this is a return, or a call into a new location
-                  (if-let ((return-depth (position pc symstack :test #'frame-addr-match-p :key #'cdr)))
-                    (setf symstack (prog1 (nthcdr return-depth symstack)
-                                     (setf (cdr (first symstack)) 0))
-                          (values) (when debug
-                                     (format nil "RET @ stack posn ~D~%" return-depth))
-                          (values) (if (= 1 return-depth)
-                                       (when report-normal-returns
-                                         (report-n-deep (1- (length symstack)) "~A <== ~A" to-fn-symbol from-fn-symbol))
-                                       (report-n-deep (1- (length symstack)) "~A~:[~*~; ~8,'0X~] <= ~A (NLR ~D frame~:*~P)"
-                                                      to-fn-symbol (qualify-symbol-p to-fn-symbol) pc from-fn-symbol return-depth)))
-                    (multiple-value-bind (return-addr kind subkind fault-addr) (return-addr-for-pc-change old-pc pc)
-                      (let* ((skip-p (find to-fn-symbol skiplist))
-                             (report-depth (length symstack))
-                             (handler-output (when-let ((handler (cadr (assoc to-fn-symbol handlers))))
-                                               ;; the handler might do anything, so let's obey the state protocol...
-                                               (exit-quick-step)
-                                               (funcall handler to-fn-symbol pc))))
-                        (setf (cdr (first symstack)) return-addr)
-                        (when skip-p
-                          (setf skip-to-addr return-addr))
-                        (push (cons to-fn-symbol 0) symstack)
-                        ;; report call, abbreviating repeated call sequences (unless it's of a non-trivial kind)
-                        ;; XXX: somewhat misrepresents the self-recursion
-                        (if (and (eq to-fn-symbol last-reported-call)
-                                 (not kind))
-                            (incf last-call-repeat-count)
-                            (let ((compressed-call-p (plusp last-call-repeat-count)))
-                              ;; in case the call is compressed, this is the tail part abbreviation,
-                              ;; with the jumped-to call to be reported later
-                              (report-entry-or-tail report-depth
-                                                    (and compressed-call-p (not (= 1 last-call-repeat-count)) last-call-repeat-count)
-                                                    (if compressed-call-p last-reported-call to-fn-symbol)
-                                                    (and (not compressed-call-p) (qualify-symbol-p to-fn-symbol)) kind subkind old-pc pc return-addr fault-addr
-                                                    skip-p handler-output)
-                              (setf last-reported-call to-fn-symbol)
-                              (when compressed-call-p
-                                ;; now, report the actual call
-                                (report-entry-or-tail report-depth
-                                                      nil
-                                                      to-fn-symbol
-                                                      (and (not compressed-call-p) (qualify-symbol-p to-fn-symbol)) kind subkind old-pc pc return-addr fault-addr
-                                                      skip-p handler-output)
-                                (setf last-call-repeat-count 0))))))))))))))
+          (unwind-protect
+               (iter (for from-fn-symbol first (caar symstack) then to-fn-symbol)
+                     (for old-pc first 0 then pc)
+                     (if skip-to-addr
+                         (progn
+                           (skip-to-address skip-to-addr)
+                           (setf skip-to-addr nil))
+                         (quick-step))
+                     (for (values to-fn-symbol pc) = (current-sym))
+                     (until (typecase until
+                              (null nil)
+                              (integer (= pc until))
+                              (symbol (eq to-fn-symbol until))))
+                     (unless (eq to-fn-symbol from-fn-symbol)
+                       (when debug
+                         (format t "~{~8,'0X ~}| ~8,'0X => ~8,'0X~%" (mapcar #'cdr symstack) old-pc pc))
+                       ;; there is a potentially reportable change in location
+                       ;; see if this is a return, or a call into a new location
+                       (if-let ((return-depth (position pc symstack :test #'frame-addr-match-p :key #'cdr)))
+                               (setf symstack (prog1 (nthcdr return-depth symstack)
+                                                (setf (cdr (first symstack)) 0))
+                                     (values) (when debug
+                                                (format nil "RET @ stack posn ~D~%" return-depth))
+                                     (values) (if (= 1 return-depth)
+                                                  (when report-normal-returns
+                                                    (report-n-deep (1- (length symstack)) "~A <== ~A" to-fn-symbol from-fn-symbol))
+                                                  (report-n-deep (1- (length symstack)) "~A~:[~*~; ~8,'0X~] <= ~A (NLR ~D frame~:*~P)"
+                                                                 to-fn-symbol (qualify-symbol-p to-fn-symbol) pc from-fn-symbol return-depth)))
+                               (multiple-value-bind (return-addr kind subkind fault-addr) (return-addr-for-pc-change old-pc pc)
+                                 (let* ((skip-p (find to-fn-symbol skiplist))
+                                        (report-depth (length symstack))
+                                        (handler-output (when-let ((handler (cadr (assoc to-fn-symbol handlers))))
+                                                          ;; the handler might do anything, so let's obey the state protocol...
+                                                          (exit-quick-step)
+                                                          (funcall handler to-fn-symbol pc))))
+                                   (setf (cdr (first symstack)) return-addr)
+                                   (when skip-p
+                                     (setf skip-to-addr return-addr))
+                                   (push (cons to-fn-symbol 0) symstack)
+                                   ;; report call, abbreviating repeated call sequences (unless it's of a non-trivial kind)
+                                   ;; XXX: somewhat misrepresents the self-recursion
+                                   (if (and (eq to-fn-symbol last-reported-call)
+                                            (not kind))
+                                       (incf last-call-repeat-count)
+                                       (let ((compressed-call-p (plusp last-call-repeat-count)))
+                                         ;; in case the call is compressed, this is the tail part abbreviation,
+                                         ;; with the jumped-to call to be reported later
+                                         (report-entry-or-tail report-depth
+                                                               (and compressed-call-p (not (= 1 last-call-repeat-count)) last-call-repeat-count)
+                                                               (if compressed-call-p last-reported-call to-fn-symbol)
+                                                               (and (not compressed-call-p) (qualify-symbol-p to-fn-symbol)) kind subkind old-pc pc return-addr fault-addr
+                                                               skip-p handler-output)
+                                         (setf last-reported-call to-fn-symbol)
+                                         (when compressed-call-p
+                                           ;; now, report the actual call
+                                           (report-entry-or-tail report-depth
+                                                                 nil
+                                                                 to-fn-symbol
+                                                                 (and (not compressed-call-p) (qualify-symbol-p to-fn-symbol)) kind subkind old-pc pc return-addr fault-addr
+                                                                 skip-p handler-output)
+                                           (setf last-call-repeat-count 0)))))))))
+            (exit-quick-step)))))))
 
 (defun stepw (&key (display *display*) (step-slaves t) report-normal-returns &aux
               (core *core*))
