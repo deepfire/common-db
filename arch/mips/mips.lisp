@@ -1,8 +1,8 @@
 ;;; -*- Mode: LISP; Syntax: COMMON-LISP; Package: MIPS; Base: 10; indent-tabs-mode: nil -*-
 ;;;
-;;;  (c) copyright 2007-2009, ГУП НПЦ "Элвис"
+;;;  (c) copyright 2007-2010, ГУП НПЦ "Элвис"
 ;;;
-;;;  (c) copyright 2007-2009 by
+;;;  (c) copyright 2007-2010 by
 ;;;           Samium Gromoff (_deepfire@feelingofgreen.ru)
 ;;;
 ;;; This library is free software; you can redistribute it and/or
@@ -268,6 +268,7 @@
   ((bank :accessor mips-core-bank :initform (make-mips-bank)))
   (:default-initargs
    :isa *mips-isa*
+   :default-state-type 'mips-state
    :continuation-address #xbfc00000
    :stop-address #xbfc00000))
 

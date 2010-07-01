@@ -41,6 +41,7 @@
    (isa :accessor core-isa :initarg :isa)
    (nopcode :reader core-nopcode)
    (insn-execution-limit :accessor core-insn-execution-limit :initarg :insn-instruction-limit)
+   (default-state-type :reader core-default-state-type :type (and (not null) symbol) :initarg :default-state-type)
    ;; constituents
    (traps :accessor core-traps :type hash-table :initarg :traps :documentation "All address traps, by address.")
    (hw-breakpoints :accessor core-hw-breakpoints :type hash-table :initarg :hw-breakpoints :documentation "Hardware breakpoints, by id.")
