@@ -51,7 +51,7 @@
   (let ((pagesize (address-map-page-size address-map)))
     (dolist (extent extents)
       (let ((physaddr (virt-to-phys address-map (base extent))))
-        (format t "loading virtual page ~08X to physaddr ~08X~%" (base extent) physaddr)
+        (format t ";;;; loading virtual page ~08X to physaddr ~08X~%" (base extent) physaddr)
         (write-block core physaddr (extent-data extent) 0 pagesize)))))
 
 (defsetf core-virtual-pages set-core-virtual-pages)
