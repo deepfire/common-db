@@ -343,7 +343,7 @@
 
 (defpackage #:core ;; needed by mips, common-db, test-hardware
   (:use :common-lisp :alexandria :pergamum :iterate :setc :bitmop :device-model :environment :allocation-pool :isa :isa-mips :assem :assem-mips
-        :options :portability :spaces :platform :tgt)
+        :options :portability :spaces :address-map :generic :platform :tgt)
   (:shadowing-import-from :bitmop #:space)
   (:shadowing-import-from :isa #:disassemble)
   (:export
@@ -532,7 +532,29 @@
    ;; disassembly
    #:core-disassemble
    #:default-disassembly-line-printer
-   ))
+   ;; state.lisp
+   #:core-physical-pages
+   #:set-core-physical-pages
+   #:core-virtual-pages
+   #:set-core-virtual-pages
+   #:state
+   #:state-pc
+   #:state-gpr
+   #:state-regs
+   #:state-fpr
+   #:state-tlb
+   #:state-page-size
+   #:state-virtual-pages
+   #:state-phys-pages
+   #:state-phys-cells
+   ;; actual meat
+   #:capture-state
+   #:apply-state
+   #:write-state-to-stream
+   #:write-state
+   #:write-core-state
+   #:read-state
+   #:emit-nonmemory-state-restorer))
 
 (defpackage #:sysdev ;; needed by common-db
   (:use :common-lisp :alexandria :pergamum :iterate :discrimination :isa :isa-mips :assem :assem-mips :setc :bitmop :device-model
@@ -572,6 +594,7 @@
    #:torn-pipeline-mips-core-broken-by
    #:mips-software-breakpoint
    #:mips-hardware-breakpoint
+   #:mips-state
    ;; address space
    #:kuseg
    ;; sane 32 bit
@@ -621,26 +644,9 @@
    #:mips-tlb-entry-hi
    #:mips-tlb-entry-lo0
    #:mips-tlb-entry-lo1
-   ;; mips-state.lisp
-   #:core-phys-pages
-   #:core-virtual-pages
-   #:state
-   #:capture-core-state
-   #:serialize-core-state
-   #:write-core-state
-   #:state-pc
-   #:state-gpr
-   #:state-regs
-   #:state-tlb
-   #:state-page-size
-   #:state-virtual-pages
-   #:state-phys-pages
-   #:state-phys-cells
-   #:unserialize-core-state
-   #:apply-core-state
-   #:emit-core-state-restorer
-   #:core-state-restorer
-   #:write-core-state-restorer-eltext
+   ;; state.lisp
+   #:state-restorer-as-memory
+   #:write-state-restorer-eltext
    ;; insanity-lurks-nearby.lisp
    #:+insane-trampoline-address+))
 

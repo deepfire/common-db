@@ -54,12 +54,13 @@
    (:file "core" :depends-on ("target"))
    (:file "system" :depends-on ("target"))
    ;;
-   (:file "context" :depends-on ("portability" "bus" "interface" "platform" "target" "core"))
+   (:file "context" :depends-on ("portability" "bus" "core"))
    (:file "dsp" :depends-on ("address-map" "core"))
+   (:file "state" :depends-on ("core"))
    (:file "system-devices" :depends-on ("system"))
    ;;
    (:module "arch"
-            :depends-on ("address-map" "core" "eltext" "interfaces")
+            :depends-on ("address-map" "eltext" "state")
             :components
             ((:module "mips"
                       :components
