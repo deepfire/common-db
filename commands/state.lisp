@@ -87,6 +87,8 @@
                              (:exception (devreg core :epc))
                              (t          (+ from (* 2 insn-width))))
                            event
+                           (when event
+                             (devbit-decode core :cause :exccode))
                            (when (eq event :tlb-fault)
                              (devreg core :badvaddr))))))
              (report-n-deep (n control-string &rest args)
@@ -96,18 +98,18 @@
                      (write-string (if (evenp i) "... " ",,, ")))
                (apply #'format t control-string args)
                (terpri))
-             (report-entry-or-tail (report-depth repeat-count symbol qualify-p kind old-pc pc ret-pc fault-addr skip-p handler-output)
+             (report-entry-or-tail (report-depth repeat-count symbol qualify-p kind subkind old-pc pc ret-pc fault-addr skip-p handler-output)
                (report-n-deep report-depth "~:[~;~:*~D more call~:*~P to ~]~
                                             ~A~
                                             ~:[~3*~; ~:[~*~;~8,'0X => ~]~8,'0X~]~
                                             ~:[~; (skipped)~]~
-                                            ~:[~2*~;    ******* ~:*~A *******  return pc: ~8,'0X~:[~;, fault addr: ~:*~8,'0X~]~]~
+                                            ~:[~3*~;    ******* ~:*~A (~A) *******  return pc: ~8,'0X~:[~;, fault addr: ~:*~8,'0X~]~]~
                                             ~:[~; ~:*~A~]"
                               repeat-count
                               symbol
                               qualify-p kind old-pc pc
                               skip-p
-                              kind ret-pc fault-addr
+                              kind subkind ret-pc fault-addr
                               handler-output))
              (exit-quick-step ()
                (free-to-stop core)
@@ -158,7 +160,7 @@
                                          (report-n-deep (1- (length symstack)) "~A <== ~A" to-fn-symbol from-fn-symbol))
                                        (report-n-deep (1- (length symstack)) "~A~:[~*~; ~8,'0X~] <= ~A (NLR ~D frame~:*~P)"
                                                       to-fn-symbol (qualify-symbol-p to-fn-symbol) pc from-fn-symbol return-depth)))
-                    (multiple-value-bind (return-addr kind fault-addr) (return-addr-for-pc-change old-pc pc)
+                    (multiple-value-bind (return-addr kind subkind fault-addr) (return-addr-for-pc-change old-pc pc)
                       (let* ((skip-p (find to-fn-symbol skiplist))
                              (report-depth (length symstack))
                              (handler-output (when-let ((handler (cadr (assoc to-fn-symbol handlers))))
@@ -180,7 +182,7 @@
                               (report-entry-or-tail report-depth
                                                     (and compressed-call-p (not (= 1 last-call-repeat-count)) last-call-repeat-count)
                                                     (if compressed-call-p last-reported-call to-fn-symbol)
-                                                    (and (not compressed-call-p) (qualify-symbol-p to-fn-symbol)) kind old-pc pc return-addr fault-addr
+                                                    (and (not compressed-call-p) (qualify-symbol-p to-fn-symbol)) kind subkind old-pc pc return-addr fault-addr
                                                     skip-p handler-output)
                               (setf last-reported-call to-fn-symbol)
                               (when compressed-call-p
@@ -188,7 +190,7 @@
                                 (report-entry-or-tail report-depth
                                                       nil
                                                       to-fn-symbol
-                                                      (and (not compressed-call-p) (qualify-symbol-p to-fn-symbol)) kind old-pc pc return-addr fault-addr
+                                                      (and (not compressed-call-p) (qualify-symbol-p to-fn-symbol)) kind subkind old-pc pc return-addr fault-addr
                                                       skip-p handler-output)
                                 (setf last-call-repeat-count 0))))))))))))))
 
