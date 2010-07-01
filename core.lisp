@@ -62,7 +62,7 @@ to the concrete classes.")
   (:layouts
    (:control %pc (setf %pc))))
 
-;;; pipeline
+;;; pipeline: moment
 (defgeneric core-moment (core))
 (defgeneric set-core-moment (core moment))
 (defsetf core-moment set-core-moment)
@@ -70,10 +70,13 @@ to the concrete classes.")
 (defgeneric derive-moment (moment address))
 (defgeneric default-core-pc (core))
 
+;;; pipeline: trail
 (defgeneric core-trail (core))
 (defgeneric set-core-trail (core trail))
 (defsetf core-trail set-core-trail)
 (defgeneric make-neutral-trail (core))
+(defgeneric listify-trail (trail))
+(defgeneric parse-trail (core list))
 
 (defgeneric pc (core)
   (:documentation

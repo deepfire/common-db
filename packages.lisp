@@ -364,6 +364,8 @@
    #:core-trail
    #:set-core-trail
    #:make-neutral-trail
+   #:listify-trail
+   #:parse-trail
    ;; pc
    #:pc
    ;; core classes and accessors
