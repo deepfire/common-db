@@ -354,3 +354,13 @@ address to be different from ADDRESS."
       (hw-break 0 ra)))
   (apply #'run run-params)
   (values))
+
+(defun crapply-state (&rest args &key (core *core*) &allow-other-keys)
+  #-help-ru
+  "Save current state, reset CORE and then apply the saved state."
+  #+help-ru
+  "Сохранить состояние текущего ядра, сбросить состояние системы,
+и затем применить сохранённое состояние."
+  (lret ((state (apply #'capture-state core (remove-from-plist args :core))))
+    (reset :core core)
+    (apply-state core state)))
