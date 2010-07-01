@@ -108,9 +108,9 @@
       (iter (for (addr val) in physical-cells)
             (format t ";; restoring memory cell at 0x~8,'0X~%" addr)
             (setf (memory-ref target addr) val))
-      (setf (values) (format t ";; restoring TLB pages~%")
+      (setf (values) (format t ";; restoring TLB-mapped pages:~{ ~8,'0X~}~%" (mapcar #'base virtual-pages))
             (core-virtual-pages o (tlb-address-map o tlb page-size)) virtual-pages
-            (values) (format t ";; restoring direct-mapped pages~%")
+            (values) (format t ";; restoring direct-mapped pages:~{ ~8,'0X~}~%" (mapcar #'base physical-pages))
             (core-physical-pages o nil page-size) physical-pages
             (values) (format t ";; restoring TLB~%")
             (get-tlb o) tlb)
