@@ -197,7 +197,9 @@
                                                                  (and (not compressed-call-p) (qualify-symbol-p to-fn-symbol)) kind subkind old-pc pc return-addr fault-addr
                                                                  skip-p handler-output)
                                            (setf last-call-repeat-count 0)))))))))
-            (exit-quick-step)))))))
+            (exit-quick-step)
+            (when *display*
+              (display))))))))
 
 (defun stepw (&key (display *display*) (step-slaves t) report-normal-returns &aux
               (core *core*))
