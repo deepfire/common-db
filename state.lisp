@@ -82,13 +82,14 @@
   (declare (ignore regs fpr tlb page-size physical-pages physical-cells virtual-pages)))
 
 (defun capture-state (core &rest args &key regs fpr page-size physical-pages physical-cells virtual-pages (tlb virtual-pages))
+  "Assume :DEBUG state."
   (when (and (not page-size)
              (or physical-pages virtual-pages))
     (error "Cannot capture memory pages without PAGE-SIZE specified."))
   (lret* ((tlb (when tlb
                  (get-tlb core)))
           (state (make-instance (core-default-state-type core)
-                                :moment (core-moment core) :trail (core-trail core)
+                                :moment (saved-core-moment core) :trail (saved-core-trail core)
                                 :gpr (mapcar (curry #'gpr core) (iota (isa-gpr-count (core-isa core))))
                                 :regs (iter (for reg in regs) (collect (list reg (devreg core reg))))
                                 :fpr (when fpr
