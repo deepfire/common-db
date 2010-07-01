@@ -56,10 +56,10 @@
   (when display (display))    
   (values))
 
-(defun callog (&key target-symbol (core *core*) step-slaves report-normal-returns skiplist handlers debug qualified-symbols)
+(defun callog (&key until (core *core*) step-slaves report-normal-returns skiplist handlers debug qualified-symbols)
   #+help-ru
   "Производить исполнение по шагам, регистрируя переходы между функциями,
-до попадания в функцию, чьё название задано параметром TARGET-SYMBOL.
+до попадания в функцию/адрес заданный параметром UNTIL.
 Функции, имена которых находятся в списке SKIPLIST исключаются из детального
 анализа и пропускаются в ускоренном режиме."
   (declare (optimize debug))
@@ -144,7 +144,10 @@
                       (setf skip-to-addr nil))
                     (quick-step))
                 (for (values to-fn-symbol pc) = (current-sym))
-                (until (and to-fn-symbol (eq to-fn-symbol target-symbol)))
+                (until (typecase until
+                         (null nil)
+                         (integer (= pc until))
+                         (symbol (eq to-fn-symbol until))))
                 (unless (eq to-fn-symbol from-fn-symbol)
                   (when debug
                     (format t "~{~8,'0X ~}| ~8,'0X => ~8,'0X~%" (mapcar #'cdr symstack) old-pc pc))
@@ -204,7 +207,7 @@
                                             (or (moment-fetch (saved-core-moment core)) #xbfc00000)))
     ;; shall we use OTC/TRACE-MODE here, instead (wouldn't that be a lie)?
     (if-let ((start-fn-symbol (addrsym (moment-fetch (saved-core-moment core)))))
-            (callog :target-symbol start-fn-symbol :core core :step-slaves step-slaves :report-normal-returns report-normal-returns)
+            (callog :until start-fn-symbol :core core :step-slaves step-slaves :report-normal-returns report-normal-returns)
             (write-line "Sorry, but the current PC doesn't resolve -- no function to step within."))
     (free-to-stop core))
   (when display (display))    
