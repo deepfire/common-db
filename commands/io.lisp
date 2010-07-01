@@ -46,7 +46,7 @@
   "Load an LDR executable from FILENAME into target device memory, and prepare it for execution."
   (prime-core-executable *core* (loadable:extract-loadable :ldr filename) :check check :checksum csum :report t :dump dump))
 
-(defun loadeltext (filename &key (entry-point #xbfc00000) check csum dump)
+(defun loadeltext (filename &key (entry-point (default-core-pc *core*)) check csum dump)
   #+help-ru
   "Загрузить содержимое FILENAME в текстовом формате 'eltext' в память
 устройства и установить точку входа.
@@ -60,7 +60,7 @@
   #-help-ru
   "Load eltext from FILENAME into target device memory, and prepare it
 for execution.  Note that, as ENTRY-POINT isn't provided by the format,
-it has to be specified by ENTRY-POINT (which defaults to #xBFC00000)."
+it has to be specified by ENTRY-POINT (which defaults to *CORE*'s default PC)."
   (prime-core-executable *core* (loadable:extract-loadable :eltext filename :entry-point entry-point) :check check :checksum csum :report t :dump dump))
 
 (defun loadbin (filename address &key check)

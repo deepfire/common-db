@@ -55,8 +55,10 @@ custom FILENAME and ENTRY-POINT."
                   (parse 'ehdr (file-as-vector filename)))))
       (make-loadable (mapcar (rcurry #'ncoerce-extent '(simple-array (unsigned-byte 8) 1)) (ehdr-sections ehdr #'shdr-loadable-p))
                      :filename filename :entry-point (ehdr-entry (ehdr-body ehdr)))))
-  (:method ((type (eql :raw)) filename &key (raw-section-name :raw-file-data) (entry-point #xbfc00000) (base #xbfc00000))
+  (:method ((type (eql :raw)) filename &key (raw-section-name :raw-file-data) entry-point base)
     "Given a FILENAME, produce a loadable with BASE and ENTRY-POINT."
+    (unless (and entry-point base)
+      (error "ENTRY-POINT and BASE must be provided."))
     (make-loadable (list (make-instance 'elf:standard-section :name raw-section-name :executable-p t :file-offset 0
                                         :base base :data (file-as-vector filename)))
                    :filename filename :entry-point entry-point)))

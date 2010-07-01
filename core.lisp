@@ -50,9 +50,11 @@
    (instruction-counter :accessor core-instruction-counter :type (integer 0) :initarg :instruction-counter)
    (stop-reason :accessor core-stop-reason :initarg :stop-reason))
   (:documentation
-   "This definition takes an obligation to implement the memory device 
-protocol, but doesn't provide one.  Which shifts responsibility
-to the concrete classes.")
+   "This class takes an obligation to implement following protocols:
+  - memory device
+  - default-core-pc
+  - state protocol (optional)
+This responsibility is on the concrete classes.")
   (:default-initargs
    :insn-instruction-limit nil
    :traps (make-hash-table)
