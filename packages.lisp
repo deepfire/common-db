@@ -361,6 +361,7 @@
    #:reinstate-saved-moment
    ;; trail
    #:trail
+   #:trail-decode
    #:core-trail
    #:set-core-trail
    #:make-neutral-trail

@@ -281,6 +281,10 @@ return the corresponding trap."))
   (orf (core-moment-changed-p core) (not (null address))))
 
 (define-protocol-class trail () ())
+(defgeneric trail-decode (trail)
+  (:documentation
+   "The specific core method must return the address of the instruction
+at the decode stage of TRAIL."))
 
 ;;;;
 ;;;; Subclasses
