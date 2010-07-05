@@ -144,7 +144,7 @@ NAME-OR-ADDRESS.  В том случае если указано имя реги
          (decoded-insn (when address (decode-mips-insn cell)))
          (control (format nil "~~&~~A:~~12T~~8,'0X~~:[~~; ~~:*~~S~~]~
                                ~~~DT~
-                               ~~:[~~;~~:*@~~8,'0X: ~~8,'0X   ~~(~~A~~{ ~~S~~}~~)~~]" postname-alignment)))
+                               ~~:[~~; ~~:*@~~8,'0X: ~~8,'0X   ~~(~~A~~{ ~~S~~}~~)~~]" postname-alignment)))
     (format *log-stream* control
             name value
             (addrsym value)
