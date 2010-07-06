@@ -135,7 +135,7 @@ NAME-OR-ADDRESS.  В том случае если указано имя реги
                                  *examine-tlb*)
                         (tlb-address-map core (get-tlb core) #x4000)))
          (address (if address-map
-                      (and address-map (addr-in-map-p address-map value)
+                      (and (addr-in-map-p address-map value)
                            (if *map-to-zeroth-page*
                                (logand #x3fff (virt-to-phys address-map value))
                                (virt-to-phys address-map value)))
@@ -144,11 +144,10 @@ NAME-OR-ADDRESS.  В том случае если указано имя реги
          (decoded-insn (when address (decode-mips-insn cell)))
          (control (format nil "~~&~~A:~~12T~~8,'0X~~:[~~; ~~:*~~S~~]~
                                ~~~DT~
-                               ~~:[~~; ~~:*@~~8,'0X: ~~8,'0X   ~~(~~A~~{ ~~S~~}~~)~~]" postname-alignment)))
+                               ~~:[~~;@[~~8,'0X~~:[~~*~~;=> ~~8,'0X~~]]: ~~8,'0X   ~~(~~A~~{ ~~S~~}~~)~~]" postname-alignment)))
     (format *log-stream* control
-            name value
-            (addrsym value)
-            address
+            name value (addrsym value)
+            address value (and address-map (addr-in-map-p address-map value)) address
             cell
             (car decoded-insn) (cdr decoded-insn))
     (when (typep (car decoded-insn) 'branch-insn)
