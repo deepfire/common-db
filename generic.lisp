@@ -154,3 +154,8 @@
 (defun mapped-device-register-address (device register-name)
   (+ (mapped-device-base device) (* (mapped-device-scale device)
                                     (device-register-selector device (register-id (device-space device) register-name)))))
+
+(defun mapped-reginstance-address (reginstance &aux
+                                   (device (reginstance-device reginstance)))
+  (+ (mapped-device-base device)
+     (* (mapped-device-scale device) (reginstance-selector reginstance))))

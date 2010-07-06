@@ -193,6 +193,7 @@
    #:mapped-device-set-fn
    #:mapped-ref
    #:mapped-device-register-address
+   #:mapped-reginstance-address
    ;; memory-region
    #:memory-region
    #:memory-region-extent
@@ -324,6 +325,8 @@
    ;; enumeration & its fruit
    #:add-target-device
    #:remove-target-device
+   #:target-reginstance
+   #:target-reg-addr
    #:target-reg
    #:set-target-reg
    ;;

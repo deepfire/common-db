@@ -106,15 +106,28 @@
       (purge-device-register-instances d)
       (enumpool-remove enumpool (enumclass enumpool (device-enumeration-class d)) d))))
 
+(defun target-reginstance (target name)
+  "Find a NAMEd register instance within the unified namespace
+of registers belonging to devices registered within TARGET."
+  (register-instance (target-enumpool target) name))
+
+(defun target-reg-addr (target name)
+  "Return address of the memory-mapped register from unified namespace of registers belonging
+to devices registered within TARGET."
+  (let ((ri (target-reginstance target name)))
+    (unless (mapped-device-p (reginstance-device ri))
+      (error "Register ~A does not belong to a memory-mapped device." name))
+    (mapped-reginstance-address ri)))
+
 (defun target-reg (target name)
   "Read a register from unified namespace of registers belonging
 to devices registered within TARGET."
-  (reginstance-value (register-instance (target-enumpool target) name)))
+  (reginstance-value (target-reginstance target name)))
 
 (defun set-target-reg (target name value)
   "Write a register within unified namespace of registers belonging
 to devices registered within TARGET."
-  (set-reginstance-value (register-instance (target-enumpool target) name) value))
+  (set-reginstance-value (target-reginstance target name) value))
 
 (defsetf target-reg set-target-reg)
 
