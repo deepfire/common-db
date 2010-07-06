@@ -500,6 +500,8 @@
    #:tlb-entry
    #:set-tlb-entry
    #:decode-tlb-entry
+   #:listify-tlb-entry
+   #:parse-tlb-entry
    #:probe-tlb
    #:get-tlb
    #:set-tlb

@@ -506,6 +506,13 @@ such kind of thing.")
           (decode :entrylo lo0)
           (decode :entrylo lo1))))
 
+(defmethod listify-tlb-entry ((o mips-tlb-entry))
+  (with-slots (hi lo0 lo1) o
+    (list hi lo0 lo1)))
+
+(defmethod parse-tlb-entry ((type (eql :mips-tlb-entry)) list)
+  (make-mips-tlb-entry (first list) (second list) (third list)))
+
 (defmethod probe-tlb ((o mips-core) (asid integer) (vpn integer))
   (setc (devbits o :entryhi (:asid :vpn2)) (asid (ash vpn -1)))
   (exec o
