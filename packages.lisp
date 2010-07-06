@@ -552,6 +552,7 @@
    #:state-physical-pages
    #:state-physical-cells
    ;; actual meat
+   #:capture-state-using-state
    #:capture-state
    #:apply-state
    #:write-state-to-stream
