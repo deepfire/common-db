@@ -46,9 +46,9 @@
   "Load an LDR executable from FILENAME into target device memory, and prepare it for execution."
   (prime-core-executable *core* (loadable:extract-loadable :ldr filename) :check check :checksum csum :report t :dump dump))
 
-(defun loadeltext (filename &key (entry-point (default-core-pc *core*)) check csum dump)
+(defun loadbank (filename &key (entry-point (default-core-pc *core*)) check csum dump)
   #+help-ru
-  "Загрузить содержимое FILENAME в текстовом формате 'eltext' в память
+  "Загрузить содержимое FILENAME в текстовом формате 'bank' в память
 устройства и установить точку входа.
 
 Принимаются следующие ключевые аргументы:
@@ -58,10 +58,10 @@
   - ENTRY-POINT ::
     установить точку входа."
   #-help-ru
-  "Load eltext from FILENAME into target device memory, and prepare it
+  "Load bank from FILENAME into target device memory, and prepare it
 for execution.  Note that, as ENTRY-POINT isn't provided by the format,
 it has to be specified by ENTRY-POINT (which defaults to *CORE*'s default PC)."
-  (prime-core-executable *core* (loadable:extract-loadable :eltext filename :entry-point entry-point) :check check :checksum csum :report t :dump dump))
+  (prime-core-executable *core* (loadable:extract-loadable :bank filename :entry-point entry-point) :check check :checksum csum :report t :dump dump))
 
 (defun loadbin (filename address &key check)
   #+help-ru
@@ -168,22 +168,22 @@ ADDRESS-OR-SYMBOL в контексте активной таблицы симв
           (values)
           (get-output-stream-string output)))))
 
-(defun saveeltext (filename address length &aux
-                   (target *target*))
+(defun savebank (filename address length &aux
+                 (target *target*))
   #+help-ru
   "Сохранить содержимое диапазона ячеек памяти начиная с ADDRESS и
-длиной LENGTH байт в FILENAME, в формате 'eltext'.
+длиной LENGTH байт в FILENAME, в формате 'bank'.
 
 ADDRESS и LENGTH должны быть выровнены по 16."
   #-help-ru
-  "Save a chunk of memory, LENGTH bytes long, at address ADDRESS, into FILENAME, in eltext format.
+  "Save a chunk of memory, LENGTH bytes long, at address ADDRESS, into FILENAME, in 'bank' format.
 
 ADDRESS and LENGTH must be aligned by 16."
   (check-address-alignment 16 address)
   (check-size-alignment 16 length)
   (with-output-to-file (stream filename)
-    (eltext:u8-extent-print-as-eltext (u8-extent target (extent (fixmap-address target address) length))
-                                      stream))
+    (bank:u8-extent-print-as-bank (u8-extent target (extent (fixmap-address target address) length))
+                                  stream))
   (values))
 
 (defun savebin (filename address length &aux

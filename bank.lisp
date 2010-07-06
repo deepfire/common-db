@@ -1,8 +1,8 @@
-;;; -*- Mode: LISP; Syntax: COMMON-LISP; Package: ELTEXT; Base: 10; indent-tabs-mode: nil -*-
+;;; -*- Mode: LISP; Syntax: COMMON-LISP; Package: BANK; Base: 10; indent-tabs-mode: nil -*-
 ;;;
-;;;  (c) copyright 2007-2008, ГУП НПЦ "Элвис"
+;;;  (c) copyright 2007-2010, ГУП НПЦ "Элвис"
 ;;;
-;;;  (c) copyright 2007-2008 by
+;;;  (c) copyright 2007-2010 by
 ;;;           Samium Gromoff (_deepfire@feelingofgreen.ru)
 ;;;
 ;;; This library is free software; you can redistribute it and/or
@@ -20,9 +20,9 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(in-package :eltext)
+(in-package :bank)
 
-(defun read-extents-eltext (stream &key (endianness :little-endian))
+(defun read-bank-extents (stream &key (endianness :little-endian))
   (lret ((accessor-fn (case endianness
                         (:little-endian #'(setf u8-vector-word32le))
                         (:big-endian #'(setf u8-vector-word32be))))
@@ -60,7 +60,7 @@
               (incf extent-length 16)
               (setf prev-address address))))))
 
-(defun u8-extent-print-as-eltext (extent stream &optional (endianness :little-endian))
+(defun u8-extent-print-as-bank (extent stream &optional (endianness :little-endian))
   (let ((data (extent-data extent)))
     (check-address-alignment 4 (base extent))
     (check-size-alignment 4 (size extent))
@@ -93,19 +93,19 @@
                 (format stream "00000000 "))
           (format stream "//0x~8,'0X~%" (+ base-address tailstart)))))))
 
-(defun print-extents-eltext (stream list &key (endianness :little-endian))
-  (mapcar (rcurry #'u8-extent-print-as-eltext stream endianness) list))
+(defun print-bank-extents (stream list &key (endianness :little-endian))
+  (mapcar (rcurry #'u8-extent-print-as-bank stream endianness) list))
 
-(defun load-extents-eltext (filename &key (endianness :little-endian))
+(defun load-bank-extents (filename &key (endianness :little-endian))
   (with-open-file (stream filename :direction :input)
-    (read-extents-eltext stream :endianness endianness)))
+    (read-bank-extents stream :endianness endianness)))
 
-(defun write-extents-eltext (filename extents &key (endianness :little-endian))
+(defun write-extents-as-bank (filename extents &key (endianness :little-endian))
   (with-open-file (stream filename :direction :output :if-does-not-exist :create :if-exists :supersede)
-    (print-extents-eltext stream extents :endianness endianness)))
+    (print-bank-extents stream extents :endianness endianness)))
 
 ;;;
 ;;; LOADABLE
 ;;;
-(defmethod extract-loadable ((type (eql :eltext)) filename &key (entry-point #xbfc00000))
-  (loadable:make-loadable (load-extents-eltext filename) :filename filename :entry-point entry-point))
+(defmethod extract-loadable ((type (eql :bank)) filename &key entry-point)
+  (loadable:make-loadable (load-bank-extents filename) :filename filename :entry-point entry-point))

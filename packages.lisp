@@ -146,15 +146,15 @@
    #-disable-parport #:parport-insufficient-privileges-error
    #-disable-parport #:parport-reset-error))
 
-(defpackage #:eltext ;; standalone
+(defpackage #:bank ;; standalone
   (:use :common-lisp :alexandria :iterate :pergamum
         :options)
   (:export
-   #:read-extents-eltext
-   #:u8-extent-print-as-eltext
-   #:print-extents-eltext
-   #:load-extents-eltext
-   #:write-extents-eltext))
+   #:read-bank-extents
+   #:u8-extent-print-as-bank
+   #:print-bank-extents
+   #:load-bank-extents
+   #:write-extents-as-bank))
 
 (defpackage #:generic ;; needed by target, platform, common-db, test-hardware
   (:use :common-lisp :pergamum :bitmop :device-model
@@ -219,7 +219,7 @@
 
 (defpackage #:loadable ;; needed by common-db
   (:use :common-lisp :alexandria :pergamum :iterate :bintype :elf
-        :options :eltext)
+        :options :bank)
   (:export
    #:loadable
    #:loadable-entry-point
@@ -647,7 +647,8 @@
    #:mips-tlb-entry-lo1
    ;; state.lisp
    #:state-restorer-as-memory
-   #:write-state-restorer-eltext
+   #:write-state-restorer-bank
+   #:apply-bank
    ;; insanity-lurks-nearby.lisp
    #:+insane-trampoline-address+))
 

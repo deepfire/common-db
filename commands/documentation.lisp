@@ -54,7 +54,7 @@ SECONDS могут быть любым неотрицательным реаль
                    :conc-name io)
      clearmem loadelf
      loadbin savebin
-     loadeltext saveeltext
+     loadbank saveeltext
      loadldr)
     ((state #-help-ru "State control"
             #+help-ru "Управление состоянием")

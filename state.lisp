@@ -179,3 +179,31 @@
               (:physical-pages (setf physical-pages (read-extent-list stream)))))
       (make-instance type :pc pc :gpr gpr :regs regs :tlb tlb :page-size page-size
                      :virtual-pages virtual-pages :physical-pages physical-pages :physical-cells (nreverse physical-cells)))))
+
+;;;;
+;;;; Code-driven replay
+;;;;
+(defun state-restorer-as-memory (core state &key (entry-point (default-core-pc core)))
+  "Produce a memory extent list suitable for reproduction of STATE on CORE, including memory.
+ENTRY-POINT specifies at which the execution is to be started, and where the
+state restoration procedure is to be emitted."
+  (declare (type (or null (integer 0)) entry-point))
+  (with-slots (tlb virtual-pages physical-pages page-size) state
+    (append
+     (list (make-extent 'extent entry-point (emit-nonmemory-state-restorer (make-instance 'segment) state)))
+     (mapcar (curry #'rebase (curry #'virt-to-phys (tlb-address-map core tlb page-size))) virtual-pages)
+     (list physical-pages))))
+
+(defun write-state-restorer-bank (core state filename &key (entry-point (default-core-pc core)))
+  (bank:write-extents-as-bank filename (state-restorer-as-memory core state :entry-point entry-point)))
+
+(defun apply-bank (core bank)
+  "This function expects a clean, post-reset core."
+  (write-u8-extents core
+                    (etypecase bank
+                      (list bank)
+                      (loadable:loadable
+                       (loadable:loadable-sections bank))
+                      ((or string pathname)
+                       (loadable:loadable-sections (loadable:extract-loadable :bank bank :entry-point (default-core-pc core))))))
+  (run-core-synchronous core))

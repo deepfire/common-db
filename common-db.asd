@@ -23,7 +23,7 @@
    (:file "loadable" :depends-on ("options"))
    (:file "bus" :depends-on ("options"))
    ;;
-   (:file "eltext" :depends-on ("loadable"))
+   (:file "bank" :depends-on ("loadable"))
    #+(and linux sbcl nil)
    (:file "host-pci" :depends-on ("bus"))
    (:file "interface" :depends-on ("options" "portability" "bus"))
@@ -60,12 +60,11 @@
    (:file "system-devices" :depends-on ("system"))
    ;;
    (:module "arch"
-            :depends-on ("address-map" "eltext" "state")
+            :depends-on ("address-map" "bank" "state")
             :components
             ((:module "mips"
                       :components
-                      ((:file "mips")
-                       (:file "state" :depends-on ("mips"))))))
+                      ((:file "mips")))))
    ;;
    (:file "flash" :depends-on ("system" "arch"))
    ;;
@@ -77,7 +76,7 @@
    ;;
    (:file "tui" :depends-on ("main"))
    (:module "commands"
-            :depends-on ("eltext" "loadable" "main")
+            :depends-on ("bank" "loadable" "main")
             :components
             (;;
              (:file "address")
