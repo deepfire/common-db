@@ -81,7 +81,7 @@
 (defmethod capture-state-using-state ((o mmu-core) state &key regs fpr tlb page-size physical-pages physical-cells virtual-pages)
   (declare (ignore regs fpr tlb page-size physical-pages physical-cells virtual-pages)))
 
-(defun capture-state (core &rest args &key regs fpr page-size physical-pages physical-cells virtual-pages (tlb virtual-pages))
+(defun capture-state (core &rest args &key regs fpr page-size physical-pages physical-cells (virtual-pages t) (tlb virtual-pages))
   "Assume :DEBUG state."
   (when (and (not page-size)
              (or physical-pages virtual-pages))
