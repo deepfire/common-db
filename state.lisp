@@ -134,27 +134,29 @@
 ;;;;
 (defmethod write-state-to-stream :around (stream (o state))
   (let ((*print-base* #x10))
-    (mapcar (curry #'format stream "~S~%")
-            (remove nil (list (type-of o)
-                              (list :moment (moment-fetch (state-moment o)) (moment-opcode (state-moment o)))
-                              (list* :trail (listify-trail (state-trail o)))
-                              (list* :gpr (state-gpr o))
-                              (list* :regs (state-regs o))
-                              (when (state-fpr o)
-                                (list :fpr (state-fpr o)))
-                              (when (state-tlb o)
-                                (list :tlb (state-tlb o)))
-                              (when (state-page-size o)
-                                (list :page-size (state-page-size o)))
-                              (when (state-physical-cells o)
-                                (list* :physical-cells (state-physical-cells o))))))
-    (when (state-physical-pages o)
-      (format stream "~S~%" (list :physical-pages))
-      (serialize-extent-list stream (state-physical-pages o)))
-    (when (state-virtual-pages o)
-      (format stream "~S~%" (list :virtual-pages))
-      (serialize-extent-list stream (state-virtual-pages o)))
-    (call-next-method)))
+    (with-slots (moment trail gpr fpr regs tlb physical-cells page-size physical-pages virtual-pages) o
+      (mapcar (curry #'format stream "~S~%")
+              (remove nil (list (type-of o)
+                                (list :moment (moment-fetch moment) (moment-opcode moment))
+                                (list* :trail (listify-trail trail))
+                                (list* :gpr gpr)
+                                (list* :regs regs)
+                                (when fpr
+                                  (list :fpr fpr))
+                                (when tlb
+                                  (list :tlb (make-keyword (type-of (first tlb)))
+                                        (mapcar #'listify-tlb-entry tlb)))
+                                (when page-size 
+                                  (list :page-size page-size))
+                                (when physical-cells
+                                  (list* :physical-cells physical-cells)))))
+      (when physical-pages 
+        (format stream "~S~%" (list :physical-pages))
+        (serialize-extent-list stream physical-pages))
+      (when virtual-pages 
+        (format stream "~S~%" (list :virtual-pages))
+        (serialize-extent-list stream virtual-pages))
+      (call-next-method))))
 
 (defun write-state (state filename)
   (with-output-to-file (stream filename)
@@ -177,7 +179,7 @@
                 (:regs (setf regs (rest form)))
                 (:physical-cell (push (rest form) physical-cells))
                 (:page-size  (setf page-size (second form)))
-                (:tlb (setf tlb (second form)))
+                (:tlb (setf tlb (mapcar (curry #'parse-tlb-entry (second form)) (third form))))
                 (:virtual-pages (setf virtual-pages (read-extent-list stream)))
                 (:physical-pages (setf physical-pages (read-extent-list stream)))))
         (make-instance type :moment moment :gpr gpr :fpr fpr :regs regs :tlb tlb :page-size page-size
