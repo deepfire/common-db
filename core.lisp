@@ -354,14 +354,6 @@ return the corresponding trap."))
   (apply #'format *log-stream* (concatenate 'string "~&CORE~A: " format-control "~%") (enumerated-id core) format-arguments))
 
 ;;;;
-;;;; Pipeline
-;;;;
-(defmethod core-pipeline-addresses :around ((o general-purpose-core) &optional cached)
-  (if cached
-      (list* (moment-fetch (saved-core-moment o)) (listify-trail (saved-core-trail o)))
-      (call-next-method)))
-
-;;;;
 ;;;; State management
 ;;;;
 (defparameter *log-state-changes* nil)
@@ -749,6 +741,11 @@ BREAKPOINT is released when the form is exited, by any means."
 ;;; *** RESET ***
 
 ;;;     PIPELINE
+(defmethod core-pipeline-addresses :around ((o general-purpose-core) &optional cached)
+  (if cached
+      (list* (moment-fetch (saved-core-moment o)) (listify-trail (saved-core-trail o)))
+      (call-next-method)))
+
 (defmethod set-core-moment :after ((o general-purpose-core) moment)
   (declare (ignore moment))
   (setf (core-moment-changed-p o) t
