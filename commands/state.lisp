@@ -56,13 +56,14 @@
   (when display (display))    
   (values))
 
-(defun callog (&key until (core *core*) step-slaves report-normal-returns skiplist handlers debug qualified-symbols)
+(defun callog (&key until (core *core*) step-slaves report-normal-returns skiplist handlers debug qualified-symbols
+               verbose-since very-verbose-since stay-for-more)
   #+help-ru
   "Производить исполнение по шагам, регистрируя переходы между функциями,
 до попадания в функцию/адрес заданный параметром UNTIL.
 Функции, имена которых находятся в списке SKIPLIST исключаются из детального
 анализа и пропускаются в ускоренном режиме."
-  (declare (optimize debug))
+  (declare (optimize debug) (type (or null integer) stay-for-more))
   (let (moment-invaded-p
         (insn-width (memory-device-byte-width (backend core))))
     (labels ((current-sym (&aux (fetch (moment-fetch (core-moment core))))
@@ -72,6 +73,10 @@
                (or (= pc return-addr)
                    (= pc (+ return-addr insn-width))         ; some function calls
                    (= pc (+ return-addr (* 2 insn-width))))) ; some instruction faults (FPU emulation)
+             (report-step-very-verbose ()
+               (let ((decode-addr (trail-decode (core-trail core)))
+                     (opcode (moment-opcode (core-moment core))))
+                 (format t "~8,'0X  ~8,' X:~{ ~A~}~%" decode-addr opcode (decode-insn (core-isa core) opcode))))
              (return-addr-for-pc-change (from to)
                (flet ((user->kernel-p ()
                         "This one is MIPS32-specific."
@@ -133,7 +138,10 @@
                      (step-core-debug slave))))))
       (with-temporary-state (core :stop)
         (let ((symstack (list (cons (current-sym) 0)))
+              stay-decay-p
               skip-to-addr
+              pc-memory
+              verbose-steps very-verbose-steps
               last-reported-call (last-call-repeat-count 0))
           (report-n-deep 0 "~A" (caar symstack))
           (unwind-protect
@@ -145,13 +153,24 @@
                            (setf skip-to-addr nil))
                          (quick-step))
                      (for (values to-fn-symbol pc) = (current-sym))
-                     (until (typecase until
-                              (null nil)
-                              (integer (= pc until))
-                              (symbol (eq to-fn-symbol until))))
+                     (cond ((and verbose-since (= pc verbose-since))           (setf verbose-steps t))
+                           ((and very-verbose-since (= pc very-verbose-since)) (setf very-verbose-steps t)))
+                     (cond (verbose-steps      (push pc pc-memory))
+                           (very-verbose-steps (report-step-very-verbose)))
+                     (until (or (when (typecase until
+                                        (null nil)
+                                        (integer (= pc until))
+                                        (symbol (eq to-fn-symbol until)))
+                                  (setf stay-decay-p t)
+                                  (not stay-for-more))
+                                (and stay-decay-p (minusp (decf stay-for-more)))))
                      (unless (eq to-fn-symbol from-fn-symbol)
                        (when debug
                          (format t "~{~8,'0X ~}| ~8,'0X => ~8,'0X~%" (mapcar #'cdr symstack) old-pc pc))
+                       (when verbose-steps
+                         (write pc-memory)
+                         (terpri)
+                         (setf pc-memory nil))
                        ;; there is a potentially reportable change in location
                        ;; see if this is a return, or a call into a new location
                        (if-let ((return-depth (position pc symstack :test #'frame-addr-match-p :key #'cdr)))
