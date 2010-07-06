@@ -557,7 +557,7 @@
    #:write-state-to-stream
    #:write-state
    #:write-core-state
-   #:read-state
+   #:read-state-for-core
    #:emit-nonmemory-state-restorer))
 
 (defpackage #:sysdev ;; needed by common-db

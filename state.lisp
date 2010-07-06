@@ -163,22 +163,24 @@
 (defun write-core-state (core filename &rest args)
   (write-state (apply #'capture-state core args) filename))
 
-(defun read-state (state-stream-or-filename)
-  (let (pc gpr regs physical-cells page-size tlb virtual-pages physical-pages (*read-base* #x10))
+(defun read-state-for-core (core state-stream-or-filename)
+  (let (moment trail gpr fpr regs physical-cells page-size tlb virtual-pages physical-pages (*read-base* #x10))
     (with-open-file (stream state-stream-or-filename)
       (let ((type (read stream)))
         (iter (for form = (read stream nil nil))
               (while form)
               (ecase (first form)
-                (:pc (setf pc (second form)))
+                (:moment (setf moment (make-moment 'moment (second form) (third form))))
+                (:trail (setf trail (parse-trail core (rest form))))
                 (:gpr (setf gpr (rest form)))
+                (:fpr (setf fpr (rest form)))
                 (:regs (setf regs (rest form)))
                 (:physical-cell (push (rest form) physical-cells))
                 (:page-size  (setf page-size (second form)))
                 (:tlb (setf tlb (second form)))
                 (:virtual-pages (setf virtual-pages (read-extent-list stream)))
                 (:physical-pages (setf physical-pages (read-extent-list stream)))))
-        (make-instance type :pc pc :gpr gpr :regs regs :tlb tlb :page-size page-size
+        (make-instance type :moment moment :gpr gpr :fpr fpr :regs regs :tlb tlb :page-size page-size
                        :virtual-pages virtual-pages :physical-pages physical-pages :physical-cells (nreverse physical-cells))))))
 
 ;;;;
