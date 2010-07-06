@@ -496,6 +496,7 @@
    #:with-maybe-free-hardware-breakpoints
    #:with-free-hardware-breakpoints
    ;; TLB
+   #:tlb
    #:tlb-entry
    #:set-tlb-entry
    #:decode-tlb-entry
@@ -551,6 +552,8 @@
    #:state-virtual-pages
    #:state-physical-pages
    #:state-physical-cells
+   #:physical-cells
+   #:regs
    ;; actual meat
    #:capture-state-using-state
    #:capture-state
@@ -559,7 +562,10 @@
    #:write-state
    #:write-core-state
    #:read-state-for-core
-   #:emit-nonmemory-state-restorer))
+   #:emit-nonmemory-state-restorer
+   #:state-restorer-as-memory
+   #:write-state-restorer-bank
+   #:apply-bank))
 
 (defpackage #:sysdev ;; needed by common-db
   (:use :common-lisp :alexandria :pergamum :iterate :discrimination :isa :isa-mips :assem :assem-mips :setc :bitmop :device-model
