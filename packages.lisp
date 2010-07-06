@@ -549,8 +549,8 @@
    #:state-tlb
    #:state-page-size
    #:state-virtual-pages
-   #:state-phys-pages
-   #:state-phys-cells
+   #:state-physical-pages
+   #:state-physical-cells
    ;; actual meat
    #:capture-state
    #:apply-state
