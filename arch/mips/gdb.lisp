@@ -54,7 +54,7 @@
                      (layout space :control))
       (export-layout "org.gnu.gdb.mips.fpu" :general nil
                      (layout space :fpr)
-                     (layout space :cop1))
+                     (layout space :cop1control))
       (export-layout "org.gnu.gdb.mips.cp0" :general nil
                      (list (layout space :cop0) :badvaddr :status :cause :epc))
       (when (next-method-p)
