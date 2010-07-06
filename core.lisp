@@ -80,6 +80,10 @@ This responsibility is on the concrete classes.")
 (defgeneric make-neutral-trail (core))
 (defgeneric listify-trail (trail))
 (defgeneric parse-trail (core list))
+(defgeneric trail-decode (trail)
+  (:documentation
+   "The specific core method must return the address of the instruction
+at the decode stage of TRAIL."))
 
 (defgeneric pc (core)
   (:documentation
@@ -281,10 +285,6 @@ return the corresponding trap."))
   (orf (core-moment-changed-p core) (not (null address))))
 
 (define-protocol-class trail () ())
-(defgeneric trail-decode (trail)
-  (:documentation
-   "The specific core method must return the address of the instruction
-at the decode stage of TRAIL."))
 
 ;;;;
 ;;;; Subclasses
@@ -352,6 +352,14 @@ at the decode stage of TRAIL."))
 
 (defun core-report (core format-control &rest format-arguments)
   (apply #'format *log-stream* (concatenate 'string "~&CORE~A: " format-control "~%") (enumerated-id core) format-arguments))
+
+;;;;
+;;;; Pipeline
+;;;;
+(defmethod core-pipeline-addresses :around ((o general-purpose-core) &optional cached)
+  (if cached
+      (list* (moment-fetch (saved-core-moment o)) (listify-trail (saved-core-trail o)))
+      (call-next-method)))
 
 ;;;;
 ;;;; State management

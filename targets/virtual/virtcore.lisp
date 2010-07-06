@@ -150,11 +150,8 @@
   (make-instance 'virtcore-trail :dec 0 :exec 0 :mem 0 :wb 0))
 
 (defmethod core-pipeline-addresses ((o virtcore) &optional cached)
-  (if cached
-      (let ((trail (saved-core-trail o)))
-        (list (moment-fetch (saved-core-moment o))
-              (trail-dec trail) (trail-exec trail) (trail-mem trail) (trail-wb trail)))
-      (list (virtcore-pcf o) (virtcore-pcd o) (virtcore-pce o) (virtcore-pcm o) (virtcore-pcw o))))
+  (declare (ignore cached))
+  (list (virtcore-pcf o) (virtcore-pcd o) (virtcore-pce o) (virtcore-pcm o) (virtcore-pcw o)))
 
 (defmethod pc ((o virtcore))
   (cond ((core-running-p o) (virtcore-pcf o))
