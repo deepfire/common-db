@@ -134,6 +134,7 @@ to return an atomic picture of pipeline when CORE is running."))
 (defgeneric set-fpr-by-name (core fpr value))
 (defsetf fpr-by-name set-fpr-by-name)
 ;;; TLB
+(defgeneric current-page-size (core))
 (defgeneric tlb-entry (core i))
 (defgeneric set-tlb-entry (core i val))
 (defsetf tlb-entry set-tlb-entry)

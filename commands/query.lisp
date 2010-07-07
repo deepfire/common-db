@@ -160,11 +160,11 @@ NAME-OR-ADDRESS.  В том случае если указано имя реги
 Величина коридора задаётся параметром SPLASH-SIZE."
   (disasm (- address splash-size) (* 2 splash-size) nil annotations))
 
-(defun print-tlb (&optional (page-size #x4000) &aux
+(defun print-tlb (&optional (page-size (current-page-size *core*)) &aux
                   (core *core*))
   #+help-ru
   "Распечатать содержимое TLB.  Размер отображаемый страницей принимается
-равным PAGE-SIZE."
+равным PAGE-SIZE, определяемому по умолчанию текущим состоянию процессора."
   (tlb-address-map core (get-tlb core) page-size))
 
 (defun pipesyms ()

@@ -496,6 +496,7 @@
    #:with-maybe-free-hardware-breakpoints
    #:with-free-hardware-breakpoints
    ;; TLB
+   #:current-page-size
    #:tlb
    #:tlb-entry
    #:set-tlb-entry

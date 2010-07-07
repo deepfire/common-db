@@ -39,20 +39,20 @@
 
 (defun core-virtual-pages (core address-map)
   "Read from CORE the pages designated by ADDRESS-MAP."
-  (lret ((pagesize (address-map-page-size address-map))
+  (lret ((page-size (address-map-page-size address-map))
          extents)
     (map-address-map (lambda (virt phys)
-                       (let ((extent (first (push (make-extent 'extent virt pagesize) extents))))
+                       (let ((extent (first (push (make-extent 'extent virt page-size) extents))))
                          (read-block core phys (extent-data extent))))
                      address-map)))
 
 (defun set-core-virtual-pages (core address-map extents)
   "Write all the virtual-addressed EXTENTS into CORE, using the ADDRESS-MAP."
-  (let ((pagesize (address-map-page-size address-map)))
+  (let ((page-size (address-map-page-size address-map)))
     (dolist (extent extents)
       (let ((physaddr (virt-to-phys address-map (base extent))))
         (format t ";;;; loading virtual page ~08X to physaddr ~08X~%" (base extent) physaddr)
-        (write-block core physaddr (extent-data extent) 0 pagesize)))))
+        (write-block core physaddr (extent-data extent) 0 page-size)))))
 
 (defsetf core-virtual-pages set-core-virtual-pages)
 
@@ -81,11 +81,8 @@
 (defmethod capture-state-using-state ((o mmu-core) state &key regs fpr tlb page-size physical-pages physical-cells virtual-pages)
   (declare (ignore regs fpr tlb page-size physical-pages physical-cells virtual-pages)))
 
-(defun capture-state (core &rest args &key regs fpr page-size physical-pages physical-cells (virtual-pages t) (tlb virtual-pages))
+(defun capture-state (core &rest args &key regs fpr (page-size (current-page-size core)) physical-pages physical-cells (virtual-pages t) (tlb virtual-pages))
   "Assume :DEBUG state."
-  (when (and (not page-size)
-             (or physical-pages virtual-pages))
-    (error "Cannot capture memory pages without PAGE-SIZE specified."))
   (lret* ((tlb (when tlb
                  (get-tlb core)))
           (state (make-instance (core-default-state-type core)
