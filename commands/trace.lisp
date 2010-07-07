@@ -22,6 +22,20 @@
 
 (in-package :common-db)
 
+(defun simple-trace (&optional count &key (core *core*) step-slaves)
+  #+help-ru
+  "Произвести простую трассировку."
+  (declare (type (or null (integer -1)) count))
+  (with-temporary-state (core :stop)
+    (oneline-report)
+    (unwind-protect
+         (iter (until (when count
+                        (minusp (decf count))))
+               (step-core-synchronous core step-slaves)
+               (oneline-report))
+      (free-to-stop core))
+    (values)))
+
 (defun count-trace (addr-or-sym &rest run-args)
   #+help-ru
   "Установить аппаратную точку останова в адрес заданный через 
