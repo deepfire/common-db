@@ -27,7 +27,7 @@
 ;;;;
 (defun core-physical-pages (core address-list page-size)
   (iter (for addr in address-list)
-        (u8-extent (backend core) (extent (logandc1 (1- page-size) addr) page-size))))
+        (collect (u8-extent (backend core) (extent (logandc1 (1- page-size) addr) page-size)))))
 
 (defun set-core-physical-pages (core address-list page-size extents)
   (declare (ignore page-size))
@@ -69,7 +69,12 @@
    (page-size :accessor state-page-size :type (or null integer) :initarg :page-size)
    (virtual-pages :accessor state-virtual-pages :type list :initarg :virtual-pages)
    (physical-pages :accessor state-physical-pages :type list :initarg :physical-pages)
-   (physical-cells :accessor state-physical-cells :type list :initarg :physical-cells)))
+   (physical-cells :accessor state-physical-cells :type list :initarg :physical-cells))
+  (:default-initargs
+   :regs nil :fpr nil :tlb nil
+   :page-size nil
+   :physical-pages nil :physical-cells nil
+   :virtual-pages nil))
 
 (defgeneric capture-state-using-state (core state &key regs fpr tlb page-size physical-pages physical-cells virtual-pages))
 (defgeneric apply-state (core state))
@@ -99,28 +104,28 @@
     (apply #'capture-state-using-state core state args)))
 
 (defmethod apply-state ((o mmu-core) state)
-  (let ((space (device-space o))
-        (target (backend o)))
+  (let ((space (device-space o)))
     (with-slots (moment trail gpr regs fpr tlb physical-pages physical-cells page-size virtual-pages) state
       (iter (for (addr val) in physical-cells)
             (format t ";; restoring memory cell at 0x~8,'0X~%" addr)
-            (setf (memory-ref target addr) val))
+            (setf (memory-ref (backend o) addr) val))
       (setf (values) (format t ";; restoring TLB-mapped pages:~{ ~8,'0X~}~%" (mapcar #'base virtual-pages))
             (core-virtual-pages o (tlb-address-map o tlb page-size)) virtual-pages
             (values) (format t ";; restoring direct-mapped pages:~{ ~8,'0X~}~%" (mapcar #'base physical-pages))
             (core-physical-pages o nil page-size) physical-pages
             (values) (format t ";; restoring TLB~%")
             (get-tlb o) tlb)
-      (format t ";; restoring FPR~%")
-      (iter (for val in fpr) (for i below (isa-fpr-count (core-isa o))) 
-            (set-gpr o i val))
-      (format t ";; restoring miscellaneous registers~%")
+      (when fpr
+        (format t ";; restoring FPR~%")
+        (iter (for val in fpr) (for i below (isa-fpr-count (core-isa o))) 
+              (set-gpr o i val)))
+      (format t ";; restoring miscellaneous registers: ~A~%" (mapcar #'car regs))
       (iter (for (reg val) in regs)
             (setf (device-register o (register-id space reg)) val))
       (format t ";; restoring GPR~%")
       (iter (for val in gpr) (for i below (isa-gpr-count (core-isa o))) 
             (set-gpr o i val))
-      (format t ";; restoring moment (~A) and trail~%" moment)
+      (format t ";; restoring moment ~A and trail ~A~%" moment trail)
       (setf (saved-core-trail o) trail
             (core-trail o) trail
             (saved-core-moment o) moment
@@ -162,10 +167,10 @@
 (defun write-core-state (core filename &rest args)
   (write-state (apply #'capture-state core args) filename))
 
-(defun read-state-for-core (core state-stream-or-filename)
-  (let (moment trail gpr fpr regs physical-cells page-size tlb virtual-pages physical-pages (*read-base* #x10))
-    (with-open-file (stream state-stream-or-filename)
-      (let ((type (read stream)))
+(defun read-state-for-core (core state-stream-or-filename &aux (*read-base* #x10))
+  (with-open-file (stream state-stream-or-filename)
+    (lret ((state (make-instance (read stream))))
+      (with-slots (moment trail gpr fpr regs physical-cells page-size tlb virtual-pages physical-pages) state
         (iter (for form = (read stream nil nil))
               (while form)
               (ecase (first form)
@@ -174,13 +179,11 @@
                 (:gpr (setf gpr (rest form)))
                 (:fpr (setf fpr (rest form)))
                 (:regs (setf regs (rest form)))
-                (:physical-cell (push (rest form) physical-cells))
+                (:physical-cells (setf physical-cells (rest form)))
                 (:page-size  (setf page-size (second form)))
                 (:tlb (setf tlb (mapcar (curry #'parse-tlb-entry (second form)) (third form))))
                 (:virtual-pages (setf virtual-pages (read-extent-list stream)))
-                (:physical-pages (setf physical-pages (read-extent-list stream)))))
-        (make-instance type :moment moment :gpr gpr :fpr fpr :regs regs :tlb tlb :page-size page-size
-                       :virtual-pages virtual-pages :physical-pages physical-pages :physical-cells (nreverse physical-cells))))))
+                (:physical-pages (setf physical-pages (read-extent-list stream)))))))))
 
 ;;;;
 ;;;; Code-driven replay

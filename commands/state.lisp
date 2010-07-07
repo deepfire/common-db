@@ -374,12 +374,22 @@ address to be different from ADDRESS."
   (apply #'run run-params)
   (values))
 
-(defun crapply-state (&rest args &key (core *core*) &allow-other-keys)
+(defun pause ()
+  #+help-ru
+  "Вывести сообщение, предлагающее нажать клавишу 'Enter' для продолжения."
+  (write-line "Press Enter to continue...")
+  (read-line))
+
+(defun substate (&optional filename &rest args &key (core *core*) (pause t) &allow-other-keys)
   #-help-ru
   "Save current state, reset CORE and then apply the saved state."
   #+help-ru
   "Сохранить состояние текущего ядра, сбросить состояние системы,
 и затем применить сохранённое состояние."
-  (lret ((state (apply #'capture-state core (remove-from-plist args :core))))
+  (lret ((state (apply #'capture-state core (remove-from-plist args :core :pause))))
+    (when filename
+      (write-state state filename))
+    (when pause
+      (pause))
     (reset :core core)
     (apply-state core state)))
