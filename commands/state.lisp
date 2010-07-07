@@ -56,6 +56,13 @@
   (when display (display))    
   (values))
 
+(defun oneline-report (&optional (core *core*))
+  #+help-ru
+  "Вывести минимальный обзор конвейера: адрес, код и мнемонику декодируемой инструкции."
+  (let ((decode-addr (trail-decode (core-trail core)))
+        (opcode (moment-opcode (core-moment core))))
+    (format t "~8,'0X  ~8,' X:~{ ~A~}~%" decode-addr opcode (decode-insn (core-isa core) opcode))))
+
 (defun callog (&key until (core *core*) step-slaves report-normal-returns skiplist handlers debug qualified-symbols
                verbose-since very-verbose-since stay-for-more)
   #+help-ru
@@ -73,10 +80,6 @@
                (or (= pc return-addr)
                    (= pc (+ return-addr insn-width))         ; some function calls
                    (= pc (+ return-addr (* 2 insn-width))))) ; some instruction faults (FPU emulation)
-             (report-step-very-verbose ()
-               (let ((decode-addr (trail-decode (core-trail core)))
-                     (opcode (moment-opcode (core-moment core))))
-                 (format t "~8,'0X  ~8,' X:~{ ~A~}~%" decode-addr opcode (decode-insn (core-isa core) opcode))))
              (return-addr-for-pc-change (from to)
                (flet ((user->kernel-p ()
                         "This one is MIPS32-specific."
@@ -156,7 +159,7 @@
                      (cond ((and verbose-since (= pc verbose-since))           (setf verbose-steps t))
                            ((and very-verbose-since (= pc very-verbose-since)) (setf very-verbose-steps t)))
                      (cond (verbose-steps      (push pc pc-memory))
-                           (very-verbose-steps (report-step-very-verbose)))
+                           (very-verbose-steps (oneline-report core)))
                      (until (or (when (typecase until
                                         (null nil)
                                         (integer (= pc until))
