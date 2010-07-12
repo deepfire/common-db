@@ -342,7 +342,8 @@
     --trace-even-noisy-comdb-calls
                                 Trace noisy common-db API calls as well.
     --trace-comdb-memory-io     Trace all memory IO.
-    --trace-exchange            Trace gdbserver protocol exchange.
+    --trace-exchange <integer>  Trace gdbserver protocol exchange, up to the
+                                  specified amount of bytes per RSP command.
     --single-shot               Exit after the first connection terminates.")
 
 (defun gdbserver-toplevel ()
