@@ -319,7 +319,8 @@
 (defun emit-setup-gpr-standalone-bits (core address)
   "Emit code to load the GPR RF with (mapcar (curry #'expt 2) (iota 31))."
   (with-bioable-mips-segment (core address)
-    (emit-nonmemory-state-restorer *segment* (make-instance 'mips:mips-state :gpr (list* 0 *log2-iota*)))
+    (dotimes (i 31)
+      (emit-set-gpr (format-symbol :keyword "R~D" (1+ i)) (ash 1 i)))
     (emit* :nop)))
 
 (defun make-expect-r1 (x)
