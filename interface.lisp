@@ -32,6 +32,7 @@
 (defvar *verbose-interface-init* nil)
 (defparameter *log-tap-register-access* nil)
 (defvar *virtual-interface-enabled* nil)
+(defvar *disable-parport-interfaces* nil)
 (defvar *disable-usb-interfaces* nil)
 
 (define-condition interface-error (error)
@@ -136,7 +137,8 @@ ERROR-RETURN-FORM."
     (bus-scan (or (root-bus 'virtif :if-does-not-exist :continue) (make-instance 'virtif-bus :name 'virtif)) force-rescan))
   (when physical
     #-disable-parport
-    (bus-scan (or (root-bus 'parport :if-does-not-exist :continue) (make-instance 'parport-bus :name 'parport)) force-rescan)
+    (unless *disable-parport-interfaces*
+      (bus-scan (or (root-bus 'parport :if-does-not-exist :continue) (make-instance 'parport-bus :name 'parport)) force-rescan))
     (unless *disable-usb-interfaces*
       (bus-scan (or (root-bus 'ezusb :if-does-not-exist :continue) (make-instance 'ezusb-bus :name 'ezusb)) force-rescan))))
 

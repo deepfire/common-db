@@ -23,6 +23,7 @@
 
    #:*virtual-interface-enabled*        ; interface
    #:*virtual-target-enabled*           ; targets/virtual
+   #:*disable-parport-interfaces*
    #:*disable-usb-interfaces*
    #:*skip-platform-init*               ; target
    #:*memory-detection-threshold*       ; platform-memory

@@ -115,6 +115,8 @@
     --platform <platform-name>  Specify platform manually, instead of detection.
     --virtual                   Enable the virtual interface/target/core.
     --no-physical               Omit looking for physical targets.
+    --no-parport                Omit looking for EPP-attached targets.
+    --no-usb                    Omit looking for USB-attached targets.
     --no-scan                   Don't scan interfaces.
     --no-platform-init          Do not do platform-level initialisation.
     --no-memory-detection       Don't try detecting and configuring memory.
@@ -154,7 +156,7 @@
     (write-string "#+END_EXAMPLE") (terpri)))
 
 (defvar *standard-parameters* '((:load :string) (:core-multiplier :decimal) :early-eval :context :platform :memory-detection-threshold :eval))
-(defvar *standard-switches*   '(:no-rc :virtual :no-physical :no-usb :no-scan :no-platform-init
+(defvar *standard-switches*   '(:no-rc :virtual :no-physical :no-parport :no-usb :no-scan :no-platform-init
                                 :list-contexts :list-platforms :help :help-en :version :no-memory-detection
                                 :disable-debugger :print-backtrace-on-errors :early-break-on-signals :break-on-signals
                                 :run-tests :ignore-test-failure :quit
@@ -187,7 +189,7 @@
        (with-quit-restart
          (destructuring-bind (&rest args &key (verbose verbose)
                                     (no-rc no-rc) early-eval
-                                    core-multiplier virtual no-physical no-usb no-scan (no-platform-init no-platform-init)
+                                    core-multiplier virtual no-physical no-parport no-usb no-scan (no-platform-init no-platform-init)
                                     load eval run-tests ignore-test-failures quit
                                     log-pipeline-crit
                                     list-contexts context list-platforms platform
@@ -209,6 +211,7 @@
                   (*log-system-configuration* verbose)
                   (discrimination:*discriminate-verbosely* verbose)
                   (*orgify* orgify)
+                  (*disable-parport-interfaces* no-parport)
                   (*disable-usb-interfaces* no-usb)
                   (*virtual-target-enabled* virtual)
                   (*forced-platform* (when platform
