@@ -26,12 +26,12 @@
    (:file "bank" :depends-on ("loadable"))
    #+(and linux sbcl nil)
    (:file "host-pci" :depends-on ("bus"))
-   (:file "interface" :depends-on ("options" "portability" "bus"))
+   (:file "interface" :depends-on ("packages" "options" "bus"))
    (:file "platform" :depends-on ("generic" "options" "portability" "loadable"))
    ;;
    (:file "target" :depends-on ("portability" "generic" "interface" "platform"))
    (:module "interfaces"
-            :depends-on ("portability"
+            :depends-on ("packages" 
                          "bus" "interface" "target")
             :components
             ((:file "packages")
@@ -70,7 +70,7 @@
    ;;
    ;; Tie it all together
    ;;
-   (:file "main" :depends-on ("arch" "flash" "dsp" "system" "system-devices" "context"))
+   (:file "main" :depends-on ("arch" "flash" "dsp" "system" "system-devices" "interfaces" "context"))
    ;;
    ;; UI
    ;;
