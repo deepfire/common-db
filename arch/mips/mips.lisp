@@ -599,29 +599,30 @@ such kind of thing.")
     (let* ((pc (moment-fetch moment))
            (userspace-trampoline-p (kusegp pc)))
       (with-segment-emission (*mips-isa* segment)
-        ;; Restore physical cells first: this allows us to do dirty platform setup tricks,
-        ;; like enabling the TLB mode.
-        (iter (for (addr val) in physical-cells)
-              (emit-store32 val addr))
-        (multiple-value-bind (status-hi-lo cop0-regs) (unzip (rcurry #'member '(:status :hi :lo) :key #'car) regs)
-          (mapc (curry #'apply #'emit-set-cp0) cop0-regs)
-          (when-let ((hi (cadr (assoc :hi status-hi-lo))))
-            (emit-set-hi hi))
-          (when-let ((lo (cadr (assoc :lo status-hi-lo))))
-            (emit-set-lo lo))
-          (when-let ((status (cadr (assoc :status status-hi-lo))))
-            (emit-set-cp0 :status (logior status
-                                           (bits (:exl) userspace-trampoline-p)))))
-        (iter (for entry in tlb) (for i from 0)
-              (emit-set-tlb-entry i (listify-tlb-entry entry))
-              (emit-nops 1))
-        (when userspace-trampoline-p
-          (emit-set-cp0 :epc pc))
-        (when fpr
-          (mapc #'emit-set-fpr (iota 32) fpr))
-        (mapc #'emit-set-gpr (iota 32) gpr)
-        (when userspace-trampoline-p
-          (emit* :nop)
-          (emit* :nop)
-          (emit* :eret)
-          (emit* :nop))))))
+        (with-mips-gpr-environment
+          ;; Restore physical cells first: this allows us to do dirty platform setup tricks,
+          ;; like enabling the TLB mode.
+          (iter (for (addr val) in physical-cells)
+                (emit-store32 val addr))
+          (multiple-value-bind (status-hi-lo cop0-regs) (unzip (lambda (x) (member (car x) '(:status :hi :lo))) regs)
+            (mapc (curry #'apply #'emit-set-cp0) cop0-regs)
+            (when-let ((hi (cadr (assoc :hi status-hi-lo))))
+              (emit-set-hi hi))
+            (when-let ((lo (cadr (assoc :lo status-hi-lo))))
+              (emit-set-lo lo))
+            (when-let ((status (cadr (assoc :status status-hi-lo))))
+              (emit-set-cp0 :status (logior status
+                                            (bits (:exl) userspace-trampoline-p)))))
+          (iter (for entry in tlb) (for i from 0)
+                (emit-set-tlb-entry i (listify-tlb-entry entry))
+                (emit-nops 1))
+          (when userspace-trampoline-p
+            (emit-set-cp0 :epc pc))
+          (when fpr
+            (mapc #'emit-set-fpr (mapcar (curry #'format-symbol :keyword "F~D") (iota 32)) fpr))
+          (mapc #'emit-set-gpr (mapcar (curry #'format-symbol :keyword "R~D") (iota 32)) gpr)
+          (when userspace-trampoline-p
+            (emit* :nop)
+            (emit* :nop)
+            (emit* :eret)
+            (emit* :nop)))))))

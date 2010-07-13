@@ -195,7 +195,7 @@ state restoration procedure is to be emitted."
   (declare (type (or null (integer 0)) entry-point))
   (with-slots (tlb virtual-pages physical-pages page-size) state
     (append
-     (list (make-extent 'extent entry-point (emit-nonmemory-state-restorer (make-instance 'segment) state)))
+     (list (make-extent 'extent entry-point (segment-active-vector (emit-nonmemory-state-restorer (make-instance 'segment) state))))
      (mapcar (curry #'rebase (curry #'virt-to-phys (tlb-address-map core tlb page-size))) virtual-pages)
      (list physical-pages))))
 
