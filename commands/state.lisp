@@ -56,12 +56,12 @@
   (when display (display))    
   (values))
 
-(defun oneline-report (&optional (core *core*))
+(defun oneline-report (&key prefix (core *core*))
   #+help-ru
   "Вывести минимальный обзор конвейера: адрес, код и мнемонику декодируемой инструкции."
   (let ((decode-addr (trail-decode (core-trail core)))
         (opcode (moment-opcode (core-moment core))))
-    (format t "~8,'0X  ~8,' X:~{ ~A~}~%" decode-addr opcode (decode-insn (core-isa core) opcode))))
+    (format t "~:[~;~:*~A ~]~8,'0X  ~8,' X:~{ ~A~}~%" prefix decode-addr opcode (decode-insn (core-isa core) opcode))))
 
 (defun callog (&key until (core *core*) step-slaves report-normal-returns skiplist handlers debug qualified-symbols
                verbose-since very-verbose-since stay-for-more)

@@ -29,10 +29,11 @@
   (with-temporary-state (core :stop)
     (oneline-report)
     (unwind-protect
-         (iter (until (when count
+         (iter (for i from 0)
+               (until (when count
                         (minusp (decf count))))
                (step-core-synchronous core step-slaves)
-               (oneline-report))
+               (oneline-report :prefix (format nil "~4D" i)))
       (free-to-stop core))
     (values)))
 
