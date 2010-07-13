@@ -197,7 +197,7 @@ state restoration procedure is to be emitted."
     (append
      (list (make-extent 'extent entry-point (segment-active-vector (emit-nonmemory-state-restorer (make-instance 'segment) state))))
      (mapcar (curry #'rebase (curry #'virt-to-phys (tlb-address-map core tlb page-size))) virtual-pages)
-     (list physical-pages))))
+     physical-pages)))
 
 (defun write-state-restorer-bank (core state filename &key (entry-point (default-core-pc core)))
   (bank:write-extents-as-bank filename (state-restorer-as-memory core state :entry-point entry-point)))
