@@ -133,6 +133,7 @@
     --run-tests                 Run tests before doing anything.
                                   Abort on errors.
     --ignore-test-failures      Don't abort on test errors.
+    --examine-tlb               Use TLB to resolve virtual addresses.
     --quit                      Terminate instead of continuing into debugger.
     --verbose                   During operation print out MORE STATUS.
                                   Implies --print-backtrace-on-errors.
@@ -160,6 +161,7 @@
                                 :list-contexts :list-platforms :help :help-en :version :no-memory-detection
                                 :disable-debugger :print-backtrace-on-errors :early-break-on-signals :break-on-signals
                                 :run-tests :ignore-test-failure :quit
+                                :examine-tlb
                                 ;; not documented
                                 :orgify :log-pipeline-crit))
 (defvar *panlevel-switches* '(:verbose)
@@ -191,7 +193,7 @@
                                     (no-rc no-rc) early-eval
                                     core-multiplier virtual no-physical no-parport no-usb no-scan (no-platform-init no-platform-init)
                                     load eval run-tests ignore-test-failures quit
-                                    log-pipeline-crit
+                                    examine-tlb log-pipeline-crit
                                     list-contexts context list-platforms platform
                                     early-break-on-signals break-on-signals help help-en orgify version
                                     ;; customisable
@@ -217,6 +219,7 @@
                   (*forced-platform* (when platform
                                        (or (find-symbol (string-upcase (string platform)) :platform-definitions)
                                            (error "~@<Unknown platform \"~A\": use --list-platforms.~:@>" platform))))
+                  (*examine-tlb* examine-tlb)
                   (*log-core-pipeline-crit* log-pipeline-crit)
                   (*print-backtrace-on-errors* print-backtrace-on-errors)
                   (*print-base* #x10)
