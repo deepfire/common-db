@@ -129,11 +129,9 @@ NAME-OR-ADDRESS.  В том случае если указано имя реги
                                             (core *core*)
                                             (target (backend core)))
   (let* ((allow-invasive (eq (state core) :debug))
-         (address-map (when (and (not (= 2 (ash value -30))) ; YYY: mapped-p
-                                 allow-invasive
-                                 (eq (devbit-decode core :config :mmu-mode) :tlb)
-                                 *examine-tlb*)
-                        (tlb-address-map core (get-tlb core) #x4000)))
+         (address-map (when (and (address-mapped-p core value) allow-invasive
+                                 (tlb-active-p core) *examine-tlb*)
+                        (tlb-address-map core (get-tlb core) (current-page-size core))))
          (address (if address-map
                       (and (addr-in-map-p address-map value)
                            (if *map-to-zeroth-page*
@@ -144,7 +142,7 @@ NAME-OR-ADDRESS.  В том случае если указано имя реги
          (decoded-insn (when address (decode-mips-insn cell)))
          (control (format nil "~~&~~A:~~12T~~8,'0X~~:[~~; ~~:*~~S~~]~
                                ~~~DT~
-                               ~~:[~~;@[~~8,'0X~~:[~~*~~;=> ~~8,'0X~~]]: ~~8,'0X   ~~(~~A~~{ ~~S~~}~~)~~]" postname-alignment)))
+                               ~~:[~~;@[~~8,'0X~~:[~~*~~; => ~~8,'0X~~]]: ~~8,'0X   ~~(~~A~~{ ~~S~~}~~)~~]" postname-alignment)))
     (format *log-stream* control
             name value (addrsym value)
             address value (and address-map (addr-in-map-p address-map value)) address
