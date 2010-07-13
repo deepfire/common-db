@@ -530,14 +530,17 @@ such kind of thing.")
       index)))
 
 (defmethod tlb-address-map ((o mips-core) tlb page-size)
-  (lret ((map (make-address-map :page-size page-size)))
+  (lret ((pagemask (1- (ash page-size 1)))
+         (map (make-address-map :page-size page-size)))
     (iter (for entry in tlb)
           (with-slots (hi lo0 lo1) entry
-            (let ((virt (logandc1 (1- page-size) (dpb (bit-value hi :vpn2) (byte 19 13) 0))))
+            (let ((virt (logandc1 pagemask (dpb (bit-value hi :vpn2) (byte 19 13) 0))))
               (when (test-bits-set (:valid) lo0)
-                (address-map-add map virt (ash (bit-value lo0 :addr) 12)))
+                (address-map-add map virt
+                                 (logandc1 (ash pagemask -1) (ash (bit-value lo0 :addr) 12))))
               (when (test-bits-set (:valid) lo1)
-                (address-map-add map (+ virt page-size) (ash (bit-value lo1 :addr) 12))))))))
+                (address-map-add map (+ virt page-size)
+                                 (logandc1 (ash pagemask -1) (ash (bit-value lo1 :addr) 12)))))))))
 
 ;;;;
 ;;;; Memory device
