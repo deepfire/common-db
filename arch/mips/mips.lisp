@@ -479,6 +479,13 @@ such kind of thing.")
 ;;;;
 ;;;; TLB
 ;;;;
+(defmethod address-mapped-p ((o mips-core) (address integer))
+  (not (or (kseg0p address)
+           (kseg1p address))))
+
+(defmethod tlb-active-p ((o mips-core))
+  (eq (devbit-decode o :config :mmu-mode) :tlb))
+
 (defmethod current-page-size ((o mips-core))
   (ash 1 (1- (integer-length (logior #x1000 (devreg o :pagemask))))))
 

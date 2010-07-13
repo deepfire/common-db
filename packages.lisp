@@ -497,7 +497,9 @@
    #:with-maybe-free-hardware-breakpoints
    #:with-free-hardware-breakpoints
    ;; TLB
+   #:address-mapped-p
    #:current-page-size
+   #:tlb-active-p
    #:tlb
    #:tlb-entry
    #:set-tlb-entry
