@@ -159,7 +159,7 @@
                      (cond ((and verbose-since (= pc verbose-since))           (setf verbose-steps t))
                            ((and very-verbose-since (= pc very-verbose-since)) (setf very-verbose-steps t)))
                      (cond (verbose-steps      (push pc pc-memory))
-                           (very-verbose-steps (oneline-report core)))
+                           (very-verbose-steps (oneline-report :core core)))
                      (until (or (when (typecase until
                                         (null nil)
                                         (integer (= pc until))
