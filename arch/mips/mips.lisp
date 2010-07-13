@@ -590,9 +590,6 @@ such kind of thing.")
         ;; like enabling the TLB mode.
         (iter (for (addr val) in physical-cells)
               (emit-store32 val addr))
-        (iter (for entry in tlb) (for i from 0)
-              (emit-set-tlb-entry i (listify-tlb-entry entry))
-              (emit-nops 1))
         (multiple-value-bind (status-hi-lo cop0-regs) (unzip (rcurry #'member '(:status :hi :lo) :key #'car) regs)
           (mapc (curry #'apply #'emit-set-cp0) cop0-regs)
           (when-let ((hi (cadr (assoc :hi status-hi-lo))))
@@ -602,6 +599,9 @@ such kind of thing.")
           (when-let ((status (cadr (assoc :status status-hi-lo))))
             (emit-set-cp0 :status (logior status
                                            (bits (:exl) userspace-trampoline-p)))))
+        (iter (for entry in tlb) (for i from 0)
+              (emit-set-tlb-entry i (listify-tlb-entry entry))
+              (emit-nops 1))
         (when userspace-trampoline-p
           (emit-set-cp0 :epc pc))
         (when fpr
