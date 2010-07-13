@@ -383,6 +383,14 @@ address to be different from ADDRESS."
   (write-line "Press Enter to continue...")
   (read-line))
 
+(defun replay (filename &key (core *core*))
+  #-help-ru
+  "Reset CORE and apply state stored in FILENAME."
+  #+help-ru
+  "Сбросить ядро, затем восстановив состояние из файла."
+  (reset :core core)
+  (apply-state core (read-state-for-core core filename)))
+
 (defun substate (&optional filename &rest args &key (core *core*) (pause t) &allow-other-keys)
   #-help-ru
   "Save current state, reset CORE and then apply the saved state."
