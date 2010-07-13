@@ -102,7 +102,8 @@
 
 (defun write-extents-as-bank (filename extents &key (endianness :little-endian))
   (with-open-file (stream filename :direction :output :if-does-not-exist :create :if-exists :supersede)
-    (print-bank-extents stream extents :endianness endianness)))
+    (print-bank-extents stream extents :endianness endianness)
+    nil))
 
 ;;;
 ;;; LOADABLE
