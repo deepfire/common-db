@@ -480,7 +480,7 @@ such kind of thing.")
 ;;;; TLB
 ;;;;
 (defmethod current-page-size ((o mips-core))
-  (ash 1 (1- (integer-length (devreg o :pagemask)))))
+  (ash 1 (1- (integer-length (logior #x1000 (devreg o :pagemask))))))
 
 (defstruct (mips-tlb-entry (:constructor make-mips-tlb-entry (hi lo0 lo1))
                            (:conc-name mips-tlbent-))
