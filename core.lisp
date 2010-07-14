@@ -291,10 +291,10 @@ return the corresponding trap."))
 (defmethod derive-moment ((m moment) (address integer))
   (make-moment 'moment address (moment-opcode m)))
 
-(defun reinstate-saved-moment (core &optional address)
-  (setf (current-core-moment core) (if (or address (not (moment-fetch (saved-core-moment core))))
-                                       (derive-moment (saved-core-moment core) (or address
-                                                                                   (default-core-pc core)))
+(defun reinstate-saved-moment (core &optional (address (unless (moment-fetch (saved-core-moment core))
+                                                         (default-core-pc core))))
+  (setf (current-core-moment core) (if address
+                                       (derive-moment (saved-core-moment core) address)
                                        (saved-core-moment core)))
   (orf (core-moment-changed-p core) (not (null address))))
 
