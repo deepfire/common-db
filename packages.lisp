@@ -382,9 +382,11 @@
    #:core-stop-reason
    #:saved-core-moment
    #:core-moment
+   #:set-core-moment
    #:core-moment-changed-p
    #:saved-core-trail
    #:core-trail
+   #:set-core-trail
    #:core-trail-important-p
    #:slave-core
    #:slave-master

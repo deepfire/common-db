@@ -69,6 +69,13 @@ This responsibility is on the concrete classes.")
 (defgeneric current-core-moment (core))
 (defgeneric set-current-core-moment (core moment))
 (defsetf current-core-moment set-current-core-moment)
+(defgeneric core-moment (core)
+  (:documentation
+   "State-dependent, currently relevant moment of core."))
+(defgeneric set-core-moment (core moment)
+  (:documentation
+   "Set the state-dependent, currently relevant moment of core."))
+(defsetf core-moment set-core-moment)
 (defgeneric make-neutral-moment (core address))
 (defgeneric derive-moment (moment address))
 (defgeneric default-core-pc (core))
@@ -77,6 +84,13 @@ This responsibility is on the concrete classes.")
 (defgeneric current-core-trail (core))
 (defgeneric set-current-core-trail (core trail))
 (defsetf current-core-trail set-current-core-trail)
+(defgeneric core-trail (core)
+  (:documentation
+   "State-dependent, currently relevant trail of core."))
+(defgeneric set-core-trail (core trail)
+  (:documentation
+   "Set the state-dependent, currently relevant trail of core."))
+(defsetf core-trail set-core-trail)
 (defgeneric make-neutral-trail (core))
 (defgeneric listify-trail (trail))
 (defgeneric parse-trail (core list))
@@ -408,6 +422,26 @@ return the corresponding trap."))
 
 (defun (setf state) (new-state core &rest transition-args)
   (setf (state:state (core-machine core) transition-args) new-state))
+
+(defmethod core-moment ((o general-purpose-core))
+  (if (eq :debug (state o))
+      (saved-core-moment o)
+      (current-core-moment o)))
+
+(defmethod set-core-moment ((o general-purpose-core) moment)
+  (if (eq :debug (state o))
+      (setf (saved-core-moment o) moment)
+      (set-current-core-moment o moment)))
+
+(defmethod core-trail ((o general-purpose-core))
+  (if (eq :debug (state o))
+      (saved-core-trail o)
+      (current-core-trail o)))
+
+(defmethod set-core-trail ((o general-purpose-core) trail)
+  (if (eq :debug (state o))
+      (setf (saved-core-trail o) trail)
+      (set-current-core-trail o trail)))
 
 (defun invoke-with-maybe-state (core entry-state exit-state maybe args fn)
   (unwind-protect (progn
