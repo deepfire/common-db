@@ -359,8 +359,8 @@
    #:fetch
    #:opcode
    #:make-moment
-   #:core-moment
-   #:set-core-moment
+   #:current-core-moment
+   #:set-current-core-moment
    #:make-neutral-moment
    #:derive-moment
    #:reinstate-saved-moment
@@ -381,6 +381,7 @@
    #:core-instruction-counter
    #:core-stop-reason
    #:saved-core-moment
+   #:core-moment
    #:core-moment-changed-p
    #:saved-core-trail
    #:core-trail-important-p

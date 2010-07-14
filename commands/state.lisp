@@ -60,7 +60,7 @@
   #+help-ru
   "Вывести минимальный обзор конвейера: адрес, код и мнемонику декодируемой инструкции."
   (let ((decode-addr (trail-decode (core-trail core)))
-        (opcode (moment-opcode (core-moment core))))
+        (opcode (moment-opcode (current-core-moment core))))
     (format t "~:[~;~:*~A ~]~8,'0X  ~8,' X:~{ ~A~}~%" prefix decode-addr opcode (decode-insn (core-isa core) opcode))))
 
 (defun callog (&key until (core *core*) step-slaves report-normal-returns skiplist handlers debug qualified-symbols
@@ -73,7 +73,7 @@
   (declare (optimize debug) (type (or null integer) stay-for-more))
   (let (moment-invaded-p
         (insn-width (memory-device-byte-width (backend core))))
-    (labels ((current-sym (&aux (fetch (moment-fetch (core-moment core))))
+    (labels ((current-sym (&aux (fetch (moment-fetch (current-core-moment core))))
                (values (addrsym fetch) fetch))
              (frame-addr-match-p (pc return-addr)
                ;; XXX: wiggle room, happens to be needed in some cases
@@ -229,8 +229,8 @@
   "Произвести COUNT шагов, пропуская вложенные вызовы."
   (with-temporary-state (core :stop)
     ;; re-implementing the stop-to-free protocol, what's to say...
-    (setf (core-moment core) (derive-moment (saved-core-moment core)
-                                            (or (moment-fetch (saved-core-moment core)) (default-core-pc core))))
+    (setf (current-core-moment core) (derive-moment (saved-core-moment core)
+                                                    (or (moment-fetch (saved-core-moment core)) (default-core-pc core))))
     ;; shall we use OTC/TRACE-MODE here, instead (wouldn't that be a lie)?
     (if-let ((start-fn-symbol (addrsym (moment-fetch (saved-core-moment core)))))
             (callog :until start-fn-symbol :core core :step-slaves step-slaves :report-normal-returns report-normal-returns)

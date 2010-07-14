@@ -123,10 +123,10 @@
 ;;;;
 ;;;; Moment/trail API
 ;;;;
-(defmethod core-moment ((o virtcore))
+(defmethod current-core-moment ((o virtcore))
   (make-moment 'moment (virtcore-pcf o) (virtcore-insn o)))
 
-(defmethod set-core-moment ((o virtcore) (m moment))
+(defmethod set-current-core-moment ((o virtcore) (m moment))
   (setc (virtcore-pcf o) (moment-fetch m)
         (virtcore-insn o) (moment-opcode m)))
 
@@ -222,7 +222,7 @@
   (interface-attach-target iface)
   (interface-stop-target iface)
   (freeze-core-slaves core)
-  (setf (saved-core-moment core) (core-moment core)
+  (setf (saved-core-moment core) (current-core-moment core)
         (saved-core-trail core) (core-trail core))
   nil)
 

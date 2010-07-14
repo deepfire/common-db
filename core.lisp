@@ -66,9 +66,9 @@ This responsibility is on the concrete classes.")
    (:control %pc (setf %pc))))
 
 ;;; pipeline: moment
-(defgeneric core-moment (core))
-(defgeneric set-core-moment (core moment))
-(defsetf core-moment set-core-moment)
+(defgeneric current-core-moment (core))
+(defgeneric set-current-core-moment (core moment))
+(defsetf current-core-moment set-current-core-moment)
 (defgeneric make-neutral-moment (core address))
 (defgeneric derive-moment (moment address))
 (defgeneric default-core-pc (core))
@@ -97,7 +97,7 @@ which doesn't really exists as a single entity, on pipelined CPUs."))
 (defgeneric save-core-pipeline (core &key trail-important)
   (:documentation
    "The provided default method copies CORE's pipeline into backing store,
-using CORE-MOMENT and CORE-TRAIL.  TRAIL-IMPORTANT provides means to specify
+using CURRENT-CORE-MOMENT and CURRENT-CORE-TRAIL.  TRAIL-IMPORTANT provides means to specify
 the importance of the trail; it defaults to T."))
 (defgeneric finish-core-pipeline (core)
   (:documentation
@@ -283,10 +283,10 @@ return the corresponding trap."))
   (make-moment 'moment address (moment-opcode m)))
 
 (defun reinstate-saved-moment (core &optional address)
-  (setf (core-moment core) (if (or address (not (moment-fetch (saved-core-moment core))))
-                               (derive-moment (saved-core-moment core) (or address
-                                                                           (default-core-pc core)))
-                               (saved-core-moment core)))
+  (setf (current-core-moment core) (if (or address (not (moment-fetch (saved-core-moment core))))
+                                       (derive-moment (saved-core-moment core) (or address
+                                                                                   (default-core-pc core)))
+                                       (saved-core-moment core)))
   (orf (core-moment-changed-p core) (not (null address))))
 
 (define-protocol-class trail () ())
@@ -375,13 +375,13 @@ return the corresponding trap."))
                                                           (when *log-state-changes*
                                                             (core-report o "changed state from ~S to ~S" from to)))))
   (unless (core-running-p o)
-    (setf (saved-core-moment o) (core-moment o)
+    (setf (saved-core-moment o) (current-core-moment o)
           (saved-core-trail o) (core-trail o)))
   (mapcar (curry #'apply #'state:set-transition-action (core-machine o)) *core-transitions*))
 
 (defmethod stop-to-free ((core general-purpose-core) &key address moment-changed (insn-execution-limit nil iel-specified) &allow-other-keys)
   (when *log-core-pipeline-crit*
-    (let ((moment (core-moment core)))
+    (let ((moment (current-core-moment core)))
       (core-report core "STOP->FREE: op/pc/mchg/mchgdcl -> ././.: ~X ~X ~S ~S => ~X ~X ~S ~S"
                    (moment-opcode moment) (moment-fetch moment) (core-moment-changed-p core) moment-changed
                    (moment-opcode (saved-core-moment core)) (or address (moment-fetch (saved-core-moment core))) (or (and address t) moment-changed)
@@ -751,7 +751,7 @@ BREAKPOINT is released when the form is exited, by any means."
       (list* (moment-fetch (saved-core-moment o)) (listify-trail (saved-core-trail o)))
       (call-next-method)))
 
-(defmethod set-core-moment :after ((o general-purpose-core) moment)
+(defmethod set-current-core-moment :after ((o general-purpose-core) moment)
   (declare (ignore moment))
   (setf (core-moment-changed-p o) t
         (saved-core-trail o) (make-neutral-trail o)
@@ -766,7 +766,7 @@ BREAKPOINT is released when the form is exited, by any means."
   (setf (core-trail-important-p o) t))
 
 (defmethod save-core-pipeline ((o general-purpose-core) &key (trail-important t))
-  (setf (saved-core-moment o) (core-moment o)
+  (setf (saved-core-moment o) (current-core-moment o)
         (saved-core-trail o) (core-trail o)
         (core-trail-important-p o) trail-important))
 
@@ -826,7 +826,7 @@ is performed."
           (core-trail core) trail
           (core-trail-important-p core) nil ; just done it manually
           (saved-core-moment core) moment
-          (core-moment core) moment)))
+          (current-core-moment core) moment)))
 
 (defun run-core-asynchronous (core &optional address (moment-changed (not (null address))))
   (prog1 (state core)
@@ -922,9 +922,9 @@ icache-related anomalies.")
   (upload-segment core segment)
   (with-temporary-state (core :stop)
     ;; re-implementing the stop-to-free protocol, what's to say...
-    (setf (core-moment core) (if continuep
-                                 (derive-moment (saved-core-moment core) (pinned-segment-base segment))
-                                 (make-neutral-moment core (pinned-segment-base segment))))
+    (setf (current-core-moment core) (if continuep
+                                         (derive-moment (saved-core-moment core) (pinned-segment-base segment))
+                                         (make-neutral-moment core (pinned-segment-base segment))))
     ;; shall we use OTC/TRACE-MODE here, instead (wouldn't that be a lie)?
     #+nil
     (iter (repeat count)
