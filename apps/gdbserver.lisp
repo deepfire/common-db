@@ -105,7 +105,6 @@
                                                (collect (cons name (u8-vector-word32le regvec offt))))))))
 
 (defmethod gdb-set-target-registers-from-vector ((o common-db-gdbserver) vector)
-  (declare (ignore vector))
   (when *trace-comdb-calls*
     (log-comdb '(setf reginstance-value) "~A" (iter (for name in (map 'list #'name *gdb-register-instance-vector*))
                                                     (for offt from 0 by 4)
