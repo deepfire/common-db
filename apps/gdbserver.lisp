@@ -54,7 +54,7 @@
   "Whether to trace target memory I/O COMMON-DB calls.")
 
 (defun log-comdb (call control &rest args)
-  (apply #'format *trace-output* (concatenate 'string "~&COMDB ~A: " control "~%")
+  (apply #'syncformat *trace-output* (concatenate 'string "~&COMDB ~A: " control "~%")
          call args))
 
 ;;;;
@@ -156,7 +156,7 @@
                   (when *trace-comdb-memory-io*
                     (print-u8-sequence *trace-output* iovec :address addr)))
     (error (c)
-      (format *trace-output* "Error in GDB-READ-MEMORY: ~A~%" c)
+      (syncformat *trace-output* "Error in GDB-READ-MEMORY: ~A~%" c)
       "E00")))
 
 (defmethod gdb-write-memory ((o common-db-gdbserver) addr data &aux
@@ -172,7 +172,7 @@
                   (write-block c addr data)
                   "OK")
     (error (c)
-      (format *trace-output* "Error in GDB-WRITE-MEMORY: ~A~%" c)
+      (syncformat *trace-output* "Error in GDB-WRITE-MEMORY: ~A~%" c)
       "E00")))
 
 ;;;;
@@ -370,10 +370,10 @@
           (make-hash-table))
     (when start-swank
       #-with-swank
-      (format t "; Swank server start requested, but swank wasn't compiled in, ignoring.~%")
+      (syncformat t "; Swank server start requested, but swank wasn't compiled in, ignoring.~%")
       #+with-swank
       (swank:create-server :dont-close t))
-    (iter (format t "; Accepting connections on ~A:~D~:[~;, tracing exchanges, up to ~:*~X bytes~]~%" address port trace-exchange)
+    (iter (syncformat t "; Accepting connections on ~A:~D~:[~;, tracing exchanges, up to ~:*~X bytes~]~%" address port trace-exchange)
           (setf (slot-value target-context 'gdbremote::no-ack-mode) nil)
           (reset :core core)
           (accept-gdb-connection target-context port address trace-exchange)
