@@ -62,7 +62,7 @@
    :memory-configuration nil))
 
 (define-protocol-device-class 32bit-bus-target :target (32bit-memory-device target) ())
-(define-protocol-device-class 64bit-bus-target :target (32bit-memory-device target) ())
+(define-protocol-device-class 64bit-bus-target :target (64bit-memory-device target) ())
 (define-protocol-device-class little-endian-target :target (little-endian-memory-device target) ())
 (define-protocol-device-class big-endian-target :target (big-endian-memory-device target) ())
 
