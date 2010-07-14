@@ -54,11 +54,10 @@
                    (terpri s))
                  (call-next-method))))
 
-(defgeneric describe-register (device name bitsize regnum group)
-  (:method ((o device) name bitsize regnum group)
-    (declare (ignore regnum))
-    (format nil "<reg name='~(~A~)' bitsize='~D'~:[~; regnum='~D'~] group='~(~A~)'/>~%"
-            name bitsize #+nil regnum nil group)))
+(defgeneric describe-register (device name bitsize regnum type group)
+  (:method ((o device) name bitsize regnum type group)
+    (format nil "<reg name='~(~A~)' bitsize='~D'~:[~; regnum=~:*'~D'~]~:[~; ~:*type='~(~A~)'~] group='~(~A~)'/>~%"
+            name bitsize regnum type group)))
 
 (defgeneric describe-core-memory-region (core type start length)
   (:method ((o core) type start length)

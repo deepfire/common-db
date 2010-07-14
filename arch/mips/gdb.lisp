@@ -26,7 +26,7 @@
                           (space (space :core))
                           (register-id 0))
   (with-html-output-to-string (s)
-    (flet ((export-layout (name group prefer-aliases &rest layouts-or-registers)
+    (flet ((export-layout (name type group prefer-aliases &rest layouts-or-registers)
              (htm (:feature :name name (terpri s)
                             (iter (for l-or-r in layouts-or-registers)
                                   (destructuring-bind (l &rest rs) (ensure-cons l-or-r)
@@ -46,16 +46,16 @@
                                                           (name ri))))
                                             (funcall reginstance-cb ri register-id)
                                             (incf register-id)
-                                            (str (describe-register o name 32 (reginstance-id ri) group))))))))))
+                                            (str (describe-register o name 32 (reginstance-id ri) type group))))))))))
              (terpri s)))
-      (export-layout "org.gnu.gdb.mips.cpu" :general t
+      (export-layout "org.gnu.gdb.mips.cpu" nil    :general t
                      (layout space :gpr)
                      (list (layout space :hilo) :hi :lo)
                      (layout space :control))
-      (export-layout "org.gnu.gdb.mips.fpu" :general nil
+      (export-layout "org.gnu.gdb.mips.fpu" :float :float   nil
                      (layout space :fpr)
                      (layout space :cop1control))
-      (export-layout "org.gnu.gdb.mips.cp0" :general nil
+      (export-layout "org.gnu.gdb.mips.cp0" nil    :general nil
                      (list (layout space :cop0) :badvaddr :status :cause :epc))
       (when (next-method-p)
         (call-next-method)))))
