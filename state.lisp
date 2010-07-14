@@ -132,7 +132,7 @@
             (set-gpr o i val))
       (format t ";; restoring moment ~A and trail ~A~%" moment trail)
       (setf (saved-core-trail o) trail
-            (core-trail o) trail
+            (current-core-trail o) trail
             (saved-core-moment o) moment
             (current-core-moment o) moment))))
 

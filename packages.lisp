@@ -367,8 +367,8 @@
    ;; trail
    #:trail
    #:trail-decode
-   #:core-trail
-   #:set-core-trail
+   #:current-core-trail
+   #:set-current-core-trail
    #:make-neutral-trail
    #:listify-trail
    #:parse-trail
@@ -384,6 +384,7 @@
    #:core-moment
    #:core-moment-changed-p
    #:saved-core-trail
+   #:core-trail
    #:core-trail-important-p
    #:slave-core
    #:slave-master

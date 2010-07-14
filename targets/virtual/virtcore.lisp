@@ -133,14 +133,14 @@
 (defmethod make-neutral-moment ((o virtcore) address)
   (make-moment 'moment address 0))
 
-(defmethod core-trail ((o virtcore))
+(defmethod current-core-trail ((o virtcore))
   (make-instance 'virtcore-trail
                  :dec (virtcore-pcd o)
                  :exec (virtcore-pce o)
                  :mem (virtcore-pcm o)
                  :wb (virtcore-pcw o)))
 
-(defmethod set-core-trail ((o virtcore) trail)
+(defmethod set-current-core-trail ((o virtcore) trail)
   (setf (virtcore-pcd o) (trail-dec trail)
         (virtcore-pce o) (trail-exec trail)
         (virtcore-pcm o) (trail-mem trail)
@@ -223,7 +223,7 @@
   (interface-stop-target iface)
   (freeze-core-slaves core)
   (setf (saved-core-moment core) (current-core-moment core)
-        (saved-core-trail core) (core-trail core))
+        (saved-core-trail core) (current-core-trail core))
   nil)
 
 (defmethod step-core-asynchronous ((core virtcore) &optional step-slaves)

@@ -74,9 +74,9 @@ This responsibility is on the concrete classes.")
 (defgeneric default-core-pc (core))
 
 ;;; pipeline: trail
-(defgeneric core-trail (core))
-(defgeneric set-core-trail (core trail))
-(defsetf core-trail set-core-trail)
+(defgeneric current-core-trail (core))
+(defgeneric set-current-core-trail (core trail))
+(defsetf current-core-trail set-current-core-trail)
 (defgeneric make-neutral-trail (core))
 (defgeneric listify-trail (trail))
 (defgeneric parse-trail (core list))
@@ -376,7 +376,7 @@ return the corresponding trap."))
                                                             (core-report o "changed state from ~S to ~S" from to)))))
   (unless (core-running-p o)
     (setf (saved-core-moment o) (current-core-moment o)
-          (saved-core-trail o) (core-trail o)))
+          (saved-core-trail o) (current-core-trail o)))
   (mapcar (curry #'apply #'state:set-transition-action (core-machine o)) *core-transitions*))
 
 (defmethod stop-to-free ((core general-purpose-core) &key address moment-changed (insn-execution-limit nil iel-specified) &allow-other-keys)
@@ -767,7 +767,7 @@ BREAKPOINT is released when the form is exited, by any means."
 
 (defmethod save-core-pipeline ((o general-purpose-core) &key (trail-important t))
   (setf (saved-core-moment o) (current-core-moment o)
-        (saved-core-trail o) (core-trail o)
+        (saved-core-trail o) (current-core-trail o)
         (core-trail-important-p o) trail-important))
 
 (defmethod (setf pc) :before (value (o core))
@@ -823,7 +823,7 @@ is performed."
   (let ((trail (make-neutral-trail core))
         (moment (make-neutral-moment core (loadable:loadable-entry-point loadable))))
     (setf (saved-core-trail core) trail
-          (core-trail core) trail
+          (current-core-trail core) trail
           (core-trail-important-p core) nil ; just done it manually
           (saved-core-moment core) moment
           (current-core-moment core) moment)))
