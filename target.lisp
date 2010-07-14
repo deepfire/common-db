@@ -73,6 +73,8 @@
 ;;;
 ;;; Identification
 ;;;
+(defgeneric target-platform-discrimination-tree (target))
+
 (defun find-target-class-for-interface (interface &optional (if-does-not-exist :error))
   (or (discriminate (interface-target-discrimination-tree interface) interface)
       (ecase if-does-not-exist

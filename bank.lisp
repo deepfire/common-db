@@ -108,5 +108,5 @@
 ;;;
 ;;; LOADABLE
 ;;;
-(defmethod extract-loadable ((type (eql :bank)) filename &key entry-point)
+(defmethod loadable:extract-loadable ((type (eql :bank)) filename &key entry-point)
   (loadable:make-loadable (load-bank-extents filename) :filename filename :entry-point entry-point))
