@@ -108,11 +108,6 @@ which doesn't really exists as a single entity, on pipelined CPUs."))
    "The backend must provide access to an illusion of a program counter,
 which doesn't really exists as a single entity, on pipelined CPUs."))
 
-(defgeneric save-core-pipeline (core &key trail-important)
-  (:documentation
-   "The provided default method copies CORE's pipeline into backing store,
-using CURRENT-CORE-MOMENT and CURRENT-CORE-TRAIL.  TRAIL-IMPORTANT provides means to specify
-the importance of the trail; it defaults to T."))
 (defgeneric finish-core-pipeline (core)
   (:documentation
    "The backend must provide a method which is expected to make sure that
@@ -389,8 +384,9 @@ return the corresponding trap."))
                                                           (when *log-state-changes*
                                                             (core-report o "changed state from ~S to ~S" from to)))))
   (unless (core-running-p o)
-    (setf (saved-core-moment o) (current-core-moment o)
-          (saved-core-trail o) (current-core-trail o)))
+    (save-core-moment o)
+    (save-core-trail o)
+    (setf (core-trail-important-p o) nil))
   (mapcar (curry #'apply #'state:set-transition-action (core-machine o)) *core-transitions*))
 
 (defmethod stop-to-free ((core general-purpose-core) &key address moment-changed (insn-execution-limit nil iel-specified) &allow-other-keys)
@@ -768,7 +764,9 @@ BREAKPOINT is released when the form is exited, by any means."
            (remove-from-plist platform-args :stop-cores-p))))
 
 (defmethod reset-core :around ((o general-purpose-core))
-  (save-core-pipeline o :trail-important nil)
+  (save-core-moment o)
+  (save-core-trail o)
+  (setf (core-trail-important-p o) nil)
   (mapc #'reset-core (core-slaves o))
   (call-next-method))
 
@@ -799,10 +797,17 @@ BREAKPOINT is released when the form is exited, by any means."
   (declare (ignore trail))
   (setf (core-trail-important-p o) t))
 
-(defmethod save-core-pipeline ((o general-purpose-core) &key (trail-important t))
-  (setf (saved-core-moment o) (current-core-moment o)
-        (saved-core-trail o) (current-core-trail o)
-        (core-trail-important-p o) trail-important))
+(defmethod save-core-moment ((o general-purpose-core))
+  (setf (saved-core-moment o) (current-core-moment o)))
+
+(defmethod save-core-trail ((o general-purpose-core))
+  (setf (saved-core-trail o) (current-core-trail o)))
+
+(defmethod restore-core-moment ((o general-purpose-core))
+  (setf (current-core-moment o) (saved-core-moment o)))
+
+(defmethod restore-core-trail ((o general-purpose-core))
+  (setf (current-core-trail o) (saved-core-trail o)))
 
 (defmethod (setf pc) :before (value (o core))
   "The moment we change PC knowingly, CORE's stop reason ceases to matter."
@@ -816,7 +821,8 @@ BREAKPOINT is released when the form is exited, by any means."
                                     :watch-period watch-period :iteration-period iteration-period :run-time run-iteration-limit))
 
 (defmethod analyse-core :before ((o general-purpose-core))
-  (save-core-pipeline o))
+  (save-core-moment o)
+  (save-core-trail o))
 
 (defmethod analyse-core :after ((o general-purpose-core))
   (setf (core-stop-reason o) (or (deduce-stop-reason o)
@@ -857,10 +863,10 @@ is performed."
   (let ((trail (make-neutral-trail core))
         (moment (make-neutral-moment core (loadable:loadable-entry-point loadable))))
     (setf (saved-core-trail core) trail
-          (current-core-trail core) trail
-          (core-trail-important-p core) nil ; just done it manually
           (saved-core-moment core) moment
-          (current-core-moment core) moment)))
+          (core-trail-important-p core) nil) ; will do it manually
+    (restore-core-trail core)
+    (restore-core-moment core)))
 
 (defun run-core-asynchronous (core &optional address (moment-changed (not (null address))))
   (prog1 (state core)

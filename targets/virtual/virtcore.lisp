@@ -118,7 +118,8 @@
     "PCdec ~8,'0X, PCexec ~8,'0X, PCmem ~8,'0X, PCwb ~8,'0X" dec exec mem wb)
 
 (defmethod initialize-instance :after ((o virtcore) &key &allow-other-keys)
-  (save-core-pipeline o))
+  (save-core-moment o)
+  (save-core-trail o))
 
 ;;;;
 ;;;; Moment/trail API
@@ -222,8 +223,9 @@
   (interface-attach-target iface)
   (interface-stop-target iface)
   (freeze-core-slaves core)
-  (setf (saved-core-moment core) (current-core-moment core)
-        (saved-core-trail core) (current-core-trail core))
+  (save-core-moment core)
+  (save-core-trail core)
+  (setf (core-trail-important-p core) nil)
   nil)
 
 (defmethod step-core-asynchronous ((core virtcore) &optional step-slaves)

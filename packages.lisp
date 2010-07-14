@@ -363,12 +363,16 @@
    #:set-current-core-moment
    #:make-neutral-moment
    #:derive-moment
+   #:save-core-moment
+   #:restore-core-moment
    #:reinstate-saved-moment
    ;; trail
    #:trail
    #:trail-decode
    #:current-core-trail
    #:set-current-core-trail
+   #:save-core-trail
+   #:restore-core-trail
    #:make-neutral-trail
    #:listify-trail
    #:parse-trail
@@ -428,7 +432,6 @@
    #:fpr-by-name
    #:set-fpr-by-name
    ;; pipeline
-   #:save-core-pipeline
    #:finish-core-pipeline
    #:patch-core-pipeline-reginstances
    #:core-pipeline-addresses

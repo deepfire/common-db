@@ -132,9 +132,9 @@
             (set-gpr o i val))
       (format t ";; restoring moment ~A and trail ~A~%" moment trail)
       (setf (saved-core-trail o) trail
-            (current-core-trail o) trail
-            (saved-core-moment o) moment
-            (current-core-moment o) moment))))
+            (saved-core-moment o) moment)
+      (restore-core-trail o)
+      (restore-core-moment o))))
 
 (defun apply-bank (core bank)
   "This function expects a clean, post-reset core."
