@@ -22,19 +22,22 @@
 
 (in-package :common-db)
 
-(defun simple-trace (&optional count &key (core *core*) step-slaves)
+(defun simple-trace (&optional count &key (core *core*) (step-lightly t) step-slaves print-trail)
   #+help-ru
   "Произвести простую трассировку."
   (declare (type (or null (integer -1)) count))
-  (with-temporary-state (core :stop)
-    (oneline-report)
+  (with-maybe-temporary-state (core :stop step-lightly)
+    (oneline-report :prefix "   0" :print-trail print-trail)
     (unwind-protect
-         (iter (for i from 0)
+         (iter (for i from 1)
                (until (when count
                         (minusp (decf count))))
-               (step-core-synchronous core step-slaves)
-               (oneline-report :prefix (format nil "~4D" i)))
-      (free-to-stop core))
+               (if step-lightly
+                   (step-core-synchronous core step-slaves)
+                   (step 1 :display nil :step-slaves step-slaves))
+               (oneline-report :prefix (format nil "~4D" i) :print-trail print-trail))
+      (when step-lightly 
+        (free-to-stop core)))
     (values)))
 
 (defun count-trace (addr-or-sym &rest run-args)
