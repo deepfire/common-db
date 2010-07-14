@@ -229,8 +229,7 @@
   "Произвести COUNT шагов, пропуская вложенные вызовы."
   (with-temporary-state (core :stop)
     ;; re-implementing the stop-to-free protocol, what's to say...
-    (setf (current-core-moment core) (derive-moment (saved-core-moment core)
-                                                    (or (moment-fetch (saved-core-moment core)) (default-core-pc core))))
+    (reinstate-saved-moment core)
     ;; shall we use OTC/TRACE-MODE here, instead (wouldn't that be a lie)?
     (if-let ((start-fn-symbol (addrsym (moment-fetch (saved-core-moment core)))))
             (callog :until start-fn-symbol :core core :step-slaves step-slaves :report-normal-returns report-normal-returns)
