@@ -111,6 +111,10 @@
 of registers belonging to devices registered within TARGET."
   (register-instance (target-enumpool target) name))
 
+(defun target-reginstance-by-id (target id)
+  "Find a register instance by its TARGET-local ID."
+  (register-instance-by-id (target-enumpool target) id))
+
 (defun target-reg-addr (target name)
   "Return address of the memory-mapped register from unified namespace of registers belonging
 to devices registered within TARGET."

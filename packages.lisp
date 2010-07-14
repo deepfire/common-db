@@ -327,6 +327,7 @@
    #:add-target-device
    #:remove-target-device
    #:target-reginstance
+   #:target-reginstance-by-id
    #:target-reg-addr
    #:target-reg
    #:set-target-reg
