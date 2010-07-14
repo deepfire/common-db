@@ -564,14 +564,14 @@
    #:capture-state-using-state
    #:capture-state
    #:apply-state
+   #:apply-bank
    #:write-state-to-stream
    #:write-state
    #:write-core-state
    #:read-state-for-core
    #:emit-nonmemory-state-restorer
-   #:state-restorer-as-memory
-   #:write-state-restorer-bank
-   #:apply-bank))
+   #:state-restorer-extents
+   #:write-state-restorer-bank))
 
 (defpackage #:sysdev ;; needed by common-db
   (:use :common-lisp :alexandria :pergamum :iterate :discrimination :isa :isa-mips :assem :assem-mips :setc :bitmop :device-model
@@ -661,10 +661,6 @@
    #:mips-tlb-entry-hi
    #:mips-tlb-entry-lo0
    #:mips-tlb-entry-lo1
-   ;; state.lisp
-   #:state-restorer-as-memory
-   #:write-state-restorer-bank
-   #:apply-bank
    ;; insanity-lurks-nearby.lisp
    #:+insane-trampoline-address+))
 

@@ -383,24 +383,45 @@ address to be different from ADDRESS."
   (write-line "Press Enter to continue...")
   (read-line))
 
-(defun replay (filename &key (core *core*))
+(defun save (filename &rest args &key (core *core*) (state t) bank &allow-other-keys)
   #-help-ru
-  "Reset CORE and apply state stored in FILENAME."
+  "Save CORE's state into FILENAME, when STATE is non-NIL, and/or to 'FILENAME.bank',
+in the bank format, when BANK is non-NIL."
   #+help-ru
-  "Сбросить ядро, затем восстановив состояние из файла."
-  (reset :core core)
-  (apply-state core (read-state-for-core core filename)))
+  "Сохранить состояние ядра в файл, в виде чистого состояния, либо в указанное имя файла
+с расширением '.bank', в виде банка, исполнение которого приводит к восстановлению
+заданного состояния."
+  (lret ((pathname (etypecase filename
+                     (pathname filename)
+                     (string (parse-namestring filename))))
+         (core-state (apply #'capture-state core (remove-from-plist args :core :state :bank))))
+    (when state
+      (write-state core-state pathname))
+    (when bank
+      (write-state-restorer-bank core core-state (make-pathname :defaults pathname :type "bank")))))
 
-(defun substate (&optional filename &rest args &key (core *core*) (pause t) &allow-other-keys)
+(defun testate (&rest args &key filename (core *core*) (state t) bank (pause t) &allow-other-keys)
   #-help-ru
   "Save current state, reset CORE and then apply the saved state."
   #+help-ru
   "Сохранить состояние текущего ядра, сбросить состояние системы,
 и затем применить сохранённое состояние."
-  (lret ((state (apply #'capture-state core (remove-from-plist args :core :pause))))
-    (when filename
-      (write-state state filename))
+  (lret ((state (apply #'save filename :core core :state state :bank bank
+                       (remove-from-plist args :filename :core :state :bank :pause))))
     (when pause
       (pause))
     (reset :core core)
     (apply-state core state)))
+
+(defun restore (filename &key (core *core*))
+  #-help-ru
+  "Reset CORE and apply state stored in FILENAME."
+  #+help-ru
+  "Сбросить ядро, затем восстановив состояние из файла."
+  (let ((pathname (etypecase filename
+                    (pathname filename)
+                    (string (parse-namestring filename)))))
+    (reset :core core)
+    (switch ((pathname-type pathname) :test #'equal)
+      ("bank" (apply-bank core filename))
+      (t      (apply-state core filename)))))

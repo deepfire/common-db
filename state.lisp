@@ -77,7 +77,12 @@
    :virtual-pages nil))
 
 (defgeneric capture-state-using-state (core state &key regs fpr tlb page-size physical-pages physical-cells virtual-pages))
-(defgeneric apply-state (core state))
+(defgeneric apply-state (core state)
+  (:method :around (core state)
+    (apply-state core (etypecase state
+                        (state state)
+                        ((or stream string pathname)
+                         (read-state-for-core core state))))))
 (defgeneric write-state-to-stream (stream state) (:method (stream (o state))))
 (defgeneric emit-nonmemory-state-restorer (segment state)
   (:documentation
@@ -131,6 +136,16 @@
             (saved-core-moment o) moment
             (core-moment o) moment))))
 
+(defun apply-bank (core bank)
+  "This function expects a clean, post-reset core."
+  (write-u8-extents core
+                    (etypecase bank
+                      (list bank)
+                      (loadable:loadable
+                       (loadable:loadable-sections bank))
+                      ((or string pathname)
+                       (loadable:loadable-sections (loadable:extract-loadable :bank bank :entry-point (default-core-pc core)))))))
+
 ;;;;
 ;;;; Serialisation/deserialisation
 ;;;;
@@ -167,6 +182,20 @@
 (defun write-core-state (core filename &rest args)
   (write-state (apply #'capture-state core args) filename))
 
+(defun state-restorer-extents (core state &key (entry-point (default-core-pc core)))
+  "Produce a memory extent list suitable for reproduction of STATE on CORE, including memory.
+ENTRY-POINT specifies at which the execution is to be started, and where the
+state restoration procedure is to be emitted."
+  (declare (type (or null (integer 0)) entry-point))
+  (with-slots (tlb virtual-pages physical-pages page-size) state
+    (append
+     (list (make-extent 'extent entry-point (segment-active-vector (emit-nonmemory-state-restorer (make-instance 'segment) state))))
+     (mapcar (curry #'rebase (curry #'virt-to-phys (tlb-address-map core tlb page-size))) virtual-pages)
+     physical-pages)))
+
+(defun write-state-restorer-bank (core state filename &key (entry-point (default-core-pc core)))
+  (bank:write-extents-as-bank filename (state-restorer-extents core state :entry-point entry-point)))
+
 (defun read-state-for-core (core state-stream-or-filename &aux (*read-base* #x10))
   (with-open-file (stream state-stream-or-filename)
     (lret ((state (make-instance (read stream))))
@@ -184,31 +213,3 @@
                 (:tlb (setf tlb (mapcar (curry #'parse-tlb-entry (second form)) (third form))))
                 (:virtual-pages (setf virtual-pages (read-extent-list stream)))
                 (:physical-pages (setf physical-pages (read-extent-list stream)))))))))
-
-;;;;
-;;;; Code-driven replay
-;;;;
-(defun state-restorer-as-memory (core state &key (entry-point (default-core-pc core)))
-  "Produce a memory extent list suitable for reproduction of STATE on CORE, including memory.
-ENTRY-POINT specifies at which the execution is to be started, and where the
-state restoration procedure is to be emitted."
-  (declare (type (or null (integer 0)) entry-point))
-  (with-slots (tlb virtual-pages physical-pages page-size) state
-    (append
-     (list (make-extent 'extent entry-point (segment-active-vector (emit-nonmemory-state-restorer (make-instance 'segment) state))))
-     (mapcar (curry #'rebase (curry #'virt-to-phys (tlb-address-map core tlb page-size))) virtual-pages)
-     physical-pages)))
-
-(defun write-state-restorer-bank (core state filename &key (entry-point (default-core-pc core)))
-  (bank:write-extents-as-bank filename (state-restorer-as-memory core state :entry-point entry-point)))
-
-(defun apply-bank (core bank)
-  "This function expects a clean, post-reset core."
-  (write-u8-extents core
-                    (etypecase bank
-                      (list bank)
-                      (loadable:loadable
-                       (loadable:loadable-sections bank))
-                      ((or string pathname)
-                       (loadable:loadable-sections (loadable:extract-loadable :bank bank :entry-point (default-core-pc core))))))
-  (run-core-synchronous core))
