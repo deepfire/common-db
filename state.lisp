@@ -83,13 +83,13 @@
                         (state state)
                         ((or stream string pathname)
                          (read-state-for-core core state))))))
-(defgeneric write-state-to-stream (stream state) (:method (stream (o state))))
+(defgeneric write-state-to-stream (stream state) (:method (stream (o state)) (declare (ignore stream))))
 (defgeneric emit-nonmemory-state-restorer (segment state)
   (:documentation
    "Emit code to restore STATE (obviously, excluding memory state) into SEGMENT."))
 
 (defmethod capture-state-using-state ((o mmu-core) state &key regs fpr tlb page-size physical-pages physical-cells virtual-pages)
-  (declare (ignore regs fpr tlb page-size physical-pages physical-cells virtual-pages)))
+  (declare (ignore state regs fpr tlb page-size physical-pages physical-cells virtual-pages)))
 
 (defun capture-state (core &rest args &key regs fpr (page-size (current-page-size core)) physical-pages physical-cells (virtual-pages t) (tlb virtual-pages))
   "Assume :DEBUG state."
