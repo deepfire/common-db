@@ -102,6 +102,10 @@ This responsibility is on the concrete classes.")
   (:documentation
    "The specific core method must return the address of the instruction
 at the decode stage of TRAIL."))
+(defgeneric trail-execute (trail)
+  (:documentation
+   "The specific core method must return the address of the instruction
+at the first execute stage of TRAIL."))
 
 (defgeneric pc (core)
   (:documentation
@@ -782,6 +786,17 @@ BREAKPOINT is released when the form is exited, by any means."
 ;;; *** RESET ***
 
 ;;;     PIPELINE
+(defmethod pc ((o general-purpose-core))
+  "Access to an illusion of a program counter, which doesn't really
+exists as a single entity, on pipelined CPUs."
+  (cond ((or (core-running-p o)
+             (null (core-stop-reason o)))
+         (moment-fetch (current-core-moment o)))
+        ((typep (core-stop-reason o) 'hardware-trap)
+         (trail-decode (saved-core-trail o)))
+        (t
+         (trail-execute (saved-core-trail o)))))
+
 (defmethod core-pipeline-addresses :around ((o general-purpose-core) &optional cached)
   (if cached
       (list* (moment-fetch (saved-core-moment o)) (listify-trail (saved-core-trail o)))

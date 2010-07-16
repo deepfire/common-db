@@ -68,24 +68,11 @@
               ,@failure-body
               (signal-test-error ',condition ,@condition-parameters :actual ,actual :expected ,expected))))))
 
-(defmacro with-interface-cushion (&body body)
+(defmacro defcomdbtest (suite name lambda-list attributes &body body)
   (with-gensyms (primary interface-error)
-    `(multiple-value-bind (,primary ,interface-error) (with-interface-error-trap-and-return nil ,@body)
-       (if (typep ,interface-error 'interface-error)
-           ,interface-error
-           ,primary))))
-
-(defmacro defcomdbtest (suite name prerequisites lambda-list &body body)
-  `(deftest ,suite ,name ,prerequisites ,lambda-list
-     (with-interface-cushion
-       ,@body)))
-
-(defmacro defcomdbtest-expected-failure (suite name prerequisites lambda-list &body body)
-  `(deftest-expected-failure ,suite ,name ,prerequisites ,lambda-list
-     (with-interface-cushion
-       ,@body)))
-
-(defmacro defcomdbtest-unstable-failure (suite name prerequisites lambda-list &body body)
-  `(deftest-unstable-failure ,suite ,name ,prerequisites ,lambda-list
-     (with-interface-cushion
-       ,@body)))
+    `(deftest ,suite ,name ,lambda-list ,attributes
+       (multiple-value-bind (,primary ,interface-error) (with-interface-error-trap-and-return nil
+                                                          ,@body)
+         (if (typep ,interface-error 'interface-error)
+             ,interface-error
+             ,primary)))))

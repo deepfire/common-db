@@ -369,6 +369,7 @@
    ;; trail
    #:trail
    #:trail-decode
+   #:trail-execute
    #:current-core-trail
    #:set-current-core-trail
    #:save-core-trail
@@ -793,10 +794,7 @@
    #:invisibility-failure
    #:expect-formatted-value
    #:expect-core-fetch-address
-   #:with-interface-cushion
    #:defcomdbtest
-   #:defcomdbtest-expected-failure
-   #:defcomdbtest-unstable-failure
    ;;
    #:emit-r1-complex-jumpclear
    #:emit-r1-fff-target+18-end+40-loading-sequence

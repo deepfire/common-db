@@ -24,41 +24,41 @@
 
 (set-namespace :interface :core)
 
-(defcomdbtest :perf memory-block-io-speed () (core &aux (target (backend core)))
+(defcomdbtest :perf memory-block-io-speed (core &aux (target (backend core))) ()
   (format nil "~D kb/sec"
           (with-measured-performance (size #x40000 :type 'integer :scale 512)
             (test-target-memory target #x0 size :if-fails :print-checksum))))
 
-(defcomdbtest :perf memory-word-read-speed () (core &aux (target (backend core)))
+(defcomdbtest :perf memory-word-read-speed (core &aux (target (backend core))) ()
   (format nil "~D word reads/sec"
           (with-measured-performance (size #x2000 :type 'integer)
             (iter (repeat size) (memory-ref target #x0)))))
 
-(defcomdbtest :perf gpr-read-speed () (core)
+(defcomdbtest :perf gpr-read-speed (core) ()
   (setc (state core) :debug)
   (format nil "~D $ra reads/sec"
           (with-measured-performance (size #x1000 :type 'integer)
             (iter (repeat size) (devreg core :ra)))))
 
-(defcomdbtest :perf cop0-read-speed () (core)
+(defcomdbtest :perf cop0-read-speed (core) ()
   (setc (state core) :debug)
   (format nil "~D cop0.cause reads/sec"
           (with-measured-performance (size #x800 :type 'integer)
             (iter (repeat size) (devreg core :cause)))))
 
-(defcomdbtest :perf debug-state-change-speed () (core)
+(defcomdbtest :perf debug-state-change-speed (core) ()
   (setc (state core) :debug)
   (format nil "~D debug->stop->debug transitions/sec"
           (with-measured-performance (size #x100 :type 'integer)
             (iter (repeat size) (with-temporary-state (core :stop))))))
 
-(defcomdbtest :perf heavy-step-speed () (core)
+(defcomdbtest :perf heavy-step-speed (core) ()
   (setc (state core) :debug)
   (format nil "~D debug steps/sec"
           (with-measured-performance (size #x100 :type 'integer)
             (iter (repeat size) (step 1 :display nil)))))
 
-(defcomdbtest :perf light-step-speed () (core)
+(defcomdbtest :perf light-step-speed (core) ()
   (setc (state core) :stop)
   (format nil "~D light steps/sec"
           (with-measured-performance (size #x100 :type 'integer)

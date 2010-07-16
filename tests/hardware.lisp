@@ -29,20 +29,20 @@
 (defvar *failure-inspector*)
 (defvar *log2-iota* (mapcar (curry #'ash 1) (iota 31 :start 0)))
 
-(defcomdbtest :target internal-memory () (target)
+(defcomdbtest :target internal-memory (target) ()
   (expect-success (test-target-memory target (base (memory-region-extent (target-device target '(internal-memory 0))))
                                       #x1000)))
 
-(defcomdbtest :target external-memory () (target)
+(defcomdbtest :target external-memory (target) ()
   (expect-success (test-target-memory target (base (memory-region-extent (target-device target '(ram 0))))
                                       #x1000)))
 
-(defcomdbtest :mips step-one () (core)
+(defcomdbtest :mips step-one (core) ()
   (reset :core core)
   (step-core-synchronous core)
   t)
 
-(defcomdbtest :mips run-one () (core)
+(defcomdbtest :mips run-one (core) ()
   (reset :core core)
   (settrace 1)
   (run-core-asynchronous core #x80000000)
@@ -51,7 +51,7 @@
   (setf (state core) :debug)
   t)
 
-(defcomdbtest :mips hw-breakpoint-simple () (core)
+(defcomdbtest :mips hw-breakpoint-simple (core) ()
   (reset :core core)
   (with-bioable-mips-segment (core #x0)
     (emit-nops #x80))
@@ -101,22 +101,22 @@
       (expect-value marker (test-trans-funcall
                             core segment (base (memory-region-extent (target-device (backend core) '(internal-memory 0)))) marker)))))
 
-(defcomdbtest :mips trans-funcall-kseg1-stop () (core)
+(defcomdbtest :mips trans-funcall-kseg1-stop (core) ()
   (run-trans-funcall-test core kseg1 :stop))
 
-(defcomdbtest :mips trans-funcall-kseg1-debug () (core)
+(defcomdbtest :mips trans-funcall-kseg1-debug (core) ()
   (run-trans-funcall-test core kseg1 :debug))
 
-(defcomdbtest :mips trans-funcall-kseg0-stop () (core)
+(defcomdbtest :mips trans-funcall-kseg0-stop (core) ()
   (run-trans-funcall-test core kseg0 :stop))
 
-(defcomdbtest :mips trans-funcall-kseg0-debug () (core)
+(defcomdbtest :mips trans-funcall-kseg0-debug (core) ()
   (run-trans-funcall-test core kseg0 :debug))
 
-(defcomdbtest :mips trans-funcall-kuseg-stop () (core)
+(defcomdbtest :mips trans-funcall-kuseg-stop (core) ()
   (run-trans-funcall-test core kuseg :stop))
 
-(defcomdbtest :mips trans-funcall-kuseg-debug () (core)
+(defcomdbtest :mips trans-funcall-kuseg-debug (core) ()
   (run-trans-funcall-test core kuseg :debug))
 
 (defun emit-r1-fff-target+18-end+40-loading-sequence (core address)
@@ -139,7 +139,7 @@
     (emit* :nop)
     (emit* :nop)))
 
-(defcomdbtest :mips free-debug-stop () (core)
+(defcomdbtest :mips free-debug-stop (core) ()
   (reset :core core)
   (unwind-protect
        (progn
@@ -373,17 +373,17 @@
 
 (defparameter *debug-stop-debug-test-pack*
   `(#x80000000
-    (:dsd-prebranch-production     emit-r1-jumpclear-0x14-0x30                   #x10 ,(make-expect-r1 8)     t t #x80000010 production-stop-debug-stop)
-    (:dsd-prebranch-production-jal emit-r1-jumpclear-0x14-0x30-jal               #x10 ,(make-expect-r1 8)     t t #x80000010 production-stop-debug-stop)
-    (:dsd-prebranch-production-jr  emit-r1-jumpclear-0x14-0x30-jr                #x10 ,(make-expect-r1 8)     t t #x80000010 production-stop-debug-stop)
-    (:dsd-prebranch-production-dep emit-r1-jumpclear-0x14-0x30-dependent         #x10 ,(make-expect-r1 8)     t t #x80000010 production-stop-debug-stop)
-    (:dsd-branch-production        emit-r1-jumpclear-0x14-0x30                   #x10 ,(make-expect-r1 8)     t t #x80000014 production-stop-debug-stop)
-    (:dsd-branch-production-jal    emit-r1-jumpclear-0x14-0x30-jal               #x10 ,(make-expect-r1 8)     t t #x80000014 production-stop-debug-stop)
-    (:dsd-branch-production-jr     emit-r1-jumpclear-0x14-0x30-jr                #x10 ,(make-expect-r1 8)     t t #x80000014 production-stop-debug-stop)
-    (:dsd-branch-production-dep    emit-r1-jumpclear-0x14-0x30-dependent         #x10 ,(make-expect-r1 8)     t t #x80000014 production-stop-debug-stop)
-    (:dsd-jumpclear-production     emit-r1-fff-target+18-end+40-loading-sequence #x10 ,(make-expect-r1 #xfff) t t #x80000014 production-stop-debug-stop)))
+    (:dsd-prebranch-production     emit-r1-jumpclear-0x14-0x30                   #x10 ,(make-expect-r1 8)     t t :run #x80000010 production-stop-debug-stop)
+    (:dsd-prebranch-production-jal emit-r1-jumpclear-0x14-0x30-jal               #x10 ,(make-expect-r1 8)     t t :run #x80000010 production-stop-debug-stop)
+    (:dsd-prebranch-production-jr  emit-r1-jumpclear-0x14-0x30-jr                #x10 ,(make-expect-r1 8)     t t :run #x80000010 production-stop-debug-stop)
+    (:dsd-prebranch-production-dep emit-r1-jumpclear-0x14-0x30-dependent         #x10 ,(make-expect-r1 8)     t t :run #x80000010 production-stop-debug-stop)
+    (:dsd-branch-production        emit-r1-jumpclear-0x14-0x30                   #x10 ,(make-expect-r1 8)     t t :run #x80000014 production-stop-debug-stop)
+    (:dsd-branch-production-jal    emit-r1-jumpclear-0x14-0x30-jal               #x10 ,(make-expect-r1 8)     t t :run #x80000014 production-stop-debug-stop)
+    (:dsd-branch-production-jr     emit-r1-jumpclear-0x14-0x30-jr                #x10 ,(make-expect-r1 8)     t t :run #x80000014 production-stop-debug-stop)
+    (:dsd-branch-production-dep    emit-r1-jumpclear-0x14-0x30-dependent         #x10 ,(make-expect-r1 8)     t t :run #x80000014 production-stop-debug-stop)
+    (:dsd-jumpclear-production     emit-r1-fff-target+18-end+40-loading-sequence #x10 ,(make-expect-r1 #xfff) t t :run #x80000014 production-stop-debug-stop)))
 
-(defcomdbtest :mips cop0-read/write-stability () (core)
+(defcomdbtest :mips cop0-read/write-stability (core) ()
   (reset :core core)
   (let ((testval (random #x100000000)))
     (with-temporary-state (core :debug)
@@ -433,7 +433,8 @@
             (andf success (apply pack-runner-fn core test-name address more-test-args))
             (finally (return success))))))
 
-(defun run-maybe-swbreak-and-dsd-test (core name start-address insn-count successp &optional (trap-test-end t) (trap-exceptions t) break-addr (debug-stop-debug-fn 'values))
+(defun run-maybe-swbreak-and-dsd-test (core name start-address insn-count successp &optional (trap-test-end t) (trap-exceptions t) (tail-mode :run) break-addr (debug-stop-debug-fn 'values))
+  (declare (type (member :run :step) tail-mode))
   (unwind-protect
        (with-subtest (name)
          (when break-addr
@@ -443,16 +444,25 @@
              (expect-core-fetch-address core (fetch (+ break-addr 8))
                  (breakpoint-not-reached :breakpoint (+ break-addr 4))))
            (funcall debug-stop-debug-fn core))
-         (with-subtest ((format-symbol :keyword "~A-TEST-EXECUTED" name))
-           (with-maybe-free-hardware-breakpoints (trap-test-end core) ((test-end (+ start-address (* 4 insn-count))))
-             (with-maybe-free-hardware-breakpoints (trap-exceptions core) ((trap #xbfc00380))
-               (run-core-synchronous core :address (unless break-addr start-address))
-               (setf (state core) :debug)
-               (lret ((success (funcall successp core)))
-                 (when trap-test-end
-                   (expect-core-fetch-address core (fetch (+ start-address (* 4 (1+ insn-count))))
-                       (breakpoint-not-reached :breakpoint (+ start-address (* 4 insn-count)))
-                     (funcall *failure-inspector*))))))))
+         (with-subtest ((format-symbol :keyword (case tail-mode
+                                                  (:run "~A-TEST-EXECUTED")
+                                                  (:step "~A-TEST-STEPPED")) name))
+           (let ((test-end-addr (+ start-address (* 4 insn-count))))
+             (case tail-mode
+               (:run
+                (with-maybe-free-hardware-breakpoints (trap-test-end core) ((test-end test-end-addr))
+                  (with-maybe-free-hardware-breakpoints (trap-exceptions core) ((trap #xbfc00380))
+                    (run-core-synchronous core :address (unless break-addr start-address))
+                    (setf (state core) :debug))))
+               (:step
+                (iter (for exec-addr = (+ 4 (trail-decode (core-trail core))))
+                      (until (= exec-addr test-end-addr))
+                      (step 1 :display nil))))
+             (lret ((success (funcall successp core)))
+               (when trap-test-end
+                 (expect-core-fetch-address core (fetch (+ start-address (* 4 (1+ insn-count))))
+                     (breakpoint-not-reached :breakpoint (+ start-address (* 4 insn-count)))
+                   (funcall *failure-inspector*)))))))
     (clear-sw-breaks)))
 
 (defun step-through-test (core name start-address insn-count successp &optional trap-test-end trap-exceptions &aux (*print-right-margin* 120) (*log-state-changes* nil))
@@ -468,7 +478,7 @@
 ;;;; Run the packed tests.
 ;;;;
 
-(defcomdbtest :mips hw-breakpoints () (core)
+(defcomdbtest :mips hw-breakpoints (core) ()
   (reset :core core)
   (with-bioable-mips-segment (core #x0)
     (emit-nops 4))
@@ -497,7 +507,7 @@
       (expect-core-fetch-address core (fetch #x80000010)
           (breakpoint-not-reached :breakpoint 1)))))
 
-(defcomdbtest :mips watchpoints () (core &aux insns)
+(defcomdbtest :mips watchpoints (core &aux insns) ()
   (reset :core core)
   (unwind-protect
        (with-temporary-state (core :stop)
@@ -529,7 +539,7 @@
     (hw-break 0 nil)
     (hw-break 1 nil)))
 
-(defcomdbtest :mips sw-breakpoints () (core)
+(defcomdbtest :mips sw-breakpoints (core) ()
   (reset :core core)
   (emit-r1-fff-target+18-end+40-loading-sequence core #x0)
   (unwind-protect
@@ -549,21 +559,21 @@
            (expect-value #xfff (gpr-by-name core :at))))
     (clear-sw-breaks)))
 
-(defcomdbtest :mips run-through-jumpclear-full () (core)
+(defcomdbtest :mips run-through-jumpclear-full (core) ()
   (run-test-pack core #'run-maybe-swbreak-and-dsd-test *runner-stepper-test-pack*
                  (lambda ()
                    (syncformat t "~&Test stop reason: ~S/~S~%" (core-stop-reason core) (devreg-decode core :cause)))))
 
-(defcomdbtest :mips step-through-jumpclear-full () (core)
+(defcomdbtest :mips step-through-jumpclear-full (core) ()
   (run-test-pack core #'step-through-test *runner-stepper-test-pack*))
 
-(defcomdbtest :mips debug-stop-debug-jumpclear-swbreak-full () (core)
+(defcomdbtest :mips debug-stop-debug-jumpclear-swbreak-full (core) ()
   (run-test-pack core #'run-maybe-swbreak-and-dsd-test *debug-stop-debug-test-pack*
                  (lambda ()
                    (syncformat t "~&Test stop reason: ~S/~S~%" (core-stop-reason core) (devreg-decode core :cause)))
                  #x20))
 
-(defcomdbtest :mips debug-stop-debug-jumpclear-hwbreak-complex () (core)
+(defcomdbtest :mips debug-stop-debug-jumpclear-hwbreak-complex (core) ()
   (reset :core core)
   (unwind-protect
        (progn
@@ -591,7 +601,8 @@
     (hw-break 0 nil)
     (hw-break 1 nil)))
 
-(defcomdbtest-expected-failure :mips debug-stop-debug-jumpclear-swbreak-complex () (core)
+(defcomdbtest :mips debug-stop-debug-jumpclear-swbreak-complex (core)
+    (:expected-failure t)
   (reset :core core)
   (unwind-protect
        (progn
@@ -618,16 +629,20 @@
     (hw-break 1 nil)
     (clear-sw-breaks)))
 
-(defcomdbtest-unstable-failure :mips run-through-interrupt () (core)
+(defcomdbtest :mips run-through-interrupt (core)
+    (:unstable-failure t)
   (run-test-pack core #'run-maybe-swbreak-and-dsd-test *interrupt-test-pack* 'values #x9))
 
-(defcomdbtest-expected-failure :mips step-through-interrupt () (core)
+(defcomdbtest :mips step-through-interrupt (core)
+    (:expected-failure t)
   (run-test-pack core #'step-through-test *interrupt-test-pack*))
 
-(defcomdbtest-unstable-failure :mips run-through-interrupt-loop () (core)
+(defcomdbtest :mips run-through-interrupt-loop (core)
+    (:unstable-failure t)
   (run-test-pack core #'run-maybe-swbreak-and-dsd-test *interrupt-loop-test-pack* 'values #x14))
 
-(defcomdbtest-expected-failure :mips step-through-interrupt-loop () (core)
+(defcomdbtest :mips step-through-interrupt-loop (core)
+    (:expected-failure t)
   (run-test-pack core #'step-through-test *interrupt-loop-test-pack*))
 
 (defun manual-test (core address pack-test)

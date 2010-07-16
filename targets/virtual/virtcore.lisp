@@ -25,19 +25,27 @@
 
 (set-namespace :core :target :interface)
 
-(defun pipeline-reg (core sel)
+(defstruct pipe
+  (pcf #xbfc00000)
+  (pcd 0) (dinsn 0)
+  (pce 0) (einsn 0)
+  (pcm 0)
+  (pcw 0))
+
+(defun pipeline-reg (core sel &aux
+                     (pipe (virtcore-pipe core)))
   (if (eq (state core) :free)
       (ecase sel
-        (#x0 (virtcore-pcf core))
-        (#x1 (virtcore-pcd core))
-        (#x2 (virtcore-pce core))
-        (#x3 (virtcore-pcm core))
-        (#x4 (virtcore-pcw core))
-        (#x5 (virtcore-insn core)))
+        (#x0 (pipe-pcf pipe))
+        (#x1 (pipe-pcd pipe))
+        (#x2 (pipe-pce pipe))
+        (#x3 (pipe-pcm pipe))
+        (#x4 (pipe-pcw pipe))
+        (#x5 (pipe-dinsn pipe)))
       (ecase sel
         (#x0 (moment-fetch (saved-core-moment core)))
-        (#x1 (trail-dec (saved-core-trail core)))
-        (#x2 (trail-exec (saved-core-trail core)))
+        (#x1 (trail-decode (saved-core-trail core)))
+        (#x2 (trail-execute (saved-core-trail core)))
         (#x3 (trail-mem (saved-core-trail core)))
         (#x4 (trail-wb (saved-core-trail core)))
         (#x5 (moment-opcode (saved-core-moment core))))))
@@ -60,13 +68,7 @@
 (defun (setf virt-hilo) (val core sel) (setf (aref (virtcore-hilo core) sel) val))
 
 (define-device-class virtcore :core (mipsel torn-pipeline-mips-core)
-  ((pcf :accessor virtcore-pcf :initarg :pcf)
-   (pcd :accessor virtcore-pcd :initarg :pcd)
-   (insn :accessor virtcore-insn :initarg :insn)
-   (pce :accessor virtcore-pce :initarg :pce)
-   (pcm :accessor virtcore-pcm :initarg :pcm)
-   (pcw :accessor virtcore-pcw :initarg :pcw)
-   (insn-exec-limit :accessor virtcore-insn-exec-limit :type (or null (integer 1)) :initarg :insn-exec-limit)
+  ((pipe :accessor virtcore-pipe :initarg :pipe)
    (state :accessor virtcore-state :type (member :running :stopped :stopped-kernel-mode) :initarg :state)
    (gpr :reader virtcore-gpr :initarg :gpr)
    (fpr :reader virtcore-fpr :initarg :fpr)
@@ -74,13 +76,8 @@
    (cop1control :reader virtcore-cop1control :initarg :cop1)
    (hilo :reader virtcore-hilo :initarg :hilo))
   (:default-initargs
-   :pcf #xbfc00000
-   :pcd #x0
-   :insn 0
-   :pce #x0
-   :pcm #x0
-   :pcw #x0
-   :insn-exec-limit nil
+   :pipe (make-pipe)
+   :insn-instruction-limit 0
    :state :running
    :gpr (make-array 32 :element-type '(unsigned-byte 32))
    :fpr (make-array 32 :element-type '(unsigned-byte 32))
@@ -89,13 +86,13 @@
    :hilo (make-array 2 :element-type '(unsigned-byte 32))
    :default-sw-breakpoint-type 'virtcore-mips-software-breakpoint
    :traps          (alist-hash-table
-                    `((#xbfc00000 . ,(make-instance 'virtcore-vector-trap :address #xbfc00000))
-                      (#x80000000 . ,(make-instance 'virtcore-vector-trap :address #x80000000))
-                      (#x80000180 . ,(make-instance 'virtcore-vector-trap :address #x80000180))
-                      (#x80000200 . ,(make-instance 'virtcore-vector-trap :address #x80000200))
-                      (#xbfc00200 . ,(make-instance 'virtcore-vector-trap :address #xbfc00200))
-                      (#xbfc00380 . ,(make-instance 'virtcore-vector-trap :address #xbfc00380))
-                      (#xbfc00400 . ,(make-instance 'virtcore-vector-trap :address #xbfc00400))))
+                    `((#xbfc00000 ,(make-instance 'virtcore-vector-trap :address #xbfc00000))
+                      (#x80000000 ,(make-instance 'virtcore-vector-trap :address #x80000000))
+                      (#x80000180 ,(make-instance 'virtcore-vector-trap :address #x80000180))
+                      (#x80000200 ,(make-instance 'virtcore-vector-trap :address #x80000200))
+                      (#xbfc00200 ,(make-instance 'virtcore-vector-trap :address #xbfc00200))
+                      (#xbfc00380 ,(make-instance 'virtcore-vector-trap :address #xbfc00380))
+                      (#xbfc00400 ,(make-instance 'virtcore-vector-trap :address #xbfc00400))))
    :hw-breakpoints (alist-hash-table
                     `((0 . ,(make-instance 'virtcore-mips-hardware-breakpoint :id 0 :address 0
                                            :memory-p nil :bound-p nil :read t :write nil :condition :equal))
@@ -109,8 +106,8 @@
             (:hilo virt-hilo (setf virt-hilo))))
 
 (defclass virtcore-trail (trail)
-  ((dec :accessor trail-dec :initarg :dec)
-   (exec :accessor trail-exec :initarg :exec)
+  ((dec :accessor trail-decode :initarg :dec)
+   (exec :accessor trail-execute :initarg :exec)
    (mem :accessor trail-mem :initarg :mem)
    (wb :accessor trail-wb :initarg :wb)))
 
@@ -122,55 +119,89 @@
   (save-core-trail o))
 
 ;;;;
+;;;; Simulation machinery basics
+;;;;
+(defun execute-insn (core insn address)
+  (declare (ignore core insn address)))
+
+(defun step-pipeline (core &optional address &aux
+                      (target (backend core))
+                      (pipe (virtcore-pipe core)))
+  (let ((nupipe (make-pipe :pcf (or address (+ (pipe-pcf pipe) (memory-device-byte-width target)))
+                           :pcd (pipe-pcf pipe)
+                           :pce (pipe-pcd pipe)
+                           :pcm (pipe-pce pipe)
+                           :pcw (pipe-pcm pipe)
+                           :dinsn (memory-ref target (pipe-pcf pipe))
+                           :einsn (pipe-einsn pipe))))
+    ;; Let's hope that assignments are atomic...
+    (setf (virtcore-pipe core) nupipe)
+    ;;
+    ;; The stuff below isn't C-c -safe..
+    ;;
+    ;; these checks should be partially deferred to ANALYSE-CORE
+    (when (zerop (decf (core-insn-execution-limit core)))
+      (setf (core-stop-reason core) (make-instance 'instruction-count-trap :core core)
+            (state core) :stopped))
+    (when (= (pipe-einsn pipe) (encode-mips-insn :break 0))
+      (setf (core-stop-reason core) (or (find-if (of-type 'software-breakpoint)
+                                                 (append (traps core (pipe-pcd pipe))
+                                                         (traps core (pipe-pce pipe))))
+                                        ;; XXX: missing information -- guessing SWbreak's address
+                                        (recognise-sw-breakpoint core (pipe-pce pipe)))
+            (state core) :stopped))))
+
+;;;;
 ;;;; Moment/trail API
 ;;;;
-(defmethod current-core-moment ((o virtcore))
-  (make-moment 'moment (virtcore-pcf o) (virtcore-insn o)))
+(defmethod current-core-moment ((o virtcore) &aux
+                                (pipe (virtcore-pipe o)))
+  (make-moment 'moment (pipe-pcf pipe) (pipe-dinsn pipe)))
 
-(defmethod set-current-core-moment ((o virtcore) (m moment))
-  (setc (virtcore-pcf o) (moment-fetch m)
-        (virtcore-insn o) (moment-opcode m)))
+(defmethod set-current-core-moment ((o virtcore) (m moment) &aux
+                                    (pipe (virtcore-pipe o)))
+  (setc (pipe-pcf pipe) (moment-fetch m)
+        (pipe-dinsn pipe) (moment-opcode m)))
 
 (defmethod make-neutral-moment ((o virtcore) address)
   (make-moment 'moment address 0))
 
-(defmethod current-core-trail ((o virtcore))
+(defmethod current-core-trail ((o virtcore) &aux
+                               (pipe (virtcore-pipe o)))
   (make-instance 'virtcore-trail
-                 :dec (virtcore-pcd o)
-                 :exec (virtcore-pce o)
-                 :mem (virtcore-pcm o)
-                 :wb (virtcore-pcw o)))
+                 :dec (pipe-pcd pipe)
+                 :exec (pipe-pce pipe)
+                 :mem (pipe-pcm pipe)
+                 :wb (pipe-pcw pipe)))
 
-(defmethod set-current-core-trail ((o virtcore) trail)
-  (setf (virtcore-pcd o) (trail-dec trail)
-        (virtcore-pce o) (trail-exec trail)
-        (virtcore-pcm o) (trail-mem trail)
-        (virtcore-pcw o) (trail-wb trail)))
+(defmethod set-current-core-trail ((o virtcore) trail &aux
+                                   (pipe (virtcore-pipe o)))
+  (setf (pipe-pcd pipe) (trail-decode trail)
+        (pipe-pce pipe) (trail-execute trail)
+        (pipe-pcm pipe) (trail-mem trail)
+        (pipe-pcw pipe) (trail-wb trail)))
 
 (defmethod make-neutral-trail ((o virtcore))
   (make-instance 'virtcore-trail :dec 0 :exec 0 :mem 0 :wb 0))
 
-(defmethod core-pipeline-addresses ((o virtcore) &optional cached)
+(defmethod core-pipeline-addresses ((o virtcore) &optional cached &aux
+                                    (pipe (virtcore-pipe o)))
   (declare (ignore cached))
-  (list (virtcore-pcf o) (virtcore-pcd o) (virtcore-pce o) (virtcore-pcm o) (virtcore-pcw o)))
-
-(defmethod pc ((o virtcore))
-  (cond ((core-running-p o) (virtcore-pcf o))
-        (t
-         (trail-dec (saved-core-trail o)))))
+  (list (pipe-pcf pipe) (pipe-pcd pipe) (pipe-pce pipe) (pipe-pcm pipe) (pipe-pcw pipe)))
 
 (defmethod (setf pc) (value (o virtcore))
-  (setf (virtcore-pcf o) value))
+  (setf (pipe-pcf (virtcore-pipe o)) value))
 
-(defmethod print-pipeline ((o virtcore) stream)
+(defmethod print-pipeline ((o virtcore) stream &aux
+                           (pipe (virtcore-pipe o)))
   (format stream "PIPELINE: ~8,'0X ~8,'0X ~8,'0X ~8,'0X ~8,'0X, ~8,'0X ~S~%"
-          (virtcore-pcf o)
-          (virtcore-pcd o)
-          (virtcore-pce o)
-          (virtcore-pcm o)
-          (virtcore-pcw o)
-          (virtcore-insn o)
-          (decode-mips-insn (virtcore-insn o)))
+          (pipe-pcf pipe)
+          (pipe-pcd pipe)
+          (pipe-pce pipe)
+          (pipe-pcm pipe)
+          (pipe-pcw pipe)
+          (pipe-dinsn pipe)
+          (decode-mips-insn (pipe-dinsn o)))
   (with-slots (dec exec mem wb) (saved-core-trail o)
     (format stream "SHADOW  : ~8,'0X ~8,'0X ~8,'0X ~8,'0X ~8,'0X, ~8,'0X ~S~%"
             (moment-fetch (saved-core-moment o)) dec exec mem wb (moment-opcode (saved-core-moment o))
@@ -182,12 +213,7 @@
 (defmethod reset-target-using-interface ((o virtual-target) interface)
   (declare (ignore interface))
   (when-let ((core (target-device o '(general-purpose-core 0) :continue)))
-    (setf (virtcore-pcf core) #xbfc00000
-          (virtcore-pcd core) 0
-          (virtcore-pce core) 0
-          (virtcore-pcm core) 0
-          (virtcore-pcw core) 0
-          (virtcore-insn core) 0)))
+    (setf (virtcore-pipe core) (make-pipe))))
 
 (defmethod stop-target-using-interface ((o virtual-target) interface)
   (declare (ignore interface))
@@ -199,25 +225,35 @@
               :running))))
 
 ;;;;
-;;;; Core API implementation
+;;;; Core API
 ;;;;
-(defmethod gpr ((core virtcore) gpr)
+(defmethod gpr ((o virtcore) gpr)
   (declare (ignore gpr)))
 
-(defmethod set-gpr ((core virtcore) gpr val)
+(defmethod set-gpr ((o virtcore) gpr val)
   (declare (ignore gpr val)))
 
-(defmethod finish-core-pipeline ((o virtcore))
-  )
+(defmethod fpr ((o virtcore) fpr)
+  (declare (ignore fpr)))
+
+(defmethod set-fpr ((o virtcore) fpr val)
+  (declare (ignore fpr val)))
+
+(defmethod flush-core-instruction-cache ((o virtcore)))
+(defmethod flush-core-data-cache ((o virtcore)))
+
+(defmethod finish-core-pipeline ((o virtcore)))
 
 (defmethod core-running-p ((o virtcore))
   (eq (virtcore-state o) :running))
 
-(defmethod analyse-core ((core virtcore))
-  )
+(defmethod analyse-core ((core virtcore)))
 
 (defmethod (setf core-running-p) ((run-p (eql t)) (o virtcore))
-  (setf (virtcore-state o) :running))
+  (setf (virtcore-state o) :running)
+  (with-sigint-trap t
+    (sleep 0.01)
+    (step-pipeline o)))
 
 (defmethod (setf core-running-p) ((run-p (eql nil)) (core virtcore) &aux (iface (backend (backend core))))
   (interface-attach-target iface)
@@ -255,8 +291,7 @@
 ;;;;
 ;;;; Breakpoints & traps
 ;;;;
-(defmethod set-core-insn-execution-limit ((o virtcore) ninsns)
-  (setf (virtcore-insn-exec-limit o) ninsns))
+(defmethod set-core-insn-execution-limit ((o virtcore) ninsns))
 
 (defclass virtcore-vector-trap (vector-trap) ())
 (defclass virtcore-mips-software-breakpoint (mips-software-breakpoint) ())

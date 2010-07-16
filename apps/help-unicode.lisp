@@ -1,6 +1,6 @@
 ;;; -*- Mode: LISP; Syntax: COMMON-LISP; Package: COMMON-DB; Base: 10 -*-
 ;;;
-;;;  (c) copyright 2009 by
+;;;  (c) copyright 2009-2010 by
 ;;;           Samium Gromoff (_deepfire@feelingofgreen.ru)
 ;;;
 ;;; This library is free software; you can redistribute it and/or
@@ -43,8 +43,9 @@
                                   автоматического определения.
     --virtual                   Активировать виртуальные интерфейс, целевое
                                   устройство и ядро.
-    --no-physical               Не искать физические целевые устройства.
-                                  Активируется при указании --virtual.
+    --physical                  Искать физические целевые устройства.
+                                  По умолчанию включено, если не указан ключ
+                                  --virtual.
     --no-parport                Не искать целевые устройства на портах EPP.
     --no-usb                    Не искать целевые устройства на шине USB.
     --no-scan                   Не сканировать интерфейсы.

@@ -67,7 +67,7 @@
 
 (defmethod memory-config-valid-for-platform-p ((o virtual-platform) (c memory-config))
   (memory-config-valid-for-device-classes-p
-   c (list (class-of (target-device (platform-target o) '(mport 0))))))
+   c (list (class-of-device (target-device (platform-target o) '(mport 0))))))
 
 (defgeneric apply-memory-config-using-mport (mport config)
   (:method :around ((o mport) (c memory-config))

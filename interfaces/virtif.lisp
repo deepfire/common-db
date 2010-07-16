@@ -35,7 +35,7 @@
   (when *verbose-interface-init*
     (syncformat t "NOTE: looking up attached virtif devices~%"))
   (when *virtual-interface-enabled*
-    (list t)))
+    (list 0)))
 
 (defmethod bus-populate-address ((o virtif-bus) address)
   (lret ((iface (make-instance 'virtif-interface :bus o :address address :version 0)))

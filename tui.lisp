@@ -1,8 +1,8 @@
 ;;; -*- Mode: LISP; Syntax: COMMON-LISP; Package: COMMON-DB; Base: 10; indent-tabs-mode: nil -*-
 ;;;
-;;;  (c) copyright 2009, ГУП НПЦ "Элвис"
+;;;  (c) copyright 2009-2010, ГУП НПЦ "Элвис"
 ;;;
-;;;  (c) copyright 2009 by
+;;;  (c) copyright 2009-2010 by
 ;;;           Samium Gromoff (_deepfire@feelingofgreen.ru)
 ;;;
 ;;; This library is free software; you can redistribute it and/or
@@ -114,8 +114,8 @@
     --list-platforms            List all known platforms and quit.
     --platform <platform-name>  Specify platform manually, instead of detection.
     --virtual                   Enable the virtual interface/target/core.
-    --no-physical               Omit looking for physical targets.  Defaults
-                                  to 'yes', when --virtual is specified.
+    --physical                  Look for physical targets.  Defaults to 'yes',
+                                  unless --virtual is specified.
     --no-parport                Omit looking for EPP-attached targets.
     --no-usb                    Omit looking for USB-attached targets.
     --no-scan                   Don't scan interfaces.
@@ -158,7 +158,7 @@
     (write-string "#+END_EXAMPLE") (terpri)))
 
 (defvar *standard-parameters* '((:load :string) (:core-multiplier :decimal) :early-eval :context :platform :memory-detection-threshold :eval))
-(defvar *standard-switches*   '(:no-rc :virtual :no-physical :no-parport :no-usb :no-scan :no-platform-init
+(defvar *standard-switches*   '(:no-rc :virtual :physical :no-parport :no-usb :no-scan :no-platform-init
                                 :list-contexts :list-platforms :help :help-en :version :no-memory-detection
                                 :disable-debugger :print-backtrace-on-errors :early-break-on-signals :break-on-signals
                                 :run-tests :ignore-test-failure :quit
@@ -192,7 +192,7 @@
        (with-quit-restart
          (destructuring-bind (&rest args &key (verbose verbose)
                                     (no-rc no-rc) early-eval
-                                    core-multiplier virtual (no-physical virtual) no-parport no-usb no-scan (no-platform-init no-platform-init)
+                                    core-multiplier virtual (physical (not virtual)) no-parport no-usb no-scan (no-platform-init no-platform-init)
                                     load eval run-tests ignore-test-failures quit
                                     examine-tlb log-pipeline-crit
                                     list-contexts context list-platforms platform
@@ -248,7 +248,7 @@
                (eval early-eval))
              (unless no-scan
                (with-retry-restarts ((retry () :report "Retry scanning interface busses."))
-                 (scan :physical (not no-physical) :virtual virtual
+                 (scan :physical physical :virtual virtual
                        :skip-platform-init no-platform-init)
                  (unless *current*
                    (error "~@<No devices were found attached to active busses.~:@>"))))

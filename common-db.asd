@@ -108,7 +108,7 @@
              ))
    ;;
    (:module "targets"
-            :depends-on ("interfaces")
+            :depends-on ("interfaces" "main")
             :components
             (#-disable-virtcore
 	     (:module "virtual"
