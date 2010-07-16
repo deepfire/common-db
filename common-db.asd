@@ -104,7 +104,7 @@
             ((:file "base")
              ;;
              (:file "performance" :depends-on ("base"))
-             (:file "test-hardware" :depends-on ("base"))
+             (:file "hardware" :depends-on ("base"))
              ))
    ;;
    (:module "targets"
