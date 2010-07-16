@@ -150,7 +150,8 @@ The primary must return the new device, if any.")
    "Scan BUS for devices, calling BUS-ADD on new devices, BUS-REMOVE
 on devices that disappeared and ")
   (:method ((o bus) &optional force-rescan)
-    (let* ((old-occupied (mapcar #'device-bus-address (bus-devices o)))
+    (let* ((old-occupied (unless force-rescan
+                           (mapcar #'device-bus-address (bus-devices o))))
            (new-occupied (bus-occupied-addresses o)) ; This fills in probe-time bus IDs, for dumb busses.
            (missing (set-difference old-occupied new-occupied :test #'=))
            (new (set-difference new-occupied old-occupied :test #'=))
@@ -160,8 +161,7 @@ on devices that disappeared and ")
                     o missing new survivors))
       (dolist (addr survivors)
         (let ((survivor-at-addr (bus-device o addr)))
-          (cond ((and (bus-id-equalp o (bus-id-at-address o addr) (device-bus-id survivor-at-addr))
-                      (not force-rescan))
+          (cond ((bus-id-equalp o (bus-id-at-address o addr) (device-bus-id survivor-at-addr))
                  (bus-notice-survivor o survivor-at-addr))
                 ;; The device looks sufficiently different to warrant a fresh look at itself.
                 (t
