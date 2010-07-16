@@ -114,7 +114,8 @@
     --list-platforms            List all known platforms and quit.
     --platform <platform-name>  Specify platform manually, instead of detection.
     --virtual                   Enable the virtual interface/target/core.
-    --no-physical               Omit looking for physical targets.
+    --no-physical               Omit looking for physical targets.  Defaults
+                                  to 'yes', when --virtual is specified.
     --no-parport                Omit looking for EPP-attached targets.
     --no-usb                    Omit looking for USB-attached targets.
     --no-scan                   Don't scan interfaces.
@@ -191,7 +192,7 @@
        (with-quit-restart
          (destructuring-bind (&rest args &key (verbose verbose)
                                     (no-rc no-rc) early-eval
-                                    core-multiplier virtual no-physical no-parport no-usb no-scan (no-platform-init no-platform-init)
+                                    core-multiplier virtual (no-physical virtual) no-parport no-usb no-scan (no-platform-init no-platform-init)
                                     load eval run-tests ignore-test-failures quit
                                     examine-tlb log-pipeline-crit
                                     list-contexts context list-platforms platform
