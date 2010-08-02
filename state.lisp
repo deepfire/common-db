@@ -78,11 +78,12 @@
 
 (defgeneric capture-state-using-state (core state &key regs fpr tlb page-size physical-pages physical-cells virtual-pages))
 (defgeneric apply-state (core state)
-  (:method :around (core state)
-    (apply-state core (etypecase state
-                        (state state)
-                        ((or stream string pathname)
-                         (read-state-for-core core state))))))
+  (:method :around (core (o stream))
+    (apply-state core (read-state-for-core core o)))
+  (:method :around (core (o string))
+    (apply-state core (read-state-for-core core o)))
+  (:method :around (core (o pathname))
+    (apply-state core (read-state-for-core core o))))
 (defgeneric write-state-to-stream (stream state) (:method (stream (o state)) (declare (ignore stream))))
 (defgeneric emit-nonmemory-state-restorer (segment state)
   (:documentation
