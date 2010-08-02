@@ -24,7 +24,7 @@
 
 (defun simple-trace (&optional count &key (core *core*) (step-lightly t) step-slaves print-trail)
   #+help-ru
-  "Произвести простую трассировку."
+  "Произвести простую, пошаговую трассировку."
   (declare (type (or null (integer -1)) count))
   (with-maybe-temporary-state (core :stop step-lightly)
     (oneline-report :prefix "   0" :print-trail print-trail)
@@ -51,7 +51,7 @@
     (with-temporary-state (*core* :stop)
       (iter (for i from 1)
             (apply #'run run-args)
-            (syncformat *log-stream* "~&---( at ~,'0X: stop ~D~%" addr-or-sym i))))
+            (syncformat *log-stream* "~&;;  at ~,'0X: stop ~D~%" addr-or-sym i))))
   (values))
 
 (defun block-trace (size &optional count &rest run-args &key (state :stop) &allow-other-keys &aux
@@ -69,6 +69,6 @@
               (return))
             (settrace size)
             (apply #'run (remove-from-plist run-args :state))
-            (syncformat *log-stream* "---( ~D passed, ~D " size i)
+            (syncformat *log-stream* ";;  ~D passed, ~D " size i)
             (addr (moment-fetch (saved-core-moment core)))))
     (values)))
