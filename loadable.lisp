@@ -46,7 +46,10 @@ custom FILENAME and ENTRY-POINT."
   (let ((sections (sort extents #'< :key #'base)))
     (dolist (section sections)
       (unless (typep section 'section)
-        (change-class section 'section :name "" :executable-p nil :file-offset 0)))
+        (let ((best-type (etypecase section
+                           (extent 'standard-section)
+                           (baseless-extent 'simple-section))))
+          (change-class section best-type :name "" :executable-p nil :file-offset 0))))
     (make-instance 'loadable :filename filename :entry-point entry-point :load-size (reduce #'+ sections :key #'size :initial-value 0) :sections sections)))
 
 (defgeneric extract-loadable (type filename &key &allow-other-keys)
