@@ -375,7 +375,7 @@ address to be different from ADDRESS."
   (with-temporary-state (core :debug)
     (let ((ra (devreg core :ra)))
       (format t "setting a return break to ~8,'0X, ~S~%" ra (addrsym ra))
-      (hw-break 0 ra)))
+      (hbreak 0 ra)))
   (apply #'run run-params)
   (values))
 

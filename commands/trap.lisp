@@ -29,7 +29,7 @@
   (set-core-insn-execution-limit *core* count)
   (values))
 
-(defun hw-break (break-or-id address &optional (skipcount 0) &key bound)
+(defun hbreak (break-or-id address &optional (skipcount 0) &key bound)
   #+help-ru
   "Установить аппаратную точку останова заданную через спецификатор
 аппаратной точки останова BREAK-OR-ID на адрес заданный через спецификатор

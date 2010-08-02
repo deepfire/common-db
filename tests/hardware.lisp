@@ -144,24 +144,24 @@
   (unwind-protect
        (progn
          (emit-r1-fff-target+18-end+40-loading-sequence core #x0)
-         (hw-break 1 #xbfc00380)
+         (hbreak 1 #xbfc00380)
          (with-subtest :r1-clear
            (with-subtest :first-break-reached
-             (hw-break 0 #x8000001c)
+             (hbreak 0 #x8000001c)
              (setc (state core) :stop)
              (run-core-synchronous core :address #x80000000 :exit-state :debug)
              (expect-core-fetch-address core (fetch #x80000020)
                  (breakpoint-not-reached :breakpoint #x8000001c)))
            (with-subtest :second-break-reached
-             (hw-break 0 #x80000040)
+             (hbreak 0 #x80000040)
              (setc (state core) :stop)
              (run-core-synchronous core :exit-state :debug)
              (expect-core-fetch-address core (fetch #x80000044)
                  (breakpoint-not-reached :breakpoint #x80000040)))
            (expect-value #xfff (with-temporary-state (core :debug)
                                  (gpr-by-name core :at)))))
-    (hw-break 0 nil)
-    (hw-break 1 nil)
+    (hbreak 0 nil)
+    (hbreak 1 nil)
     (clear-sw-breaks)))
 
 (defun emit-r1-jumpclear-0x14-0x30 (core address)
@@ -484,25 +484,25 @@
     (emit-nops 4))
   (with-free-hardware-breakpoints (core) (break-0 break-1)
     (with-subtest :second-shadows-first
-      (hw-break break-0 #x80000008)
-      (hw-break break-1 #x8000000c)
+      (hbreak break-0 #x80000008)
+      (hbreak break-1 #x8000000c)
       (run-core-synchronous core :address #x80000000)
       (expect-core-fetch-address core (fetch #x8000000c)
           (breakpoint-not-reached :breakpoint 0)))
     (with-subtest :second-shadows-first-2
-      (hw-break break-1 #x80000008)
-      (hw-break break-0 #x8000000c)
+      (hbreak break-1 #x80000008)
+      (hbreak break-0 #x8000000c)
       (run-core-synchronous core :address #x80000000)
       (expect-core-fetch-address core (fetch #x8000000c)
           (breakpoint-not-reached :breakpoint 1)))
     (with-subtest :second-before-first
-      (hw-break break-1 #x8000000c)
-      (hw-break break-0 #x80000008)
+      (hbreak break-1 #x8000000c)
+      (hbreak break-0 #x80000008)
       (run-core-synchronous core :address #x80000000)
       (expect-core-fetch-address core (fetch #x8000000c)
           (breakpoint-not-reached :breakpoint 0)))
     (with-subtest :first-after-second-undone
-      (hw-break break-0 nil)
+      (hbreak break-0 nil)
       (run-core-synchronous core :address #x80000000)
       (expect-core-fetch-address core (fetch #x80000010)
           (breakpoint-not-reached :breakpoint 1)))))
@@ -536,8 +536,8 @@
            (expect (and (typep (core-stop-reason core) 'hardware-trap)
                         (= 0 (trap-id (core-stop-reason core))))
                (breakpoint-not-reached :expected '(:hardware-break-watch 0) :actual (core-stop-reason core) :breakpoint 0))))
-    (hw-break 0 nil)
-    (hw-break 1 nil)))
+    (hbreak 0 nil)
+    (hbreak 1 nil)))
 
 (defcomdbtest :mips sw-breakpoints (core) ()
   (reset :core core)
@@ -577,29 +577,29 @@
   (reset :core core)
   (unwind-protect
        (progn
-         (hw-break 0 #x80000040)
+         (hbreak 0 #x80000040)
          (setc (state core) :debug)
          (emit-r1-complex-jumpclear core #x0)
-         (hw-break 1 #xbfc00380)
+         (hbreak 1 #xbfc00380)
          (with-subtest :r1-clear
            (with-subtest :prebranch-executed
-             (hw-break 0 #x8000000c)
+             (hbreak 0 #x8000000c)
              (run-core-synchronous core :address #x80000000)
              (expect-core-fetch-address core (fetch #x80000010)
                  (breakpoint-not-reached :breakpoint #x8000000c)))
            (with-subtest :branch-executed
-             (hw-break 0 #x8000001c)
+             (hbreak 0 #x8000001c)
              (run-core-synchronous core)
              (expect-core-fetch-address core (fetch #x80000020)
                  (breakpoint-not-reached :breakpoint #x8000001c)))
            (with-subtest :postdslot-executed
-             (hw-break 0 #x80000040)
+             (hbreak 0 #x80000040)
              (run-core-synchronous core)
              (expect-core-fetch-address core (fetch #x80000044)
                  (breakpoint-not-reached :breakpoint #x80000040)))
            (expect-value #x0 (gpr-by-name core :at))))
-    (hw-break 0 nil)
-    (hw-break 1 nil)))
+    (hbreak 0 nil)
+    (hbreak 1 nil)))
 
 (defcomdbtest :mips debug-stop-debug-jumpclear-swbreak-complex (core)
     (:expected-failure t)
@@ -608,7 +608,7 @@
        (progn
          (setc (state core) :debug)
          (emit-r1-complex-jumpclear core #x0)
-         (hw-break 1 #xbfc00380)
+         (hbreak 1 #xbfc00380)
          (sw-break #x8000000c)
          (sw-break #x8000001c)
          (sw-break #x80000040)
@@ -626,7 +626,7 @@
              (expect-core-fetch-address core (fetch #x80000048)
                  (breakpoint-not-reached :breakpoint #x80000044)))
            (expect-value #x0 (gpr-by-name core :at))))
-    (hw-break 1 nil)
+    (hbreak 1 nil)
     (clear-sw-breaks)))
 
 (defcomdbtest :mips run-through-interrupt (core)

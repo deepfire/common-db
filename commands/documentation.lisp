@@ -67,7 +67,7 @@ SECONDS могут быть любым неотрицательным реаль
      ret)
     ((traps #-help-ru "Traps"
             #+help-ru "Ловушки")
-     hw-break sw-break watch catch trace settrace
+     hbreak sw-break watch catch trace settrace
      clear-break clear-sw-breaks disable-breaks describe-breaks
      dspbreak)
     ((dsp #-help-ru "DSP"
