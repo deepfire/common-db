@@ -23,12 +23,12 @@
 (in-package :bank)
 
 (defun read-bank-extents (stream &key (endianness :little-endian))
-  (lret ((accessor-fn (case endianness
-                        (:little-endian #'(setf u8-vector-word32le))
-                        (:big-endian #'(setf u8-vector-word32be))))
-         acc
-         (extent-length 0)
-         prev-address)
+  (let ((accessor-fn (case endianness
+                       (:little-endian #'(setf u8-vector-word32le))
+                       (:big-endian #'(setf u8-vector-word32be))))
+        acc
+        (extent-length 0)
+        prev-address)
     (flet ((pick-accumulated-extent ()
              (when acc
                (let ((data (make-array extent-length :element-type '(unsigned-byte 8))))
