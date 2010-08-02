@@ -81,6 +81,8 @@
   (:method :around (core (o stream))
     (apply-state core (read-state-for-core core o)))
   (:method :around (core (o string))
+    (when (string= "bank" (pathname-type o))
+      (error "~@<File ~S has type 'bank', which is supposed, by convention, to contain a state restorer, not a state.~:@>" o))
     (apply-state core (read-state-for-core core o)))
   (:method :around (core (o pathname))
     (apply-state core (read-state-for-core core o))))
@@ -199,7 +201,11 @@ state restoration procedure is to be emitted."
 
 (defun read-state-for-core (core state-stream-or-filename &aux (*read-base* #x10))
   (with-open-file (stream state-stream-or-filename)
-    (lret ((state (make-instance (read stream))))
+    (lret* ((type (read stream))
+            (state (progn
+                     (unless (symbolp type)
+                       (error "~@<First token in SEXP state file must be a symbol type designator.~:@>"))
+                     (make-instance type))))
       (with-slots (moment trail gpr fpr regs physical-cells page-size tlb virtual-pages physical-pages) state
         (iter (for form = (read stream nil nil))
               (while form)
