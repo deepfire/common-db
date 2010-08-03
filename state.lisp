@@ -29,14 +29,6 @@
   (iter (for addr in address-list)
         (collect (u8-extent (backend core) (extent (logandc1 (1- page-size) addr) page-size)))))
 
-(defun set-core-physical-pages (core address-list page-size extents)
-  (declare (ignore page-size))
-  (iter (for addr in address-list)
-        (for extent in extents)
-        (write-u8-extent core (rebase (constantly addr) extent))))
-
-(defsetf core-physical-pages set-core-physical-pages)
-
 (defun core-virtual-pages (core address-map)
   "Read from CORE the pages designated by ADDRESS-MAP."
   (lret ((page-size (address-map-page-size address-map))
@@ -120,7 +112,7 @@
       (setf (values) (format t ";; restoring TLB-mapped pages:~{ ~8,'0X~}~%" (mapcar #'base virtual-pages))
             (core-virtual-pages o (tlb-address-map o tlb page-size)) virtual-pages
             (values) (format t ";; restoring direct-mapped pages:~{ ~8,'0X~}~%" (mapcar #'base physical-pages))
-            (core-physical-pages o nil page-size) physical-pages
+            (values) (mapc (curry #'write-u8-extent o) physical-pages)
             (values) (format t ";; restoring TLB~%")
             (get-tlb o) tlb)
       (when fpr
