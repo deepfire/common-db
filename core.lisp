@@ -911,6 +911,8 @@ every WATCH-PERIOD such polls."
     (unwind-protect (setf execution-status (wait-core core watch-fn watch-period iteration-period iteration-limit))
       (cond ((eq execution-status :timeout)
              (ecase if-limit-reached
+               (:restore-state-and-break
+                (setf (state core) old-state))
                (:break)
                (:warn
                 (warn "~@<While executing ~:[~;~:*~S ~]on ~S at #x~8,'0X:~_~
