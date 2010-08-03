@@ -427,3 +427,33 @@ in the bank format, when BANK is non-NIL."
     (switch ((pathname-type pathname) :test #'equal)
       ("bank" (apply-bank core filename))
       (t      (apply-state core filename)))))
+
+(defun findcritmem (state1 state2 repro-p-fn &key (core *core*) (iteration-limit 1) (start 0) (length 67108864) &aux
+                    (*core* core)
+                    (*display* nil)
+                    (*explain* nil))
+  #-help-ru
+  "Find memory region correlating STATE1 and STATE2."
+  (labels ((try (start length)
+             (reset)
+             (restore state1)
+             (run :iteration-limit iteration-limit :if-limit-reached :restore-state-and-break)
+             (format t ";; clearing #x~X at #x~X~%" length start)
+             (clearmem start length)
+             (reset)
+             (restore state2)
+             (run :iteration-limit iteration-limit :if-limit-reached :restore-state-and-break)
+             (funcall repro-p-fn core))
+           (rec (start length)
+             (if (zerop length)
+                 (format t ";; full circle, no memory cleared, yet no reproduction~%")
+                 (if (try start length)
+                     (rec (+ start length) length)
+                     (rec start (ash length -1))))))
+    (cond ((not (try 0 0))
+           (format t ";; no correlation: no reproduction with no memory cleared~%"))
+          ((try start length)
+           (format t ";; no correlation: reproduction achieved with all memory cleared~%"))
+          (t
+           (format t ";; reproduction achieved with no memory cleared, proceeding to find the pesky region...~%")
+           (rec start (ash length -1))))))
