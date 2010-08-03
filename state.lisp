@@ -38,12 +38,13 @@
                          (read-block core phys (extent-data extent))))
                      address-map)))
 
-(defun set-core-virtual-pages (core address-map extents)
+(defun set-core-virtual-pages (core address-map verbose extents)
   "Write all the virtual-addressed EXTENTS into CORE, using the ADDRESS-MAP."
   (let ((page-size (address-map-page-size address-map)))
     (dolist (extent extents)
       (let ((physaddr (virt-to-phys address-map (base extent))))
-        (format t ";;;; loading virtual page ~08X to physaddr ~08X~%" (base extent) physaddr)
+        (when verbose
+          (format t ";;;; loading virtual page ~08X to physaddr ~08X~%" (base extent) physaddr))
         (write-block core physaddr (extent-data extent) 0 page-size)))))
 
 (defsetf core-virtual-pages set-core-virtual-pages)
@@ -69,14 +70,17 @@
    :virtual-pages nil))
 
 (defgeneric capture-state-using-state (core state &key regs fpr tlb page-size physical-pages physical-cells virtual-pages))
-(defgeneric apply-state (core state)
-  (:method :around (core (o stream))
+(defgeneric apply-state (core state &key verbose)
+  (:method :around (core (o stream) &key verbose)
+    (declare (ignore verbose))
     (apply-state core (read-state-for-core core o)))
-  (:method :around (core (o string))
+  (:method :around (core (o string) &key verbose)
+    (declare (ignore verbose))
     (when (string= "bank" (pathname-type o))
       (error "~@<File ~S has type 'bank', which is supposed, by convention, to contain a state restorer, not a state.~:@>" o))
     (apply-state core (read-state-for-core core o)))
-  (:method :around (core (o pathname))
+  (:method :around (core (o pathname) &key verbose)
+    (declare (ignore verbose))
     (apply-state core (read-state-for-core core o))))
 (defgeneric write-state-to-stream (stream state) (:method (stream (o state)) (declare (ignore stream))))
 (defgeneric emit-nonmemory-state-restorer (segment state)
@@ -103,29 +107,37 @@
                                 :virtual-pages (core-virtual-pages core (tlb-address-map core tlb page-size)))))
     (apply #'capture-state-using-state core state args)))
 
-(defmethod apply-state ((o mmu-core) state)
+(defmethod apply-state ((o mmu-core) state &key verbose)
   (let ((space (device-space o)))
     (with-slots (moment trail gpr regs fpr tlb physical-pages physical-cells page-size virtual-pages) state
       (iter (for (addr val) in physical-cells)
-            (format t ";; restoring memory cell at 0x~8,'0X~%" addr)
+            (when verbose
+              (format t ";; restoring memory cell at 0x~8,'0X~%" addr))
             (setf (memory-ref (backend o) addr) val))
-      (setf (values) (format t ";; restoring TLB-mapped pages:~{ ~8,'0X~}~%" (mapcar #'base virtual-pages))
-            (core-virtual-pages o (tlb-address-map o tlb page-size)) virtual-pages
-            (values) (format t ";; restoring direct-mapped pages:~{ ~8,'0X~}~%" (mapcar #'base physical-pages))
+      (setf (values) (when verbose
+                       (format t ";; restoring TLB-mapped pages:~{ ~8,'0X~}~%" (mapcar #'base virtual-pages)))
+            (core-virtual-pages o (tlb-address-map o tlb page-size) verbose) virtual-pages
+            (values) (when verbose
+                       (format t ";; restoring direct-mapped pages:~{ ~8,'0X~}~%" (mapcar #'base physical-pages)))
             (values) (mapc (curry #'write-u8-extent o) physical-pages)
-            (values) (format t ";; restoring TLB~%")
+            (values) (when verbose
+                       (format t ";; restoring TLB~%"))
             (get-tlb o) tlb)
       (when fpr
-        (format t ";; restoring FPR~%")
+        (when verbose
+          (format t ";; restoring FPR~%"))
         (iter (for val in fpr) (for i below (isa-fpr-count (core-isa o))) 
               (set-gpr o i val)))
-      (format t ";; restoring miscellaneous registers: ~A~%" (mapcar #'car regs))
+      (when verbose
+        (format t ";; restoring miscellaneous registers: ~A~%" (mapcar #'car regs)))
       (iter (for (reg val) in regs)
             (setf (device-register o (register-id space reg)) val))
-      (format t ";; restoring GPR~%")
+      (when verbose
+        (format t ";; restoring GPR~%"))
       (iter (for val in gpr) (for i below (isa-gpr-count (core-isa o))) 
             (set-gpr o i val))
-      (format t ";; restoring moment ~A and trail ~A~%" moment trail)
+      (when verbose
+        (format t ";; restoring moment ~A and trail ~A~%" moment trail))
       (setf (saved-core-trail o) trail
             (saved-core-moment o) moment)
       (restore-core-trail o)
