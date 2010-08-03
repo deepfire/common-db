@@ -376,6 +376,7 @@
       (swank:create-server :dont-close t))
     (iter (syncformat t "; Accepting connections on ~A:~D~:[~;, tracing exchanges, up to ~:*~X bytes~]~%" address port trace-exchange)
           (setf (slot-value target-context 'gdbremote::no-ack-mode) nil)
+          (for client = (accept-client-connection target-context port address))
           (reset :core core)
-          (accept-gdb-connection target-context port address trace-exchange)
+          (serve-client-connection target-context client trace-exchange)
           (until single-shot))))
