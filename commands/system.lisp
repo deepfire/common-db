@@ -54,17 +54,18 @@
   #+help-ru
   "Детально, по битовым полям, разобрать структуру конфигурации памяти
 с именем NAME.  Если имя не указано, разобрать текущую настройку."
-  (let ((config (if name
-                    (memory-config (target-platform *target*) name)
-                    (platform-memory-configuration (target-platform *target*)))))
+  (let* ((target *target*)
+         (config (if name
+                     (memory-config (target-platform target) name)
+                     (platform-memory-configuration (target-platform target)))))
     (format *log-stream* "Memory config ~A:~%" (memory-config-name config))
     (iter (for (regname fieldnames fieldvalues) in (memory-config-register-values config))
           (let* ((space (space :platform))
                  (fields (mapcar (curry #'bitfield space) fieldnames))
                  (bytes (mapcar (curry #'bitfield-byte space) fieldnames))
                  (bytemasks (mapcar #'byte-bitmask bytes)))
-            (format *log-stream* "  ~A:~18T ~8,'0X ~:{ ~A(~X)~}~%~28T <= ~:{ ~A(~X)~}~%"
-                    regname (fbits fieldnames fieldvalues)
+            (format *log-stream* "  ~8,'0X ~A:~18T ~8,'0X ~:{ ~A(~X)~}~%~28T <= ~:{ ~A(~X)~}~%"
+                    (target-reg-addr target regname) regname (fbits fieldnames fieldvalues)
                     (mapcar #'list fieldnames bytemasks)
                     (iter (for field in fields)
                           (for byte in bytes)
