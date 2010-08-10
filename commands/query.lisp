@@ -62,7 +62,7 @@
                                  (artifact (target-artifact-by-address target address)))
   (if (typep artifact 'register-instance)
       (let* ((reg (reginstance-register artifact))
-             (bitfield-values (format-decode (reg-format reg) raw-value)))
+             (bitfield-values (decode-using-format (reg-format reg) raw-value)))
         (values (name reg)
                 (mapcar #'car bitfield-values)
                 (mapcar #'cdr bitfield-values)))
@@ -97,7 +97,7 @@ NAME-OR-ADDRESS.  Также доступен синтаксис (setf (get NAME
   (:method ((o symbol) (value integer))  value)
   (:method ((o register-instance) (value integer))
     (let ((format (reg-format (reginstance-register o))))
-      (xform format (curry #'format-decode format) value))))
+      (xform format (curry #'decode-using-format format) value))))
 
 (defun show (name-or-address &aux
              (core *core*)
