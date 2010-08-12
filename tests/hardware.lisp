@@ -119,7 +119,7 @@
 (defcomdbtest :mips trans-funcall-kuseg-debug (core) ()
   (run-trans-funcall-test core kuseg :debug))
 
-(defun emit-r1-fff-target+18-end+40-loading-sequence (core address)
+(defun emit-r1-fff-target+18-end+40-load-seq (core address)
   (with-bioable-mips-segment (core address)
     (emit* :xori :r1 :zero 0)
     (emit* :xori :r1 :r1 #b000000000001)
@@ -143,7 +143,7 @@
   (reset :core core)
   (unwind-protect
        (progn
-         (emit-r1-fff-target+18-end+40-loading-sequence core #x0)
+         (emit-r1-fff-target+18-end+40-load-seq core #x0)
          (hbreak 1 #xbfc00380)
          (with-subtest :r1-clear
            (with-subtest :first-break-reached
@@ -333,8 +333,9 @@
       (unless (devbit core :status :exl)
         (test-error "~@<Cop0.status.exl is not set.~:@>")))
     (with-subtest ((format nil "CP0-EXCCODE-SAYS-~A" exception-type))
-      (unless (= (devbit-value core :cause :exccode) (bits :exccode exception-type))
-        (test-error "~@<Cop0.status.exccode is ~X, not ~X.~:@>" (devbit-value core :cause :exccode) exception-type)))
+      (let ((cause-code (devbit-value core :cause :exccode)))
+       (unless (= cause-code (bits :exccode exception-type))
+         (test-error "~@<Cop0.status.exccode is ~X (~A), not ~X (~A).~:@>" cause-code (decode-bitfield :exccode cause-code) (bits :exccode exception-type) exception-type))))
     (with-subtest "PC-IN-EXCEPTION-VECTOR"
       (let ((pc (moment-fetch (saved-core-moment core))))
         (unless (and (>= pc #xbfc00380) (< pc #xbfc003c0))
@@ -351,37 +352,37 @@
           (devbit core :cause :p-sw0) nil))
   t)
 
-(defun production-stop-debug-stop (core)
+(defun prod-sds (core)
   (stop-to-debug core)
   (debug-to-stop core))
 
 (defparameter *runner-stepper-test-pack*
   `(#x80000000
-    (:walkpad                      emit-r1-fff-target+18-end+40-loading-sequence 16 ,(make-expect-r1 #xfff))
-    (:beq-r0-r0                    emit-r1-jumpclear-0x14-0x30                   16 ,(make-expect-r1 8))
-    (:jal                          emit-r1-jumpclear-0x14-0x30-jal               16 ,(make-expect-r1 8))
-    (:jr                           emit-r1-jumpclear-0x14-0x30-jr                16 ,(make-expect-r1 8))
-    (:beq-dependent                emit-r1-jumpclear-0x14-0x30-dependent         16 ,(make-expect-r1 8))))
+    (:walkpad                      emit-r1-fff-target+18-end+40-load-seq #x10 :test ,(make-expect-r1 #xfff))
+    (:beq-r0-r0                    emit-r1-jumpclear-0x14-0x30           #x10 :test ,(make-expect-r1 8))
+    (:jal                          emit-r1-jumpclear-0x14-0x30-jal       #x10 :test ,(make-expect-r1 8))
+    (:jr                           emit-r1-jumpclear-0x14-0x30-jr        #x10 :test ,(make-expect-r1 8))
+    (:beq-dependent                emit-r1-jumpclear-0x14-0x30-dependent #x10 :test ,(make-expect-r1 8))))
 
 (defparameter *interrupt-test-pack*
   `(#x80000000
-    (:interrupt       emit-software-interrupt-generator-epc=base+5  #x9 ,(rcurry #'check-in-software-interrupt #x80000018) nil nil)))
+    (:interrupt             emit-software-interrupt-generator-epc=base+5 #x9  :test ,(rcurry 'check-in-software-interrupt #x80000018) :trap-end nil :trap-ex nil)))
 
 (defparameter *interrupt-loop-test-pack*
   `(#xbfc00380
-    (:interrupt-loop  emit-interrupt-loop                           #x14 ,(rcurry #'check-in-software-interrupt #x98000004) nil nil)))
+    (:interrupt-loop  emit-interrupt-loop                                #x14 :test ,(rcurry 'check-in-software-interrupt #x98000004) :trap-end nil :trap-ex nil)))
 
 (defparameter *debug-stop-debug-test-pack*
   `(#x80000000
-    (:dsd-prebranch-production     emit-r1-jumpclear-0x14-0x30                   #x10 ,(make-expect-r1 8)     t t :run #x80000010 production-stop-debug-stop)
-    (:dsd-prebranch-production-jal emit-r1-jumpclear-0x14-0x30-jal               #x10 ,(make-expect-r1 8)     t t :run #x80000010 production-stop-debug-stop)
-    (:dsd-prebranch-production-jr  emit-r1-jumpclear-0x14-0x30-jr                #x10 ,(make-expect-r1 8)     t t :run #x80000010 production-stop-debug-stop)
-    (:dsd-prebranch-production-dep emit-r1-jumpclear-0x14-0x30-dependent         #x10 ,(make-expect-r1 8)     t t :run #x80000010 production-stop-debug-stop)
-    (:dsd-branch-production        emit-r1-jumpclear-0x14-0x30                   #x10 ,(make-expect-r1 8)     t t :run #x80000014 production-stop-debug-stop)
-    (:dsd-branch-production-jal    emit-r1-jumpclear-0x14-0x30-jal               #x10 ,(make-expect-r1 8)     t t :run #x80000014 production-stop-debug-stop)
-    (:dsd-branch-production-jr     emit-r1-jumpclear-0x14-0x30-jr                #x10 ,(make-expect-r1 8)     t t :run #x80000014 production-stop-debug-stop)
-    (:dsd-branch-production-dep    emit-r1-jumpclear-0x14-0x30-dependent         #x10 ,(make-expect-r1 8)     t t :run #x80000014 production-stop-debug-stop)
-    (:dsd-jumpclear-production     emit-r1-fff-target+18-end+40-loading-sequence #x10 ,(make-expect-r1 #xfff) t t :run #x80000014 production-stop-debug-stop)))
+    (:dsd-prebranch-production     emit-r1-jumpclear-0x14-0x30           #x10 :test ,(make-expect-r1 8)     :tail :run  :break-addr #x80000010 :dsd-fn prod-sds)
+    (:dsd-prebranch-production-jal emit-r1-jumpclear-0x14-0x30-jal       #x10 :test ,(make-expect-r1 8)     :tail :run  :break-addr #x80000010 :dsd-fn prod-sds)
+    (:dsd-prebranch-production-jr  emit-r1-jumpclear-0x14-0x30-jr        #x10 :test ,(make-expect-r1 8)     :tail :run  :break-addr #x80000010 :dsd-fn prod-sds)
+    (:dsd-prebranch-production-dep emit-r1-jumpclear-0x14-0x30-dependent #x10 :test ,(make-expect-r1 8)     :tail :run  :break-addr #x80000010 :dsd-fn prod-sds)
+    (:dsd-branch-production        emit-r1-jumpclear-0x14-0x30           #x10 :test ,(make-expect-r1 8)     :tail :run  :break-addr #x80000014 :dsd-fn prod-sds)
+    (:dsd-branch-production-jal    emit-r1-jumpclear-0x14-0x30-jal       #x10 :test ,(make-expect-r1 8)     :tail :run  :break-addr #x80000014 :dsd-fn prod-sds)
+    (:dsd-branch-production-jr     emit-r1-jumpclear-0x14-0x30-jr        #x10 :test ,(make-expect-r1 8)     :tail :run  :break-addr #x80000014 :dsd-fn prod-sds)
+    (:dsd-branch-production-dep    emit-r1-jumpclear-0x14-0x30-dependent #x10 :test ,(make-expect-r1 8)     :tail :run  :break-addr #x80000014 :dsd-fn prod-sds)
+    (:dsd-jumpclear-production     emit-r1-fff-target+18-end+40-load-seq #x10 :test ,(make-expect-r1 #xfff) :tail :run  :break-addr #x80000014 :dsd-fn prod-sds)))
 
 (defcomdbtest :mips cop0-read/write-stability (core) ()
   (reset :core core)
@@ -423,6 +424,8 @@
   (let ((*failure-inspector* failure-inspector-fn))
     (declare (special *failure-inspector*))
     (destructuring-bind (address . test-specs) pack
+      (unless test-specs
+        (error "~@<Refusing to run an empty test pack.~:@>"))
       (iter (for (test-name test-emit-and-prepare-fn . more-test-args) in test-specs)
             (reset :core core :state :debug)
             (let ((segment (funcall test-emit-and-prepare-fn core address)))
@@ -433,8 +436,8 @@
             (andf success (apply pack-runner-fn core test-name address more-test-args))
             (finally (return success))))))
 
-(defun run-maybe-swbreak-and-dsd-test (core name start-address insn-count successp &optional (trap-test-end t) (trap-exceptions t) (tail-mode :run) break-addr (debug-stop-debug-fn 'values))
-  (declare (type (member :run :step) tail-mode))
+(defun run-maybe-swbreak-and-dsd-test (core name start-address insn-count &key test (trap-end t) (trap-ex t) (tail :run) break-addr (dsd-fn 'values))
+  (declare (type (member :run :step) tail))
   (unwind-protect
        (with-subtest (name)
          (when break-addr
@@ -443,35 +446,46 @@
              (run-core-synchronous core :address start-address :exit-state :stop)
              (expect-core-fetch-address core (fetch (+ break-addr 8))
                  (breakpoint-not-reached :breakpoint (+ break-addr 4))))
-           (funcall debug-stop-debug-fn core))
-         (with-subtest ((format-symbol :keyword (case tail-mode
+           (funcall dsd-fn core))
+         (with-subtest ((format-symbol :keyword (case tail
                                                   (:run "~A-TEST-EXECUTED")
                                                   (:step "~A-TEST-STEPPED")) name))
            (let ((test-end-addr (+ start-address (* 4 insn-count))))
-             (case tail-mode
+             (ecase tail
                (:run
-                (with-maybe-free-hardware-breakpoints (trap-test-end core) ((test-end test-end-addr))
-                  (with-maybe-free-hardware-breakpoints (trap-exceptions core) ((trap #xbfc00380))
+                (with-maybe-free-hardware-breakpoints (trap-end core) ((test-end test-end-addr))
+                  (with-maybe-free-hardware-breakpoints (trap-ex core) ((trap #xbfc00380))
                     (run-core-synchronous core :address (unless break-addr start-address))
-                    (setf (state core) :debug))))
+                    (setf (state core) :debug)))
+                (lret ((test (funcall test core)))
+                  (when trap-end
+                    (expect-core-fetch-address core (fetch (+ start-address (* 4 (1+ insn-count))))
+                        (breakpoint-not-reached :breakpoint (+ start-address (* 4 insn-count)))
+                      (funcall *failure-inspector*)))))
                (:step
-                (iter (for exec-addr = (+ 4 (trail-decode (core-trail core))))
-                      (until (= exec-addr test-end-addr))
-                      (step 1 :display nil))))
-             (lret ((success (funcall successp core)))
-               (when trap-test-end
-                 (expect-core-fetch-address core (fetch (+ start-address (* 4 (1+ insn-count))))
-                     (breakpoint-not-reached :breakpoint (+ start-address (* 4 insn-count)))
-                   (funcall *failure-inspector*)))))))
+                (unless break-addr
+                  (setf (saved-core-moment core) (make-neutral-moment core start-address)))
+                (expect-success
+                 (iter (for exec-addr = (+ 4 (trail-decode (core-trail core))))
+                       (until (= exec-addr test-end-addr))
+                       (step 1 :display nil)
+                       (flet ((pc-to-insn-nr (x) (ash (- x start-address) -2)))
+                         (unless (funcall test core
+                                          (pc-to-insn-nr (devreg core :pc))
+                                          (pc-to-insn-nr (trail-decode (saved-core-trail core)))
+                                          (moment-opcode (saved-core-moment core)))
+                           (return nil)))
+                       (finally (return t)))))))))
     (clear-sw-breaks)))
 
-(defun step-through-test (core name start-address insn-count successp &optional trap-test-end trap-exceptions &aux (*print-right-margin* 120) (*log-state-changes* nil))
-  (declare (ignore trap-test-end trap-exceptions))
+(defun step-through-test (core name start-address insn-count &key test (trap-end t) (trap-ex t) &aux
+                          (*print-right-margin* 120) (*log-state-changes* nil))
+  (declare (ignore trap-end trap-ex))
   (with-subtest ((format-symbol :keyword "~A-STEPTHROUGH-WAS-GOOD" name))
     (setf (saved-core-moment core) (make-neutral-moment core start-address))
     (dotimes (i insn-count)
       (step 1 :display nil))
-    (funcall successp core)))
+    (funcall test core)))
 
 ;; Succeeds on MC24, fails on NVCom-01.
 ;;;;
@@ -541,7 +555,7 @@
 
 (defcomdbtest :mips sw-breakpoints (core) ()
   (reset :core core)
-  (emit-r1-fff-target+18-end+40-loading-sequence core #x0)
+  (emit-r1-fff-target+18-end+40-load-seq core #x0)
   (unwind-protect
        (with-free-hardware-breakpoints (core)
            ((target #x80000040)
