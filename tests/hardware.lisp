@@ -252,6 +252,26 @@
     (emit* :nop)
     (emit* :nop)))
 
+(defun emit-r1-condjump-0x14 (core address)
+  (with-bioable-mips-segment (core address)
+    (emit* :or :r0 :r0 :r0)
+    (emit* :or :r1 :r1 :r1)
+    (emit* :or :r2 :r2 :r2)
+    (emit* :or :r3 :r3 :r3)
+    (emit* :or :r4 :r4 :r4)
+    (emit-ref :past-ori (delta :pad-delay nil) :beq :r0 :r0 delta)
+    (emit* :or :r5 :r5 :r5)
+    (emit* :or :r6 :r6 :r6)
+    (emit* :or :r7 :r7 :r7)
+    (emit* :or :r8 :r8 :r8)
+    (emit* :or :r9 :r9 :r9)
+    (emit-tag :past-ori)
+    (emit* :or :r10 :r10 :r10)
+    (emit* :or :r11 :r11 :r11)
+    (emit* :or :r12 :r12 :r12)
+    (emit* :or :r13 :r13 :r13)
+    (emit* :or :r14 :r14 :r14)))
+
 (defun emit-r1-complex-jumpclear (core address)
   (with-bioable-mips-segment ((backend core) address)
     (emit* :ori :r1 :zero 0)
@@ -327,6 +347,10 @@
   (lambda (core)
     (expect-value x (gpr-by-name core :r1))))
 
+(defun continuity-checker (core pc-offt pcdec-offt opcode)
+  (declare (ignore core pc-offt opcode))
+  (not (= pcdec-offt 7)))
+
 (defun make-exception-checker (exception-type &optional expected-epc)
   (lambda (core)
     (with-subtest "IN-EXCEPTION"
@@ -383,6 +407,10 @@
     (:dsd-branch-production-jr     emit-r1-jumpclear-0x14-0x30-jr        #x10 :test ,(make-expect-r1 8)     :tail :run  :break-addr #x80000014 :dsd-fn prod-sds)
     (:dsd-branch-production-dep    emit-r1-jumpclear-0x14-0x30-dependent #x10 :test ,(make-expect-r1 8)     :tail :run  :break-addr #x80000014 :dsd-fn prod-sds)
     (:dsd-jumpclear-production     emit-r1-fff-target+18-end+40-load-seq #x10 :test ,(make-expect-r1 #xfff) :tail :run  :break-addr #x80000014 :dsd-fn prod-sds)))
+
+(defparameter *pipeline-continuity-test-pack*
+  `(#x80000000
+    (:pipeline-continuity          emit-r1-condjump-0x14                 #x10 :test continuity-checker      :tail :step)))
 
 (defcomdbtest :mips cop0-read/write-stability (core) ()
   (reset :core core)
@@ -491,6 +519,9 @@
 ;;;;
 ;;;; Run the packed tests.
 ;;;;
+(defcomdbtest :mips pipeline-continuity (core)
+    (:unstable-failure t)
+  (run-test-pack core 'run-maybe-swbreak-and-dsd-test *pipeline-continuity-test-pack*))
 
 (defcomdbtest :mips hw-breakpoints (core) ()
   (reset :core core)
