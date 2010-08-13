@@ -83,9 +83,9 @@
     (declare (ignore verbose))
     (apply-state core (read-state-for-core core o))))
 (defgeneric write-state-to-stream (stream state) (:method (stream (o state)) (declare (ignore stream))))
-(defgeneric emit-nonmemory-state-restorer (segment state)
+(defgeneric emit-state-restorer (core segment state)
   (:documentation
-   "Emit code to restore STATE (obviously, excluding memory state) into SEGMENT."))
+   "Emit code into SEGMENT to restore CORE's STATE."))
 
 (defmethod capture-state-using-state ((o mmu-core) state &key regs fpr tlb page-size physical-pages physical-cells virtual-pages)
   (declare (ignore state regs fpr tlb page-size physical-pages physical-cells virtual-pages)))
@@ -189,19 +189,16 @@
 (defun write-core-state (core filename &rest args)
   (write-state (apply #'capture-state core args) filename))
 
-(defun state-restorer-extents (core state &key (entry-point (default-core-pc core)))
-  "Produce a memory extent list suitable for reproduction of STATE on CORE, including memory.
-ENTRY-POINT specifies at which the execution is to be started, and where the
-state restoration procedure is to be emitted."
+(defun state-restorer-extent (core state &key (entry-point (default-core-pc core)))
+  "Produce a non-relocatable memory extent, combining code and data, which when activated
+will rebuild STATE on CORE.
+ENTRY-POINT specifies the entry point of the resulting code."
   (declare (type (or null (integer 0)) entry-point))
-  (with-slots (tlb virtual-pages physical-pages page-size) state
-    (append
-     (list (make-extent 'extent entry-point (segment-active-vector (emit-nonmemory-state-restorer (make-instance 'segment) state))))
-     (mapcar (curry #'rebase (curry #'virt-to-phys (tlb-address-map core tlb page-size))) virtual-pages)
-     physical-pages)))
+  (make-extent 'extent entry-point (segment-active-vector (emit-state-restorer core (make-instance 'pinned-segment :base entry-point) state))))
 
 (defun write-state-restorer-bank (core state filename &key (entry-point (default-core-pc core)))
-  (bank:write-extents-as-bank filename (state-restorer-extents core state :entry-point entry-point)))
+  (lret ((restorer-extent (state-restorer-extent core state :entry-point entry-point)))
+    (bank:write-extents-as-bank filename (list restorer-extent))))
 
 (defun read-state-for-core (core state-stream-or-filename &aux (*read-base* #x10))
   (with-open-file (stream state-stream-or-filename)

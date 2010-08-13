@@ -594,14 +594,23 @@ such kind of thing.")
 (defclass mips-state (state)
   ())
 
-(defmethod emit-nonmemory-state-restorer (segment (o mips-state))
-  (with-slots (moment gpr fpr regs physical-cells tlb) o
+(defmethod emit-state-restorer (core segment (o mips-state))
+  (declare (type pinned-segment segment))
+  (with-slots (moment gpr fpr regs physical-cells tlb page-size virtual-pages physical-pages) o
     (let* ((pc (moment-fetch moment))
-           (userspace-trampoline-p (kusegp pc)))
+           (userspace-trampoline-p (kusegp pc))
+           (nr-total-transit-regions (+ (length virtual-pages) (length physical-pages)))
+           table-offset)
       (with-segment-emission (*mips-isa* segment)
         (with-mips-gpr-environment
           ;; Restore physical cells first: this allows us to do dirty platform setup tricks,
           ;; like enabling the TLB mode.
+          (emit-tag :__entry)
+          (emit-ref :entry (delta) :beq :r0 :r0 delta)
+          (emit-tag :transit-table)
+          (setf table-offset (- (tag-address :transit-table) (tag-address :__entry)))
+          (emit-nops (* 3 nr-total-transit-regions))
+          (emit-tag :entry)
           (iter (for (addr val) in physical-cells)
                 (emit-store32 val addr))
           (multiple-value-bind (status-tlb-hi-lo cop0-regs) (unzip (lambda (x) (member (car x) '(:status :hi :lo :entryhi :entrylo0 :entrylo1))) regs)
@@ -621,10 +630,46 @@ such kind of thing.")
             (emit-set-cp0 :epc pc))
           (when fpr
             (mapc #'emit-set-fpr (mapcar (curry #'format-symbol :keyword "F~D") (iota 32)) fpr))
+          (when (plusp nr-total-transit-regions)
+            ;;  Copy virtual pages from the transit area into their target location.
+            ;; ...........
+            ;; r1: current region entry pointer
+            ;; r2: remaining region count
+            ;; r3: source
+            ;; r4: dest
+            ;; r5: region copy loop counter
+            (emit-ref :transit-table (delta :tag-address table-base)
+              :lui :r1 (ash table-base -16))
+            (emit-ref :transit-table (delta :tag-address table-base)
+              :ori :r1 :r1 (logand #xffff table-base))
+            (emit* :ori :r2 :r2 nr-total-transit-regions)
+            (emitting-iteration (nr-total-transit-regions :outer-exit :r2)
+              (emit* :lw :r3 0 :r1)
+              (emit* :lw :r4 4 :r1)
+              (emit* :lw :r5 8 :r1)
+              (emit* :nop)
+              (emitting-iteration (:r5 :inner-exit :r5)
+                (emit* :lw :r6 0 :r3)
+                (emit* :sw :r6 0 :r4)
+                (emit* :addiu :r3 :r3 4)
+                (emit* :addiu :r4 :r4 4))
+              (emit* :addiu :r1 :r1 #xc)))
           (mapc #'emit-set-gpr (mapcar (curry #'format-symbol :keyword "R~D") (iota 32)) gpr)
           (when userspace-trampoline-p
             (emit* :nop)
             (emit* :nop)
             (emit* :eret)
-            (emit* :nop))))
+            (emit* :nop))
+          (emit-tag :transit-regions)
+          (let ((map (when virtual-pages
+                       (tlb-address-map core tlb page-size))))
+            (iter (for (virtp . extent) in (append (mapcar (curry #'cons nil) physical-pages)
+                                                   (mapcar (curry #'cons t)   virtual-pages)))
+                  (let ((phys-base (xform virtp (curry #'virt-to-phys map) (base extent))))
+                    (setf (u8-vector-word32le (segment-active-vector *segment*) (+ table-offset 0)) (current-absolute-addr)
+                          (u8-vector-word32le (segment-active-vector *segment*) (+ table-offset 4)) phys-base
+                          (u8-vector-word32le (segment-active-vector *segment*) (+ table-offset 8)) (size extent)))
+                  (assem-emission:emit-vector (extent-data extent))
+                  (incf table-offset #xc)))
+          (format t "transit-table: ~X, transit-regions: ~X~%" (tag-address :transit-table) (tag-address :transit-regions))))
       segment)))

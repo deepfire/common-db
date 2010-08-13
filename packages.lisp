@@ -553,6 +553,9 @@
    #:core-disassemble
    #:default-disassembly-line-printer
    ;; state.lisp
+   #:physical-pages
+   #:virtual-pages
+   #:page-size
    #:core-physical-pages
    #:set-core-physical-pages
    #:core-virtual-pages
@@ -578,8 +581,8 @@
    #:write-state
    #:write-core-state
    #:read-state-for-core
-   #:emit-nonmemory-state-restorer
-   #:state-restorer-extents
+   #:emit-state-restorer
+   #:state-restorer-extent
    #:write-state-restorer-bank))
 
 (defpackage #:sysdev ;; needed by common-db
