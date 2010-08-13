@@ -107,14 +107,17 @@ ADDRESS-OR-SYMBOL must be aligned by 4."
   (multiple-value-bind (address length) (etypecase address-or-symbol-or-extent
                                           (null                (values (max 0 (- (moment-fetch (saved-core-moment core)) #x10))
                                                                        #x20))
-                                          (extent              (values (base address-or-symbol-or-extent)
-                                                                       (lret ((final (size address-or-symbol-or-extent)))
-                                                                         (when length
-                                                                           (minf final length)))))
-                                          (pinned-segment      (values (pinned-segment-base address-or-symbol-or-extent)
-                                                                       (lret ((final (segment-active-vector address-or-symbol-or-extent)))
-                                                                         (when length
-                                                                           (minf final length)))))
+                                          ((or extent vector
+                                               pinned-segment) (multiple-value-bind (address-frob length-frob)
+                                                                   (typecase address-or-symbol-or-extent
+                                                                     (extent  (values #'base #'size))
+                                                                     (segment (values #'pinned-segment-base (compose #'length #'segment-active-vector)))
+                                                                     (vector  (values (constantly 0) #'length)))
+                                                                 (let ((final-length (funcall length-frob address-or-symbol-or-extent)))
+                                                                   (when length
+                                                                     (minf final-length length))
+                                                                   (values (funcall address-frob address-or-symbol-or-extent)
+                                                                           final-length))))
                                           ((or symbol integer) (values (coerce-to-address address-or-symbol-or-extent :if-not-found :error)
                                                                        (symlength address-or-symbol-or-extent))))
     (check-address-alignment 4 address)
@@ -127,12 +130,15 @@ ADDRESS-OR-SYMBOL must be aligned by 4."
                                                          (make-annotating-disassembly-printer annotations)
                                                          #'default-disassembly-line-printer))))
       (etypecase address-or-symbol-or-extent
-        ((or symbol integer)        (apply #'core-disassemble core address length disassemble-and-print-args))
-        ((or extent pinned-segment) (apply #'core::disassemble-and-print *standard-output* (core-isa core)
-                                           address
-                                           (funcall (fif (of-type 'extent) #'extent-data #'segment-active-vector)
-                                                    address-or-symbol-or-extent)
-                                           (remove-if #'keywordp disassemble-and-print-args)))))                      
+        ((or symbol integer)               (apply #'core-disassemble core address length disassemble-and-print-args))
+        ((or extent pinned-segment vector) (apply #'core::disassemble-and-print *standard-output* (core-isa core)
+                                                  address
+                                                  (funcall (typecase address-or-symbol-or-extent
+                                                             (extent  #'extent-data)
+                                                             (segment #'segment-active-vector)
+                                                             (vector  #'identity))
+                                                           address-or-symbol-or-extent)
+                                                  (remove-if #'keywordp disassemble-and-print-args)))))                      
     (values)))
 
 (defun dump (address-or-symbol &optional (length #x100))
