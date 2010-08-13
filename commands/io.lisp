@@ -119,7 +119,9 @@ ADDRESS-OR-SYMBOL must be aligned by 4."
                                                                    (values (funcall address-frob address-or-symbol-or-extent)
                                                                            final-length))))
                                           ((or symbol integer) (values (coerce-to-address address-or-symbol-or-extent :if-not-found :error)
-                                                                       (symlength address-or-symbol-or-extent))))
+                                                                       (if (symbolp address-or-symbol-or-extent)
+                                                                           (symlength address-or-symbol-or-extent)
+                                                                           (or length #x20)))))
     (check-address-alignment 4 address)
     (let ((disassemble-and-print-args (list :line-pre-annotate-fn line-pre-annotate-fn
                                             ;; this just asks for a CLOS GF
