@@ -89,7 +89,8 @@ it has to be specified by ENTRY-POINT (which defaults to *CORE*'s default PC)."
   (when-let ((jump-target (branch-insn-target-address insn addr insnargs)))
     (format stream "~8,'0X: ~A" jump-target (addrsym jump-target))))
 
-(defun disasm (&optional address-or-symbol length line-pre-annotate-fn annotations &aux
+;; This is a good material for study of what can be generalised in the whole stack.
+(defun disasm (&optional address-or-symbol-or-extent length line-pre-annotate-fn annotations &aux
                (core *core*))
   #+help-ru
   "Дизассемблировать содержимое диапазона ячеек памяти начиная с
@@ -103,23 +104,35 @@ ADDRESS-OR-SYMBOL и длиной LENGTH.
   #-help-ru
   "Disassemble LENGTH bytes of target device's memory, starting from ADDRESS-OR-SYMBOL, defaulting to PCfetch.
 ADDRESS-OR-SYMBOL must be aligned by 4."
-  (let ((address (if address-or-symbol
-                     (coerce-to-address address-or-symbol :if-not-found :error)
-                     (max 0 (- (moment-fetch (saved-core-moment core)) #x10))))
-        (length (or length (if (and address-or-symbol (symbolp address-or-symbol))
-                               (symlength address-or-symbol)
-                               #x20))))
+  (multiple-value-bind (address length) (etypecase address-or-symbol-or-extent
+                                          (null                (values (max 0 (- (moment-fetch (saved-core-moment core)) #x10))
+                                                                       #x20))
+                                          (extent              (values (base address-or-symbol-or-extent)
+                                                                       (lret ((final (size address-or-symbol-or-extent)))
+                                                                         (when length
+                                                                           (minf final length)))))
+                                          (pinned-segment      (values (pinned-segment-base address-or-symbol-or-extent)
+                                                                       (lret ((final (segment-active-vector address-or-symbol-or-extent)))
+                                                                         (when length
+                                                                           (minf final length)))))
+                                          ((or symbol integer) (values (coerce-to-address address-or-symbol-or-extent :if-not-found :error)
+                                                                       (symlength address-or-symbol-or-extent))))
     (check-address-alignment 4 address)
-    (core-disassemble core address length
-                      :line-pre-annotate-fn line-pre-annotate-fn
-                      :line-fn (if annotations
-                                   (make-annotating-disassembly-printer annotations)
-                                   #'default-disassembly-line-printer)
-                      ;; this just asks for a CLOS GF
-                      :line-post-annotate-fn (lambda (stream addr insn insnargs)
-                                               (when (typep insn 'branch-insn)
-                                                 (describe-insn-jump-target stream addr insn insnargs))))
-                      
+    (let ((disassemble-and-print-args (list :line-pre-annotate-fn line-pre-annotate-fn
+                                            ;; this just asks for a CLOS GF
+                                            :line-post-annotate-fn (lambda (stream addr insn insnargs)
+                                                                     (when (typep insn 'branch-insn)
+                                                                       (describe-insn-jump-target stream addr insn insnargs)))
+                                            :line-fn (if annotations
+                                                         (make-annotating-disassembly-printer annotations)
+                                                         #'default-disassembly-line-printer))))
+      (etypecase address-or-symbol-or-extent
+        ((or symbol integer)        (apply #'core-disassemble core address length disassemble-and-print-args))
+        ((or extent pinned-segment) (apply #'core::disassemble-and-print *standard-output* (core-isa core)
+                                           address
+                                           (funcall (fif (of-type 'extent) #'extent-data #'segment-active-vector)
+                                                    address-or-symbol-or-extent)
+                                           (remove-if #'keywordp disassemble-and-print-args)))))                      
     (values)))
 
 (defun dump (address-or-symbol &optional (length #x100))
