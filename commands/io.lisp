@@ -135,11 +135,12 @@ ADDRESS-OR-SYMBOL must be aligned by 4."
         ((or symbol integer)               (apply #'core-disassemble core address length disassemble-and-print-args))
         ((or extent pinned-segment vector) (apply #'core::disassemble-and-print *standard-output* (core-isa core)
                                                   address
-                                                  (funcall (typecase address-or-symbol-or-extent
-                                                             (extent  #'extent-data)
-                                                             (segment #'segment-active-vector)
-                                                             (vector  #'identity))
-                                                           address-or-symbol-or-extent)
+                                                  (subseq (funcall (typecase address-or-symbol-or-extent
+                                                                     (extent  #'extent-data)
+                                                                     (segment #'segment-active-vector)
+                                                                     (vector  #'identity))
+                                                                   address-or-symbol-or-extent)
+                                                          0 length)
                                                   (remove-if #'keywordp disassemble-and-print-args)))))                      
     (values)))
 
