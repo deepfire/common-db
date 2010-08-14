@@ -561,7 +561,8 @@
    #:core-virtual-pages
    #:set-core-virtual-pages
    #:state
-   #:state-pc
+   #:state-moment
+   #:state-trail
    #:state-gpr
    #:state-regs
    #:state-fpr
