@@ -141,7 +141,8 @@
       (setf (saved-core-trail o) trail
             (saved-core-moment o) moment)
       (restore-core-trail o)
-      (restore-core-moment o))))
+      (restore-core-moment o)
+      state)))
 
 (defun apply-bank (core bank)
   "This function expects a clean, post-reset core."
