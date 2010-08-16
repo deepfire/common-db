@@ -211,7 +211,7 @@
     (setf (iface-idcode iface)
           (handler-bind ((error (lambda (c)
                                   (syncformat *error-output* "~@<ERROR: ~@;failed to reset ~S, closing down.~:@>~%" iface)
-                                  (ezusb-close iface)
+                                  (interface-close iface)
                                   (error c))))
             (with-maybe-logged-device-io (iface t nil)
               (interface-reset iface))))))
