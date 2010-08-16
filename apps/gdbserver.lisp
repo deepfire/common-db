@@ -349,7 +349,7 @@
   (setf common-db::*additional-help-en* *gdbserver-help-en*
         common-db::*additional-help-ru* common-db::*gdbserver-help-ru*)
   (comdb::comdb-toplevel-wrapper #'gdbserver
-                                 '((:address :string) :port :trace-exchange)
+                                 '((:address :string) (:port :decimal) :trace-exchange)
                                  '(:start-swank :single-shot :trace-comdb-calls :trace-even-noisy-comdb-calls :trace-comdb-memory-io)))
 
 (defun gdbserver (&key verbose (target-context *current*) (address "127.0.0.1") (port 9000) single-shot
