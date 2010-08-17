@@ -462,6 +462,11 @@ step-core-asynchronous and exec-raw."
 ;;;;
 ;;;; IDCODE
 ;;;;
+(defun parport-read-idcode (iface)
+  (let ((retarr (make-array 4 :element-type '(unsigned-byte 8) :initial-element 0)))
+    (tap-shift-dr-path retarr iface +idcode-length+ 0)
+    (u8-vector-word32le retarr 0)))
+
 (defun parport-tap-idcode (interface selector &aux (port-base (parport-interface-epp-base interface)))
   "Get device's ID and lookup device table.
  
@@ -485,9 +490,7 @@ step-core-asynchronous and exec-raw."
   ;;  first bit at TDO: BYPASS 0, IDCODE 1
   (send-command port-base :finish)
   (send-command port-base :start)
-  (let ((retarr (make-array 4 :element-type '(unsigned-byte 8) :initial-element 0)))
-    (tap-shift-dr-path retarr interface +idcode-length+ 0)
-    (u8-vector-word32le retarr 0)))
+  (parport-read-idcode interface))
 
 ;;;;
 ;;;; Interface bus
@@ -515,16 +518,16 @@ step-core-asynchronous and exec-raw."
   (syncformat t "NOTE: opening an EPP device on port #x~X~%" epp-base)
   (lret ((iface (make-instance 'parport-interface :bus o :address address :epp-base epp-base :version (status-bit epp-base :idmask))))
     (setf (iface-idcode iface)
-          (with-condition-recourses interface-state-transition-timeout
-              (progn (interface-reset iface)
-                     (devbit-decode iface :idcode :oncd-version))
-            (:common (c recourse)
-                     (syncformat t "~&WARNING: OFP: ~S, failed to get IDCODE of ~S. Attempting workaround: ~A~%"
-                                 (oncd-functional-p iface) iface recourse)
-                     (call-next-recourse-and-retry)
-                     (error c))
-            (target-reset-and-stop ()
-                                   (interface-reset-target iface t))))
+          (decode-bitfield :oncd-version
+                           (with-condition-recourses interface-state-transition-timeout
+                               (interface-reset iface)
+                             (:common (c recourse)
+                                      (syncformat t "~&WARNING: OFP: ~S, failed to get IDCODE of ~S. Attempting workaround: ~A~%"
+                                                  (oncd-functional-p iface) iface recourse)
+                                      (call-next-recourse-and-retry)
+                                      (error c))
+                             (target-reset-and-stop ()
+                                                    (interface-reset-target iface t)))))
     (interface-reset iface)))
 
 ;;;;
@@ -540,12 +543,11 @@ step-core-asynchronous and exec-raw."
   (:extended-layouts :tap-dr))
 
 (defmethod interface-reset ((i parport-interface) &aux (port-base (parport-interface-epp-base i)))
-  "Stale? NMI?"
   (port-reset port-base)
   (send-command port-base :start)
-  (with-reset-bit-twitch :trst port-base
-                         (nanosleep +generic-delay+)
-                         t))
+  (prog1 (parport-read-idcode i)
+    (with-reset-bit-twitch :trst port-base
+      (nanosleep +generic-delay+))))
 
 (defun oncd-functional-p (interface)
   "Sniff OnCD, so as to avoid excessive resetting."

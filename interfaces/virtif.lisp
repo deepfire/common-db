@@ -22,6 +22,8 @@
 
 (in-package :interface-virtual)
 
+(set-namespace :interface)
+
 
 (defvar *virtual-interface-stop-during-reset* nil)
 
@@ -39,7 +41,7 @@
 
 (defmethod bus-populate-address ((o virtif-bus) address)
   (lret ((iface (make-instance 'virtif-interface :bus o :address address :version 0)))
-    (setf (iface-idcode iface) (interface-reset iface))))
+    (setf (iface-idcode iface) (decode-bitfield :oncd-version (interface-reset iface)))))
 
 ;;;;
 ;;;; Interface

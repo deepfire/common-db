@@ -208,13 +208,7 @@
 
 (defmethod bus-populate-address ((o ezusb-bus) address)
   (lret ((iface (make-instance 'ezusb-interface :bus o :address address :handle (ezusb-open address))))
-    (setf (iface-idcode iface)
-          (handler-bind ((error (lambda (c)
-                                  (syncformat *error-output* "~@<ERROR: ~@;failed to reset ~S, closing down.~:@>~%" iface)
-                                  (interface-close iface)
-                                  (error c))))
-            (with-maybe-logged-device-io (iface t nil)
-              (interface-reset iface))))))
+    (setf (iface-idcode iface) (decode-bitfield :oncd-version (interface-reset iface)))))
 
 (define-device-class ezusb-interface :interface (interface)
   ((handle :accessor ezusb-interface-handle :type (or null #-windows stream #+windows integer) :initarg :handle))
@@ -228,13 +222,13 @@
 
 (defmethod interface-reset ((o ezusb-interface))
   (with-condition-recourses interface-error
-      (progn
+      (progn-1
         (setc (devbit o :ezusb-cmd :ezusb-opcode :write-only t) :program-pll-to-48mhz
               (devbit o :ezusb-cmd :ezusb-opcode :write-only t) :begin-reset
               (devbit o :ezusb-cmd :ezusb-opcode :write-only t) :end-reset)
         (ezusb-oncd-reset o)
-        (prog1 (devbit-decode o :idcode :oncd-version)
-          (setf (iface-version o) (ezusb-firmware-version o))))
+        (devbit-value o :idcode :oncd-version)
+        (setf (iface-version o) (ezusb-firmware-version o)))
     #+windows
     (:common (c)
       (call-next-recourse-and-retry)

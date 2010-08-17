@@ -118,8 +118,11 @@ ERROR-RETURN-FORM."
   (:documentation
    "Device representing the means of access to the target's OnChip Debug machinery."))
 
+(defvar *initializing-interface*)
+
 (defmethod initialize-instance :after ((o interface) &key address &allow-other-keys)
-  (setf (slot-value o 'name) (format nil "~A-~X" (type-of o) address)))
+  (setf (slot-value o 'name) (format nil "~A-~X" (type-of o) address)
+        *initializing-interface* o))
 
 (defmethod print-object ((o interface) stream)
   (labels ((slot (id) (if (slot-boundp o id) (slot-value o id) :unbound-slot)))
@@ -127,6 +130,14 @@ ERROR-RETURN-FORM."
             (slot 'name) (slot 'version) (slot 'idcode))))
 
 (defmethod interface-close ((o interface)) t)
+
+(defmethod bus-populate-address :around ((o interface-bus) address)
+  (declare (ignore address))
+  (unwind-protect (handler-bind ((error (lambda (c)
+                                          (declare (ignore c))
+                                          (interface-close *initializing-interface*))))
+                    (call-next-method))
+    (makunbound '*initializing-interface*)))
 
 (defun scan-interface-busses (&key force-rescan virtual (physical t) tapserver-address tapserver-port)
   (declare (ignore #+disable-virtcore

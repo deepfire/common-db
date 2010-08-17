@@ -243,6 +243,7 @@
   (:shadowing-import-from :bitmop #:space)
   (:export
    #:interface-bus
+   #:*initializing-interface*
    #-disable-virtcore  #:virtif-bus
    #-disable-tapclient #:tapclient-bus
    #-disable-parport   #:parport-bus
