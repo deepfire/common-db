@@ -95,7 +95,7 @@ To be called once, before any use of COMMON-DB."
   (set-namespace :interface :platform :core :dsp)
   (values))
 
-(defun scan (&key force-rescan virtual (physical (not virtual)) skip-platform-init &aux
+(defun scan (&key force-rescan virtual (physical (not virtual)) tapserver-address tapserver-port skip-platform-init &aux
              (*skip-platform-init* skip-platform-init))
   #+help-ru
   "Функция производит следующие операции:
@@ -114,7 +114,10 @@ To be called once, before any use of COMMON-DB."
 придаёт адаптерам на шине USB определённый приоритет."
   (setf *print-circle* t
         *print-base* #x10)
-  (scan-interface-busses :force-rescan force-rescan :virtual virtual :physical physical)
+  (scan-interface-busses :force-rescan force-rescan
+                         :virtual virtual
+                         :physical physical
+                         :tapserver-address tapserver-address :tapserver-port tapserver-port)
   (values))
 
 (defun reset (&rest platform-args &key (core *core*) (state *depth*) &allow-other-keys)

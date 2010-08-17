@@ -20,6 +20,7 @@
    #:*log-core-pipeline-crit*           ; mips
    #:*log-interface-bus-discovery*      ; common-db-core
    #:*verbose-interface-init*           ; interface
+   #:*trace-exchange*                   ; all network code
 
    #:*virtual-interface-enabled*        ; interface
    #:*virtual-target-enabled*           ; targets/virtual
@@ -242,8 +243,9 @@
   (:shadowing-import-from :bitmop #:space)
   (:export
    #:interface-bus
-   #-disable-virtcore #:virtif-bus
-   #-disable-parport  #:parport-bus
+   #-disable-virtcore  #:virtif-bus
+   #-disable-tapclient #:tapclient-bus
+   #-disable-parport   #:parport-bus
    #:ezusb-bus
    #:interface
    #:iface-name

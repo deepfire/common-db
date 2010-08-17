@@ -1,8 +1,8 @@
 ;;; -*- Mode: LISP; Syntax: COMMON-LISP; Package: INTERFACE; Base: 10; indent-tabs-mode: nil -*-
 ;;;
-;;;  (c) copyright 2007-2009, ГУП НПЦ "Элвис"
+;;;  (c) copyright 2007-2010, ГУП НПЦ "Элвис"
 ;;;
-;;;  (c) copyright 2007-2009 by
+;;;  (c) copyright 2007-2010 by
 ;;;           Samium Gromoff (_deepfire@feelingofgreen.ru)
 ;;;
 ;;; This library is free software; you can redistribute it and/or
@@ -128,13 +128,22 @@ ERROR-RETURN-FORM."
 
 (defmethod interface-close ((o interface)) t)
 
-(defun scan-interface-busses (&key force-rescan virtual (physical t))
-  #+disable-virtcore
-  (declare (ignore virtual))
+(defun scan-interface-busses (&key force-rescan virtual (physical t) tapserver-address tapserver-port)
+  (declare (ignore #+disable-virtcore
+                   virtual
+                   #+disable-tapclient #+disable-tapclient
+                   tapserver-address tapserver-port))
   #-disable-virtcore
   (let ((*virtual-interface-enabled* virtual)
         (*virtual-target-enabled* virtual))
     (bus-scan (or (root-bus 'virtif :if-does-not-exist :continue) (make-instance 'virtif-bus :name 'virtif)) force-rescan))
+  #-disable-tapclient
+  (when tapserver-address
+    (bus-scan (or (when-let ((bus (root-bus 'tapclient :if-does-not-exist :continue)))
+                    (reinitialize-instance bus :address tapserver-address :port tapserver-port)
+                    bus)
+                  (make-instance 'tapclient-bus :name 'tapclient :address tapserver-address :port tapserver-port))
+              force-rescan))
   (when physical
     #-disable-parport
     (unless *disable-parport-interfaces*
@@ -146,6 +155,8 @@ ERROR-RETURN-FORM."
   "Return the list of all active interfaces."
   (append #-disable-virtcore
           (bus-devices (root-bus 'virtif))
+          #-disable-tapclient
+          (bus-devices (root-bus 'tapclient))
           #-disable-parport
           (bus-devices (root-bus 'parport))
           (bus-devices (root-bus 'ezusb))))

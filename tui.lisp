@@ -114,6 +114,11 @@
     --list-platforms            List all known platforms and quit.
     --platform <platform-name>  Specify platform manually, instead of detection.
     --virtual                   Enable the virtual interface/target/core.
+    --tapserver-address
+                 <dotted-quad>  Connect to a tapserver at the specified
+                                  address.
+    --tapserver-port <integer>  Tapserver TCP port number.
+                                  Defaults to 9001.
     --physical                  Look for physical targets.  Defaults to 'yes',
                                   unless --virtual is specified.
     --no-parport                Omit looking for EPP-attached targets.
@@ -157,7 +162,8 @@
   (when *orgify*
     (write-string "#+END_EXAMPLE") (terpri)))
 
-(defvar *standard-parameters* '((:load :string) (:core-multiplier :decimal) :early-eval :context :platform :memory-detection-threshold :eval))
+(defvar *standard-parameters* '((:load :string) (:core-multiplier :decimal) :early-eval :context :platform :memory-detection-threshold :eval
+                                (:tapserver-address :string) (:tapserver-port :decimal)))
 (defvar *standard-switches*   '(:no-rc :virtual :physical :no-parport :no-usb :no-scan :no-platform-init
                                 :list-contexts :list-platforms :help :help-en :version :no-memory-detection
                                 :disable-debugger :print-backtrace-on-errors :early-break-on-signals :break-on-signals
@@ -171,6 +177,7 @@
 (defun comdb-toplevel-wrapper (fn &optional additional-parameters additional-switches &key
                                (help-needed-discriminator (constantly nil))
                                (user-package :comdb)
+                               tapserver-address (tapserver-port 9001)
                                ;; default option customisation
                                no-rc no-platform-init disable-debugger print-backtrace-on-errors
                                no-memory-detection memory-detection-threshold verbose)
@@ -248,7 +255,7 @@
                (eval early-eval))
              (unless no-scan
                (with-retry-restarts ((retry () :report "Retry scanning interface busses."))
-                 (scan :physical physical :virtual virtual
+                 (scan :physical physical :virtual virtual :tapserver-address tapserver-address :tapserver-port tapserver-port
                        :skip-platform-init no-platform-init)
                  (unless *current*
                    (error "~@<No devices were found attached to active busses.~:@>"))))
