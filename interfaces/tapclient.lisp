@@ -50,24 +50,35 @@
     (when *trace-exchange*
       (format *trace-output* "<REQ ~S~%" pkt))))
 
-(defun call-with-response (stream expectation fn)
+(defun call-with-response (interface stream expectation eof-error-p fn)
   (with-safe-reader-context ()
     (let* ((*read-base* #x10)
-           (response (read stream)))
+           (response (read stream nil '(:eof))))
       (when *trace-exchange*
         (format *trace-output* "> ~S~%" response))
-      (when (eq :error (first response))
-        (error "~@<Remote signalled error: ~@<~S~:@>~:@>" (second response)))
-      (unless (eq expectation (first response))
-        (error "~@<Expected response type ~S, got ~S.~:@>" expectation (first response)))
-      (funcall fn response))))
+      (case (first response)
+        (:eof   (when eof-error-p
+                  (interface-error interface "~@<EOF on tapserver stream ~S~:@>" stream)))
+        (:error (error "~@<Remote signalled error: ~@<~S~:@>~:@>" (second response)))
+        (t
+         (unless (eq expectation (first response))
+           (error "~@<Expected response type ~S, got ~S.~:@>" expectation (first response)))
+         (funcall fn response))))))
 
-(defmacro with-response (lambda-list stream &body body)
+(defmacro with-response (interface lambda-list stream eof-error-p &body body)
   (with-gensyms (response)
-    `(call-with-response ,stream ,(first lambda-list)
+    `(call-with-response ,interface ,stream ,(first lambda-list) ,eof-error-p
                          (lambda (,response)
                            (destructuring-bind ,(rest lambda-list) (rest ,response)
                              ,@body)))))
+
+(defun dotted-quad/port->integer (dotted-quad port)
+  (declare (type string dotted-quad) (type (unsigned-byte 16) port))
+  (logior (ash (u8-vector-word32le
+                (map '(vector (unsigned-byte 8)) #'identity (usocket:dotted-quad-to-vector-quad dotted-quad))
+                0)
+               16)
+          port))
 
 (defmethod bus-occupied-addresses ((o tapclient-bus))
   (with-slots (address port stream) o
@@ -75,33 +86,33 @@
       (syncformat *trace-output* "; trying to connect to tapserver at ~A:~D~%" address port))
     ;; XXX: handle errors here
     (if (setf stream (ignore-errors (socket-stream (socket-connect address port))))
-        (list (list address port))
+        (list (dotted-quad/port->integer address port))
         (syncformat *trace-output* "; failed to connect to tapserver at ~A:~D~%" address port))))
 
 (defun (setf tapclient-tap-ird) (val iface null &aux
                                  (stream (tap-stream iface)))
   (declare (type (unsigned-byte 32) val) (ignore null))
   (sendpkt stream :set-ird val)
-  (with-response (:ird value) stream
+  (with-response iface (:ird value) stream t
     value))
 
 (defun tapclient-tap-idcode (iface null &aux
                              (stream (tap-stream iface)))
   (declare (ignore null))
   (sendpkt stream :idcode)
-  (with-response (:idcode idcode) stream
+  (with-response iface (:idcode idcode) stream t
     idcode))
 
 (defun tapclient-tap-dr (iface reg &aux
                          (stream (tap-stream iface)))
   (sendpkt stream :get-dr reg)
-  (with-response (:dr value) stream
+  (with-response iface (:dr value) stream t
     value))
 
 (defun (setf tapclient-tap-dr) (val iface reg &aux
                                 (stream (tap-stream iface)))
   (sendpkt stream :set-dr reg val)
-  (with-response (:ok) stream)
+  (with-response iface (:ok) stream t)
   val)
 
 (defmethod bus-populate-address ((o tapclient-bus) address)
@@ -120,26 +131,26 @@
   (with-condition-recourses interface-error
       (progn
         (sendpkt stream :reset-interface)
-        (with-response (:idcode idcode) stream
+        (with-response o (:idcode idcode) stream t
           idcode))))
 
 (defmethod interface-stop-target ((o tapclient-interface) &aux
                             (stream (tap-stream o)))
   (sendpkt stream :stop-target)
-  (with-response (:ok) stream
+  (with-response o (:ok) stream t
     t))
 
 (defmethod interface-attach-target ((o tapclient-interface) &aux
                                     (stream (tap-stream o)))
   (sendpkt stream :attach-target)
-  (with-response (:ird ird) stream
+  (with-response o (:ird ird) stream t
     ird))
 
 (defmethod interface-reset-target ((o tapclient-interface) stop-cores-p &aux
                                    (stream (tap-stream o)))
   (declare (ignore stop-cores-p))
   (sendpkt stream :reset-target)
-  (with-response (:ok) stream)
+  (with-response o (:ok) stream t)
   (interface-stop-target o)
   (interface-attach-target o))
 
@@ -148,7 +159,7 @@
   "Read 32 bits from a given bus address."
   (declare (type (unsigned-byte 32) address))
   (sendpkt stream :read-word address)
-  (with-response (:word value) stream
+  (with-response o (:word value) stream t
     value))
 
 (defmethod (setf interface-bus-word) (val (o tapclient-interface) address &aux
@@ -156,7 +167,7 @@
   "Write 32 bits into a given bus address."
   (declare (type (unsigned-byte 32) val address))
   (sendpkt stream :write-word address val)
-  (with-response (:ok) stream
+  (with-response o (:ok) stream t
     val))
 
 (defmethod interface-bus-io ((o tapclient-interface) buffer address size direction &optional (offset 0) &aux
@@ -168,7 +179,7 @@
                                                                                            (= size (length buffer)))
                                                                                       buffer
                                                                                       (subseq buffer offset (+ offset size)))))))
-  (with-response (:data/ok &optional data) stream
+  (with-response o (:data/ok &optional data) stream t
     (when (eq direction :read)
       (setf (subseq buffer offset) data))))
 
@@ -176,8 +187,8 @@
                             (stream (tap-stream o)))
   (when (open-stream-p stream)
     (unwind-protect
-         (progn (sendpkt stream :bye)
-                (with-response (:bye) stream))
+         (progn (ignore-errors (sendpkt stream :bye))
+                (with-response o (:bye) nil stream))
       (close (tap-stream o)))))
 
 (defmethod bus-remove ((bus tapclient-bus) (o tapclient-interface))

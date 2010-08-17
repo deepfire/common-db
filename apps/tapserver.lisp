@@ -53,6 +53,32 @@
   (apply #'format *log-stream* (concatenate 'string "~&TAPCLIENT> " control-string "~%") args)
   (force-output *log-stream*))
 
+(defun call-ensuring (stream check error-message fn)
+  (if check
+      (funcall fn)
+      (sendpkt stream :error error-message)))
+
+(defmacro with-check ((check stream) error-message &body body)
+  `(call-ensuring ,stream ,check ,error-message (lambda () ,@body)))
+
+(defun call-ensuring-nonnegative-arg (stream arg fn)
+  (if (and (integerp arg) (not (minusp arg)))
+      (funcall fn)
+      (sendpkt stream :error "Single mandatory argument not a non-negative integer.")))
+
+(defmacro with-nonnegative-arg ((arg stream) &body body)
+  `(call-ensuring-nonnegative-arg ,stream ,arg (lambda () ,@body)))
+
+(defun call-ensuring-two-nonnegative-args (stream arg1 arg2 fn)
+  (if (and (integerp arg1) (not (minusp arg1))
+           (integerp arg2) (not (minusp arg2)))
+      (funcall fn)
+      (sendpkt stream :error "The two mandatory arguments are not both non-negative integers.")))
+
+(defmacro with-two-nonnegative-args ((arg1 arg2 stream) &body body)
+  `(call-ensuring-two-nonnegative-args ,stream ,arg1 ,arg2 (lambda () ,@body)))
+
+
 (defun do-the-dance (server &aux
                      (stream (stream-of server))
                      (iface (ctx-interface server)))
@@ -67,14 +93,18 @@
                 (destructuring-bind (op &optional first second) request
                   (ecase op
                     (:set-ird
-                     (if (integerp first)
-                         (sendpkt stream :ird (setc (devreg iface :ird) first))
-                         (sendpkt stream :error "Single mandatory argument not an integer.")))
+                     (with-nonnegative-arg (first stream)
+                       (sendpkt stream :ird (setc (devreg iface :ird) first))))
                     (:get-dr
-                     (sendpkt stream :dr (device-register iface first)))
+                     (with-nonnegative-arg (first stream)
+                       (sendpkt stream :dr (reginstance-value (device-layout-register-instance-by-selector
+                                                               iface (layout (space :interface) :tap-dr) first)))))
                     (:set-dr
-                     (setc (devreg iface first) second)
-                     (sendpkt stream :ok))
+                     (with-two-nonnegative-args (first second stream)
+                       (set-reginstance-value (device-layout-register-instance-by-selector
+                                               iface (layout (space :interface) :tap-dr) first)
+                                              second)
+                       (sendpkt stream :ok)))
                     (:reset-interface
                      (sendpkt stream :idcode (interface-reset iface)))
                     (:stop-target
@@ -86,14 +116,24 @@
                      (interface-reset-target iface first)
                      (sendpkt stream :ok))
                     (:read-word
-                     (sendpkt stream :word (interface-bus-word iface first)))
+                     (with-nonnegative-arg (first stream)
+                       (sendpkt stream :word (interface-bus-word iface first))))
                     (:write-word
-                     (setf (interface-bus-word iface first) second)
-                     (sendpkt stream :ok))
+                     (with-two-nonnegative-args (first second stream)
+                       (setf (interface-bus-word iface first) second)
+                       (sendpkt stream :ok)))
                     (:read-sequence
-                     (sendpkt stream :data/ok))
+                     (with-two-nonnegative-args (first second stream)
+                       (let ((iovec (make-array second :element-type '(unsigned-byte 8))))
+                         (interface-bus-io iface iovec first second :read)
+                         (sendpkt stream :data/ok iovec))))
                     (:write-sequence
-                     (sendpkt stream :data/ok))
+                     (with-nonnegative-arg (first stream)
+                       (with-check ((vectorp second) stream) "Second mandatory argument not a vector."
+                         (let ((iovec (make-array (length second) :element-type '(unsigned-byte 8))))
+                           (map-into iovec #'identity second)
+                           (interface-bus-io iface iovec first (length iovec) :write)
+                           (sendpkt stream :data/ok)))))
                     (:bye
                      (sendpkt stream :bye)
                      (return))
