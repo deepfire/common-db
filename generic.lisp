@@ -110,7 +110,7 @@
 
 (defgeneric bioable-memory-io (device address vector size writep)
   (:method ((o bioable-memory-device) address vector size writep)
-    (declare (type (vector (unsigned-byte 8)) vector) (type integer address size) (type boolean writep))
+    (declare (type (vector (unsigned-byte 8)) vector) (type (integer 0) address size) (type boolean writep))
     (merge-u8-extremity o address vector size t writep)
     (with-alignment (nil nil head) (memory-device-byte-width o) address
       (with-alignment (nil tail) (memory-device-byte-width o) (+ address size)

@@ -953,6 +953,7 @@ every WATCH-PERIOD such polls."
 
 (defun core-disassemble (core addr len &key (stream *standard-output*) line-pre-annotate-fn line-post-annotate-fn
                          (line-fn #'default-disassembly-line-printer))
+  (declare (type (integer 0) addr len))
   (let* ((ioaddr (logandc1 #x3 addr))
          (iolen (logandc1 #b11 (logior len (if (zerop (logand #b11 len)) 0 #b100))))
          (ioarr (make-array iolen :element-type '(unsigned-byte 8))))

@@ -467,7 +467,7 @@ such kind of thing.")
 (defmethod handle-execution-error ((o mips-core) (type (eql 'unexpected-stop-reason)) args)
   (let ((epc (with-temporary-state (o :debug)
                (devreg o :epc))))
-    (core-disassemble o (- (logandc1 #xf epc) #x10) #x30)
+    (core-disassemble o (max 0 (- (logandc1 #xf epc) #x10)) #x30)
     (call-next-method o type (list* :error-address epc args))))
 
 ;;;;

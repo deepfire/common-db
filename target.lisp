@@ -253,6 +253,7 @@ potential SLAVES."
 
 ;;; XXX: inefficient
 (defmethod read-block ((o 32bit-bus-target) base vector &optional start end)
+  (declare (type (integer 0) base))
   (if (or start end)
       (let* ((iolen (- end start))
              (iovec (make-array iolen :element-type '(unsigned-byte 8))))
@@ -262,6 +263,7 @@ potential SLAVES."
 
 ;;; XXX: inefficient
 (defmethod write-block ((o 32bit-bus-target) base vector &optional start end)
+  (declare (type (integer 0) base))
   (if (or start end)
       (bioable-memory-io o (fixmap-address o base) (subseq vector start end) (- end start) t)
       (bioable-memory-io o (fixmap-address o base) vector (length vector) t)))
