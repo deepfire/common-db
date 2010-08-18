@@ -40,7 +40,10 @@
 (defvar *log-stream* *trace-output*)
 
 (defclass tap-server (target-context)
-  ((stream :reader stream-of)))
+  ((stream                :reader stream-of)
+   (dr-selector->space-id :initarg :dr-selector->space-id)))
+
+(define-subcontainer drreg-space-id :type integer :container-slot dr-selector->space-id)
 
 (defun sendpkt (stream type &rest args)
   (print (list* type args) stream)
@@ -97,13 +100,10 @@
                        (sendpkt stream :ird (setc (devreg iface :ird) first))))
                     (:get-dr
                      (with-nonnegative-arg (first stream)
-                       (sendpkt stream :dr (reginstance-value (device-layout-register-instance-by-selector
-                                                               iface (layout (space :interface) :tap-dr) first)))))
+                       (sendpkt stream :dr (device-register iface (drreg-space-id server first)))))
                     (:set-dr
                      (with-two-nonnegative-args (first second stream)
-                       (set-reginstance-value (device-layout-register-instance-by-selector
-                                               iface (layout (space :interface) :tap-dr) first)
-                                              second)
+                       (set-device-register iface (drreg-space-id server first) second)
                        (sendpkt stream :ok)))
                     (:reset-interface
                      (sendpkt stream :idcode (interface-reset iface)))
@@ -192,7 +192,9 @@
                        (error "~@<No active target context: cannot proceed with tapserver!~:@>")))
               (*trace-exchange* trace-exchange))
   (declare (ignore verbose))
-  (change-class ctx 'tap-server)
+  (change-class ctx 'tap-server :dr-selector->space-id (make-hash-table :test 'eq))
+  (dolist (ri (device-layout-register-instances (ctx-interface ctx) (layout (space :interface) :tap-dr)))
+    (setf (drreg-space-id ctx (reginstance-selector ri)) (reginstance-space-id ri)))
   (iter (syncformat t "; Accepting connections on ~A:~D~:[~;, tracing exchanges~]~%" address port trace-exchange)
         (for client = (accept-client-connection ctx port address))
         (serve-client-connection ctx client trace-exchange)
