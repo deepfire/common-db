@@ -177,7 +177,7 @@
 (defun comdb-toplevel-wrapper (fn &optional additional-parameters additional-switches &key
                                (help-needed-discriminator (constantly nil))
                                (user-package :comdb)
-                               tapserver-address (tapserver-port 9001)
+                               tapserver-address tapserver-port
                                ;; default option customisation
                                no-rc no-platform-init disable-debugger print-backtrace-on-errors
                                no-memory-detection memory-detection-threshold verbose)
@@ -199,7 +199,8 @@
        (with-quit-restart
          (destructuring-bind (&rest args &key (verbose verbose)
                                     (no-rc no-rc) early-eval
-                                    core-multiplier virtual (physical (not virtual)) no-parport no-usb no-scan (no-platform-init no-platform-init)
+                                    core-multiplier virtual (physical (not virtual)) no-parport no-usb tapserver-address (tapserver-port 9001)
+                                    no-scan (no-platform-init no-platform-init)
                                     load eval run-tests ignore-test-failures quit
                                     examine-tlb log-pipeline-crit
                                     list-contexts context list-platforms platform
