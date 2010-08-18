@@ -27,21 +27,31 @@
 (defvar *print-backtrace-on-errors* nil)
 
 (defgeneric read-option (string type)
+  (:documentation
+   "Parameter values can be of the following types:
+  - string
+  - binary integer
+  - hexadecimal integer
+  - decimal integer
+  - boolean
+This function directly deals with all of those, but the last one,
+which is handled implicitly, in the non-default case (the default
+case is handled elsewhere).")
   (:method ((s string) (type (eql :string)))
-    (values s t))
+    s)
   (:method ((s string) (type (eql :binary)))
     (when (plusp (length s))
-      (values (parse-integer s :radix 2) t)))
+      (parse-integer s :radix 2)))
   (:method ((s string) (type (eql :hex)))
     (when (plusp (length s))
-      (values (parse-integer s :radix 16) t)))
+      (parse-integer s :radix 16)))
   (:method ((s string) (type (eql :decimal)))
     (when (plusp (length s))
-      (values (parse-integer s :radix 10) t)))
+      (parse-integer s :radix 10)))
   (:method ((s string) (type null))
-    (cond ((zerop (length s))
-           (values))
-          ((and (> (length s) 2) (string= "--" (subseq s 0 2)))
+    "Neutral machine state."
+    (cond ((and (> (length s) 2)
+                (char= #\- (char s 0)) (char= #\- (char s 1)))
            (make-keyword (string-upcase (subseq s 2))))
           (t
            (read-from-string s)))))
@@ -53,12 +63,10 @@
         option-type)
     (lret ((processed-args
             (iter (for (string . rest) on argv)
-                  (when skip-next
+                  (when (or skip-next (zerop (length string)))
                     (setf skip-next nil)
                     (next-iteration))
-                  (for (values option interestingp) = (read-option string option-type))
-                  (unless interestingp
-                    (next-iteration))
+                  (for option = (read-option string option-type))
                   (setf option-type nil)
                   (collect option)
                   (when (keywordp option)
@@ -177,7 +185,6 @@
 (defun comdb-toplevel-wrapper (fn &optional additional-parameters additional-switches &key
                                (help-needed-discriminator (constantly nil))
                                (user-package :comdb)
-                               tapserver-address tapserver-port
                                ;; default option customisation
                                no-rc no-platform-init disable-debugger print-backtrace-on-errors
                                no-memory-detection memory-detection-threshold verbose)
