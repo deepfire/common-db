@@ -219,6 +219,7 @@
                   (other-args (apply #'remove-from-plist args (append (mapcar #'ensure-car *standard-parameters*) *standard-switches*)))
                   (*log-platform-processing* verbose)
                   (*log-system-configuration* verbose)
+                  (*verbose-interface-init* verbose)
                   (discrimination:*discriminate-verbosely* verbose)
                   (*orgify* orgify)
                   (*disable-parport-interfaces* no-parport)
