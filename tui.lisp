@@ -57,38 +57,44 @@ case is handled elsewhere).")
            (read-from-string s)))))
 
 (defun read-args-safely (argv keywords flags)
-  (let ((*read-base* #x10)
-        (*read-eval* nil)
+  (let ((keywords (mapcar #'ensure-list keywords))
+        (*read-base* #x10)
         skip-next
         option-type)
-    (lret ((processed-args
-            (iter (for (string . rest) on argv)
-                  (when (or skip-next (zerop (length string)))
-                    (setf skip-next nil)
-                    (next-iteration))
-                  (for option = (read-option string option-type))
-                  (setf option-type nil)
-                  (collect option)
-                  (when (keywordp option)
-                    (multiple-value-bind (next-option next-boolean-p) (when-let ((next-string (car rest)))
-                                                                        (let ((next-option (read-option next-string nil)))
-                                                                          (when (typep next-option 'boolean)
-                                                                            (setf skip-next t)
-                                                                            (values next-option t))))
-                      (cond (next-boolean-p
-                             (collect next-option))
-                            ((member option flags)
-                             (collect t))
-                            (t
-                             (let ((keywords (mapcar #'ensure-list keywords)))
-                               (destructuring-bind (&optional found-option type) (find option keywords :key #'car)
+    (with-safe-reader-context ()
+      (lret ((processed-args
+              (iter (for (string . rest) on argv)
+                    (when (or skip-next (zerop (length string)))
+                      (setf skip-next nil)
+                      (next-iteration))
+                    (for option = (read-option string option-type))
+                    (setf option-type nil)
+                    (collect option)
+                    (when (keywordp option)
+                      (let* ((next-string (car rest))
+                             (next-option (when next-string
+                                            (read-option next-string nil))))
+                        (cond ((and next-string
+                                    (typep next-option 'boolean))
+                               (setf skip-next t)
+                               (collect next-option))
+                              ((member option flags)
+                               ;; no boolean, but one is expected?  default the flag to T
+                               (collect t))
+                              (t
+                               (destructuring-bind (&optional found-option type (default nil default-provided-p)) (find option keywords :key #'car)
                                  (unless found-option
                                    (error "~@<~A is not a valid keyword argument.~:@>" option))
-                                 (setf option-type type))))))))))
-          (when (oddp (length processed-args))
-            (format t "Malformed argument list:~{ ~A~}~%" processed-args)
-            (display-invocation-help)
-            (quit)))))
+                                 (if (and (or (keywordp next-option)
+                                              (not next-string))
+                                          default-provided-p)
+                                     ;; expecting a value, got a keyword (or nothing), got a default -- recipe for defaulting
+                                     (collect default)
+                                     (setf option-type type))))))))))
+        (when (oddp (length processed-args))
+          (format t "Malformed argument list:~{ ~A~}~%" processed-args)
+          (display-invocation-help)
+          (quit))))))
 
 (defvar *common-db-release-p* (load-time-value (getenv "RELEASE-P")))
 (defvar *common-db-version* (load-time-value (getenv "VERSION")))
@@ -171,7 +177,7 @@ case is handled elsewhere).")
     (write-string "#+END_EXAMPLE") (terpri)))
 
 (defvar *standard-parameters* '((:load :string) (:core-multiplier :decimal) :early-eval :context :platform :memory-detection-threshold :eval
-                                (:tapserver-address :string) (:tapserver-port :decimal)))
+                                (:tapserver-address :string "127.0.0.1") (:tapserver-port :decimal)))
 (defvar *standard-switches*   '(:no-rc :virtual :physical :no-parport :no-usb :no-scan :no-platform-init
                                 :list-contexts :list-platforms :help :help-en :version :no-memory-detection
                                 :disable-debugger :print-backtrace-on-errors :early-break-on-signals :break-on-signals
