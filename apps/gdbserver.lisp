@@ -341,19 +341,17 @@
     --trace-even-noisy-comdb-calls
                                 Trace noisy common-db API calls as well.
     --trace-comdb-memory-io     Trace all memory IO.
-    --trace-exchange <integer>  Trace gdbserver protocol exchange, up to the
-                                  specified amount of bytes per RSP command.
     --single-shot               Exit after the first connection terminates.")
 
 (defun gdbserver-toplevel ()
   (setf common-db::*additional-help-en* *gdbserver-help-en*
         common-db::*additional-help-ru* common-db::*gdbserver-help-ru*)
   (comdb::comdb-toplevel-wrapper #'gdbserver
-                                 '((:address :string) (:port :decimal) :trace-exchange)
+                                 '((:address :string) (:port :decimal))
                                  '(:start-swank :single-shot :trace-comdb-calls :trace-even-noisy-comdb-calls :trace-comdb-memory-io)))
 
 (defun gdbserver (&key verbose (target-context *current*) (address "127.0.0.1") (port 9000) single-shot
-                  start-swank trace-comdb-calls trace-even-noisy-comdb-calls trace-comdb-memory-io trace-exchange &aux
+                  start-swank trace-comdb-calls trace-even-noisy-comdb-calls trace-comdb-memory-io &aux
                   (core (if target-context
                             (ctx-core target-context)
                             (error "~@<No active target context: cannot start GDB server.~:@>"))))
@@ -374,9 +372,9 @@
       (syncformat t "; Swank server start requested, but swank wasn't compiled in, ignoring.~%")
       #+with-swank
       (swank:create-server :dont-close t))
-    (iter (syncformat t "; Accepting connections on ~A:~D~:[~;, tracing exchanges, up to ~:*~X bytes~]~%" address port trace-exchange)
+    (iter (syncformat t "; Accepting connections on ~A:~D~:[~;, tracing exchanges, up to ~:*~X bytes~]~%" address port *trace-exchange*)
           (setf (slot-value target-context 'gdbremote::no-ack-mode) nil)
           (for client = (accept-client-connection target-context port address))
           (reset :core core)
-          (serve-client-connection target-context client trace-exchange)
+          (serve-client-connection target-context client *trace-exchange*)
           (until single-shot))))

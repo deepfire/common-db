@@ -127,14 +127,20 @@ case is handled elsewhere).")
     --core-multiplier <integer> Set core frequency multiplier.
     --list-platforms            List all known platforms and quit.
     --platform <platform-name>  Specify platform manually, instead of detection.
+    --physical                  Look for physical targets.  Defaults to T,
+                                  unless --virtual or --tapserver are specified.
     --virtual                   Enable the virtual interface/target/core.
-    --tapserver-address
-                 <dotted-quad>  Connect to a tapserver at the specified
-                                  address.
+                                  Forces --physical to default to NIL.
+    --tapserver [<dotted-quad>] Connect to a tapserver at the optionally 
+                                  specified address, defaulting to 127.0.0.1
+                                  Forces --physical to default to NIL.
+    --trace-exchange [<integer>]  
+                                Trace protocol exchanges, whenever applicable.
+                                  Whenever applicable, a per-message byte
+                                  limit might also be provided, which defaults
+                                  to 1024.
     --tapserver-port <integer>  Tapserver TCP port number.
                                   Defaults to 9001.
-    --physical                  Look for physical targets.  Defaults to 'yes',
-                                  unless --virtual is specified.
     --no-parport                Omit looking for EPP-attached targets.
     --no-usb                    Omit looking for USB-attached targets.
     --no-scan                   Don't scan interfaces.
@@ -177,7 +183,7 @@ case is handled elsewhere).")
     (write-string "#+END_EXAMPLE") (terpri)))
 
 (defvar *standard-parameters* '((:load :string) (:core-multiplier :decimal) :early-eval :context :platform :memory-detection-threshold :eval
-                                (:tapserver-address :string "127.0.0.1") (:tapserver-port :decimal)))
+                                (:tapserver :string "127.0.0.1") (:tapserver-port :decimal) (:trace-exchange :decimal 1024)))
 (defvar *standard-switches*   '(:no-rc :virtual :physical :no-parport :no-usb :no-scan :no-platform-init
                                 :list-contexts :list-platforms :help :help-en :version :no-memory-detection
                                 :disable-debugger :print-backtrace-on-errors :early-break-on-signals :break-on-signals
@@ -212,7 +218,7 @@ case is handled elsewhere).")
        (with-quit-restart
          (destructuring-bind (&rest args &key (verbose verbose)
                                     (no-rc no-rc) early-eval
-                                    core-multiplier virtual (physical (not virtual)) no-parport no-usb tapserver-address (tapserver-port 9001)
+                                    core-multiplier tapserver (tapserver-port 9001) virtual (physical (not (or virtual tapserver))) no-parport no-usb trace-exchange
                                     no-scan (no-platform-init no-platform-init)
                                     load eval run-tests ignore-test-failures quit
                                     examine-tlb log-pipeline-crit
@@ -234,6 +240,7 @@ case is handled elsewhere).")
                   (*log-platform-processing* verbose)
                   (*log-system-configuration* verbose)
                   (*verbose-interface-init* verbose)
+                  (*trace-exchange* trace-exchange)
                   (discrimination:*discriminate-verbosely* verbose)
                   (*orgify* orgify)
                   (*disable-parport-interfaces* no-parport)
@@ -270,7 +277,7 @@ case is handled elsewhere).")
                (eval early-eval))
              (unless no-scan
                (with-retry-restarts ((retry () :report "Retry scanning interface busses."))
-                 (scan :physical physical :virtual virtual :tapserver-address tapserver-address :tapserver-port tapserver-port
+                 (scan :physical physical :virtual virtual :tapserver-address tapserver :tapserver-port tapserver-port
                        :skip-platform-init no-platform-init)
                  (unless *current*
                    (error "~@<No devices were found attached to active busses.~:@>"))))
