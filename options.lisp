@@ -27,3 +27,24 @@
 
 (defvar *virtual-target-enabled* nil
   "Whether the virt target shows up on the virt interface.")
+
+(defvar *initargs*         nil
+  "Option argument list.")
+
+
+(defun args ()
+  *initargs*)
+
+(defun set-args (value)
+  (setf *initargs* value))
+
+
+(defun arg (name)
+  (getf *initargs* name))
+
+(defun set-arg (name value)
+  (setf (getf *initargs* name) value))
+
+
+(defsetf args set-args)
+(defsetf arg set-arg)

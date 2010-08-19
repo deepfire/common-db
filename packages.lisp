@@ -7,7 +7,11 @@
   (:nicknames :opt)
   (:use :common-lisp)
   (:export
-   ;; logging
+   ;;
+   ;; The all-knowing, all-seeing oracle.
+   #:*initargs*
+   ;;
+   ;; Logging
    #:*log-stream*                       ; options
    #:*log-bus-events*                   ; bus
    #:*log-loadable-processing*          ; loadable
@@ -21,26 +25,24 @@
    #:*log-interface-bus-discovery*      ; common-db-core
    #:*verbose-interface-init*           ; interface
    #:*trace-exchange*                   ; all network code
-
+   ;;
+   ;; Grab bag
    #:*virtual-interface-enabled*        ; interface
    #:*virtual-target-enabled*           ; targets/virtual
-   #:*disable-parport-interfaces*
-   #:*disable-usb-interfaces*
-   #:*skip-platform-init*               ; target
-   #:*memory-detection-threshold*       ; platform-memory
    #:*orgify*                           ; common-db-tui
-   #:*print-backtrace-on-errors*        ; common-db-tui
+   #:*map-to-zeroth-page*
    ;;
+   ;; UI
    #:*explain*
    #:*examine-tlb*
-   #:*map-to-zeroth-page*
-   #:*keep-target-intact*
-   #:*forced-platform*
-   #:*force-memory-detection*
-   #:*inhibit-memory-detection*
    #:*display*
    #:*watch*
-   #:*watch-fn*))
+   #:*watch-fn*
+   ;;
+   ;; Functional interface to *initargs*
+   #:args
+   #:arg
+   #:set-arg))
 
 (defpackage #:spaces                    ; standalone
   (:use :common-lisp :bitmop :device-model)
@@ -598,7 +600,6 @@
   (:export
    #:*memory-configurations*
    #:*memory-configuration-order*
-   #:*memory-detection-threshold*
    #:memory-config
    #:make-memory-config
    #:memory-config-name
@@ -609,8 +610,7 @@
    #:apply-memory-config
    #:test-target-memory
    #:platform-no-usable-memory-detected-error
-   #:platform-no-usable-memory-detected
-   #:configure-platform-memory))
+   #:platform-no-usable-memory-detected))
 
 (defpackage #:mips ;; needed by common-db, test-hardware
   (:use :common-lisp :alexandria :pergamum :iterate :setc :bitmop :device-model :isa :isa-mips :assem :assem-mips :address-map
@@ -759,7 +759,6 @@
    apropos describe load sleep quit
    ;;
    #:*syms*
-   #:*initargs*
    #:*default-initargs*
    ;; target contexts
    #:target-context

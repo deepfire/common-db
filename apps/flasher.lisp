@@ -50,7 +50,7 @@
                                    (:fcode :binary))
                                  '(:erase-chip :preserve-holes :no-check :print-checksums :dry-run)
                                  :disable-debugger t
-                                 :no-memory-detection t
+                                 :no-memory-configuration t
                                  :help-needed-discriminator
                                  (lambda (args)
                                    (null (intersection args '(:run-tests :raw-file :elf-file :dump-base))))))

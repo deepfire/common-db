@@ -82,15 +82,17 @@
 ;;;;
 (defgeneric detect-platform-memory-size (platform base &key minimum maximum when-infinite))
 (defgeneric configure-platform-system (platform system &key &allow-other-keys))
-(defgeneric configure-platform-memory (platform &optional force-detection if-detection-fails)
+(defgeneric configure-platform-memory (platform force-detection detection-threshold memory-configuration-failure-error-p)
   (:documentation 
    "Configure PLATFORM's memory, performing detection when there is no stored 
 configuration or when FORCE-DETECTION is non-NIL, otherwise using the configuration
-stored in PLATFORM.
+stored in PLATFORM.  DETECTION-THRESHOLD is used as the size of the test memory
+region used to determine if the configuration is stable enough.
 
-When no working configuration is found, and IF-DETECTION-FAILS is :ERROR (the default),
-an error of type PLATFORM-NO-USABLE-MEMORY-DETECTED-ERROR is signalled.  When it is :WARN,
-a warning of type PLATFORM-NO-USABLE-MEMORY-DETECTED is signalled instead."))
+When no working configuration is found, and MEMORY-CONFIGURATION-FAILURE-ERROR-P is non-NIL,
+an error of type PLATFORM-NO-USABLE-MEMORY-DETECTED-ERROR is signalled.  
+Otherwise, when MEMORY-CONFIGURATION-FAILURE-ERROR-P is NIL, a warning of type
+PLATFORM-NO-USABLE-MEMORY-DETECTED is signalled instead."))
 
 ;;;;
 ;;;; Definitions

@@ -23,9 +23,6 @@
 (in-package :sysdev)
 
 
-(defparameter *memory-detection-threshold* #x1000)
-
-
 (defmethod detect-platform-memory-size ((o platform) (base integer) &key (minimum #x8000) (maximum #x80000000) (when-infinite :error))
   (let ((target (platform-target o))
         (size minimum)
@@ -140,7 +137,7 @@ MEMORY-CONFIG-VALID-FOR-DEVICE-CLASSES-P could be used."))
   ((target :initarg :target))
   (:report (target) "~@<No memory could be assigned for bus address #x00000000 to ~S.~:@>" target))
 
-(defun detect-and-configure-platform-memory (platform &optional (if-not-found :error))
+(defun detect-and-configure-platform-memory (platform detection-threshold &optional (if-not-found :error))
   "Try every known memory configuration for PLATFORM, applying and returning
 the first one which works as the primary value, and the size of the detected
 memory extent as the secondary value.
@@ -168,7 +165,7 @@ the consequent behavior:
                   (apply-memory-config platform config)
                   (for size = (detect-platform-memory-size platform #x00000000))
                   (when (and size (let ((*log-platform-processing* nil))
-                                    (test-target-memory target #x0 *memory-detection-threshold* :if-fails :continue)))
+                                    (test-target-memory target #x0 detection-threshold :if-fails :continue)))
                     (pprint-newline :mandatory *log-stream*)
                     (format *log-stream* "found ~DK of ~A-type memory at bus address #x00000000"
                             (ash size -10) (memory-config-name config))
@@ -184,7 +181,7 @@ the consequent behavior:
               (:warn (warn 'platform-no-usable-memory-detected :target target))
               (:error (error 'platform-no-usable-memory-detected-error :target target)))))))))
 
-(defmethod configure-platform-memory ((o platform) &optional force-detection (if-detection-fails :error))
+(defmethod configure-platform-memory ((o platform) force-detection detection-threshold detection-failure-error-p)
   (let ((target (platform-target o))
         (*log-stream* (if *log-platform-processing*
                           *log-stream*
@@ -192,6 +189,6 @@ the consequent behavior:
     (if-let ((configuration (platform-memory-configuration o))
              (no-forced-detection (null force-detection)))
       (apply-memory-config o configuration)
-      (multiple-value-bind (config size) (detect-and-configure-platform-memory o if-detection-fails)
+      (multiple-value-bind (config size) (detect-and-configure-platform-memory o detection-threshold detection-failure-error-p)
         (make-target-device target 'ram :extent (extent 0 size) :master (target-device target '(general-purpose-core 0)))
         (setf (platform-memory-configuration o) config)))))

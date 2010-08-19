@@ -27,6 +27,9 @@
 ;;;
 (defvar *spaces*           '(:interface :platform :core :dsp))
 
+(defvar *default-initargs* '(:reset-p t :stop-cores-p t)
+  "Default device context initialization argument list.")
+
 ;;;
 ;;; CLI
 ;;;
@@ -37,14 +40,6 @@
 (defvar *watch*              t)
 (defvar *watch-fn*           'print-pipeline-terse)
 (defvar *log-interface-bus-discovery* nil)
-
-;;;
-;;; Hardware parametrization
-;;;
-(defvar *initargs*         nil
-  "Device context initialization argument list.")
-(defvar *default-initargs* '(:reset-p t :stop-cores-p t)
-  "Default device context initialization argument list.")
 
 ;;;;
 ;;;; State
@@ -81,7 +76,7 @@ To be called once, before any use of COMMON-DB."
 ;;;;
 (defmethod bus-add ((o interface-bus) interface)
   (with-maybe-logged-device-io (interface t *log-interface-bus-discovery*)
-    (let* ((platform-initargs (or *initargs* *default-initargs*))
+    (let* ((platform-initargs (or (args) *default-initargs*))
            (target (apply #'make-instance (find-target-class-for-interface interface) :backend interface platform-initargs))
            (core (target-device target '(core:general-purpose-core 0)))
            ;; And one to bind them all..
@@ -95,8 +90,7 @@ To be called once, before any use of COMMON-DB."
 (defmethod add-target-device :after ((target target) (o mips-core))
   (patch-core-pipeline-reginstances o))
 
-(defun scan (&key force-rescan virtual (physical (not virtual)) tapserver-address tapserver-port skip-platform-init &aux
-             (*skip-platform-init* skip-platform-init))
+(defun scan (&key force-rescan virtual (physical (not virtual)) tapserver-address tapserver-port)
   #+help-ru
   "Функция производит следующие операции:
 
@@ -135,9 +129,9 @@ To be called once, before any use of COMMON-DB."
   "Reset the target device."
   (let ((prereset-mult (ignore-errors (core-frequency-multiplier core)))
         (specified-mult (getf platform-args :core-multiplier)))
-    (appendf platform-args
-             (when-let ((multiplier (or specified-mult (and (core-frequency-multiplier-valid-p core prereset-mult)
-                                                            prereset-mult))))
+    (when-let ((multiplier (or specified-mult (and (core-frequency-multiplier-valid-p core prereset-mult)
+                                                   prereset-mult))))
+      (appendf platform-args
                `(:core-multiplier ,multiplier)))
     (apply #'reset-platform core (remove-from-plist platform-args :core :state))
     (setf (state core) state)

@@ -1,0 +1,55 @@
+How are command-line arguments affecting platform init handled?
+===============================================================
+August 19, 2010, Samium Gromoff <_deepfire@feelingofgreen.ru>
+
+
+First of all, let's have a pretty picture (worth a lot of words, yes):
+
+
+ list
+  of
+strings                               plist                            plist
+-------> common-db:read-args-safely ---------> common-db:*initargs* ---------->...
+         - uses *...-parameters* and     - common-db:comdb-toplevel-wrapper
+           *...-switches* to parse and     selectively populates this so-called
+           default argument strings        "initial argument list" with a chosen
+                                           subset of arguments relevant to
+                                           platform initialisation
+                                         - Some arguments in this argument list are
+                                           not passed directly, but rather are queried
+                                           using options:arg.  They are:
+
+                                          --no-usb,                     DISABLE-USB-INTERFACES
+                                          --no-parport,                 DISABLE-PARPORT-INTERFACES
+                                          --print-backtrace-on-errors,  PRINT-BACKTRACE-ON-ERRORS
+                                                   
+
+
+ plist                                                    plist
+...----> initialize-instance :after (target) --------------------------------->...
+         - common-db:comdb-toplevel-wrapper ->
+             common-db:scan ->
+               common-db:scan-interface-busses ->
+                 bus:bus-scan ->
+                   bus:bus-populate-address :around (bus) ->
+                     bus:bus-add (interface-bus) ->
+                       initialize-instance :after (target)
+        ...a long way.
+        Following arguments are handled here:
+          --keep-target-intact,  KEEP-TARGET-INTACT
+          --platform,            FORCED-PLATFORM
+          --no-platform-init,    SKIP-PLATFORM-INIT
+        The rest is passed to:
+
+
+ plist
+...----> configure-target-platform (target) (platform)
+         - Arguments that are handled here:
+          --no-memory-configuration,               INHIBIT-MEMORY-CONFIGURATION
+
+         - Passed to platform:configure-platform-system:
+          --core-multiplier,                       CORE-MULTIPLIER (also used by comdb:reset)
+
+         - Passed to platform:configure-platform-memory:
+          --memory-detection-threshold,            MEMORY-DETECTION-THRESHOLD
+          --memory-configuration-failure-error-p,  MEMORY-CONFIGURATION-FAILURE-ERROR-P

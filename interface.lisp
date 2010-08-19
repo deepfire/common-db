@@ -32,8 +32,6 @@
 (defvar *verbose-interface-init* nil)
 (defparameter *log-tap-register-access* nil)
 (defvar *virtual-interface-enabled* nil)
-(defvar *disable-parport-interfaces* nil)
-(defvar *disable-usb-interfaces* nil)
 
 (define-condition interface-error (error)
   ((interface :reader condition-interface :initarg :interface)))
@@ -157,9 +155,9 @@ ERROR-RETURN-FORM."
               force-rescan))
   (when physical
     #-disable-parport
-    (unless *disable-parport-interfaces*
+    (unless (arg :disable-parport-interfaces)
       (bus-scan (or (root-bus 'parport :if-does-not-exist :continue) (make-instance 'parport-bus :name 'parport)) force-rescan))
-    (unless *disable-usb-interfaces*
+    (unless (arg :disable-usb-interfaces)
       (bus-scan (or (root-bus 'ezusb :if-does-not-exist :continue) (make-instance 'ezusb-bus :name 'ezusb)) force-rescan))))
 
 (defun interfaces ()

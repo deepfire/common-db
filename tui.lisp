@@ -24,7 +24,6 @@
 
 
 (defvar *orgify* nil)
-(defvar *print-backtrace-on-errors* nil)
 
 (defgeneric read-option (string type)
   (:documentation
@@ -145,7 +144,14 @@ case is handled elsewhere).")
     --no-usb                    Omit looking for USB-attached targets.
     --no-scan                   Don't scan interfaces.
     --no-platform-init          Do not do platform-level initialisation.
-    --no-memory-detection       Don't try detecting and configuring memory.
+    --no-memory-configuration   Don't try detecting and configuring memory.
+                                  Suppresses --memory-config.
+    --memory-configuration-failure-error-p
+                                Consider it an error when no working memory
+                                  configuration is found.  Defaults to T.
+    --keep-target-intact        Try to keep init-time hardware affairs to
+                                  the absolute bare minimum.
+                                  Works best with --platform specified.
     --memory-detection-threshold  While detecting type of main memory
                                   use that much memory for I/O correctness
                                   testing.
@@ -185,7 +191,7 @@ case is handled elsewhere).")
 (defvar *standard-parameters* '((:load :string) (:core-multiplier :decimal) :early-eval :context :platform :memory-detection-threshold :eval
                                 (:tapserver :string "127.0.0.1") (:tapserver-port :decimal) (:trace-exchange :decimal 1024)))
 (defvar *standard-switches*   '(:no-rc :virtual :physical :no-parport :no-usb :no-scan :no-platform-init
-                                :list-contexts :list-platforms :help :help-en :version :no-memory-detection
+                                :list-contexts :list-platforms :help :help-en :version :no-memory-configuration :memory-configuration-failure-error-p :keep-target-intact
                                 :disable-debugger :print-backtrace-on-errors :early-break-on-signals :break-on-signals
                                 :run-tests :ignore-test-failure :quit
                                 :examine-tlb
@@ -199,7 +205,7 @@ case is handled elsewhere).")
                                (user-package :comdb)
                                ;; default option customisation
                                no-rc no-platform-init disable-debugger print-backtrace-on-errors
-                               no-memory-detection memory-detection-threshold verbose)
+                               no-memory-configuration memory-detection-threshold verbose)
   (declare (optimize debug))
   (setf opfr:*opfr-repeat-on-return-key* t)
   (portability:set-and-activate-repl-fun
@@ -219,13 +225,13 @@ case is handled elsewhere).")
          (destructuring-bind (&rest args &key (verbose verbose)
                                     (no-rc no-rc) early-eval
                                     core-multiplier tapserver (tapserver-port 9001) virtual (physical (not (or virtual tapserver))) no-parport no-usb trace-exchange
-                                    no-scan (no-platform-init no-platform-init)
+                                    no-scan (no-platform-init no-platform-init) keep-target-intact memory-config memory-configuration-failure-error-p
                                     load eval run-tests ignore-test-failures quit
                                     examine-tlb log-pipeline-crit
                                     list-contexts context list-platforms platform
                                     early-break-on-signals break-on-signals help help-en orgify version
                                     ;; customisable
-                                    (no-memory-detection (unless run-tests no-memory-detection))
+                                    (no-memory-configuration (unless run-tests no-memory-configuration))
                                     (memory-detection-threshold memory-detection-threshold)
                                     (disable-debugger disable-debugger)
                                     (print-backtrace-on-errors print-backtrace-on-errors)
@@ -243,18 +249,13 @@ case is handled elsewhere).")
                   (*trace-exchange* trace-exchange)
                   (discrimination:*discriminate-verbosely* verbose)
                   (*orgify* orgify)
-                  (*disable-parport-interfaces* no-parport)
-                  (*disable-usb-interfaces* no-usb)
                   (*virtual-target-enabled* virtual)
-                  (*forced-platform* (when platform
-                                       (or (find-symbol (string-upcase (string platform)) :platform-definitions)
-                                           (error "~@<Unknown platform \"~A\": use --list-platforms.~:@>" platform))))
+                  (forced-platform (when platform
+                                     (or (find-symbol (string-upcase (string platform)) :platform-definitions)
+                                         (error "~@<Unknown platform \"~A\": use --list-platforms.~:@>" platform))))
                   (*examine-tlb* examine-tlb)
                   (*log-core-pipeline-crit* log-pipeline-crit)
-                  (*print-backtrace-on-errors* print-backtrace-on-errors)
                   (*print-base* #x10)
-                  (*inhibit-memory-detection* no-memory-detection)
-                  (*memory-detection-threshold* (or memory-detection-threshold *memory-detection-threshold*))
                   (help (or help help-en (funcall help-needed-discriminator args))))
              (when disable-debugger
                #+sbcl
@@ -267,9 +268,17 @@ case is handled elsewhere).")
                                      ((or list-contexts) nil)
                                      (help               (display-invocation-help help-en) t))))
                (quit))
-             (appendf comdb:*initargs*
-                      (when no-memory-detection `(:no-memory-detection t))
-                      (when core-multiplier     `(:core-multiplier ,core-multiplier)))
+             (appendf (args)
+                      (when no-parport                           `(:disable-parport-interfaces t))
+                      (when no-usb                               `(:disable-usb-interfaces t))
+                      (when keep-target-intact                   `(:keep-target-intact t))
+                      (when forced-platform                      `(:forced-platform t))
+                      (when no-platform-init                     `(:skip-platform-init t))
+                      (when no-memory-configuration              `(:inhibit-memory-configuration t))
+                      (when memory-detection-threshold           `(:memory-detection-threshold ,memory-detection-threshold))
+                      (when print-backtrace-on-errors            `(:print-backtrace-on-errors t))
+                      (when memory-configuration-failure-error-p `(:memory-configuration-failure-error-p t))
+                      (when core-multiplier                      `(:core-multiplier ,core-multiplier)))
              ;;
              ;; Phase 1: inteface scanning
              ;;
@@ -277,8 +286,7 @@ case is handled elsewhere).")
                (eval early-eval))
              (unless no-scan
                (with-retry-restarts ((retry () :report "Retry scanning interface busses."))
-                 (scan :physical physical :virtual virtual :tapserver-address tapserver :tapserver-port tapserver-port
-                       :skip-platform-init no-platform-init)
+                 (scan :physical physical :virtual virtual :tapserver-address tapserver :tapserver-port tapserver-port)
                  (unless *current*
                    (error "~@<No devices were found attached to active busses.~:@>"))))
              ;;
@@ -425,7 +433,7 @@ QUALIFIED-PACKAGES дополняются префиксом из коротко
                   (type-of condition)
                   condition)
           (finish-output *error-output*)
-          (when comdb::*print-backtrace-on-errors*
+          (when (options::arg :print-backtrace-on-errors)
             (sb-debug:backtrace 128 *error-output*)
             (finish-output *error-output*))
           (failure-quit))
