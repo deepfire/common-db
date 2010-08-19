@@ -65,6 +65,18 @@
     (error 'no-core-breakpoint :core *core* :address o)))
 
 ;;;;
+;;;; Control
+;;;;
+(defun init ()
+  "Prepare the debugger environment.
+To be called once, before any use of COMMON-DB."
+  (setf *print-circle* t
+        *print-base* #x10)
+  (init-device-model)
+  (set-namespace :interface :platform :core :dsp)
+  (values))
+
+;;;;
 ;;;; Discovery
 ;;;;
 (defmethod bus-add ((o interface-bus) interface)
@@ -82,18 +94,6 @@
 
 (defmethod add-target-device :after ((target target) (o mips-core))
   (patch-core-pipeline-reginstances o))
-
-;;;;
-;;;; Control
-;;;;
-(defun init ()
-  "Prepare the debugger environment.
-To be called once, before any use of COMMON-DB."
-  (setf *print-circle* t
-        *print-base* #x10)
-  (init-device-model)
-  (set-namespace :interface :platform :core :dsp)
-  (values))
 
 (defun scan (&key force-rescan virtual (physical (not virtual)) tapserver-address tapserver-port skip-platform-init &aux
              (*skip-platform-init* skip-platform-init))
