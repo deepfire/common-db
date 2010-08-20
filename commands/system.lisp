@@ -48,7 +48,9 @@
   "Найти конфигурацию памяти с заданным именем, среди множества доступного для
 платформы текущего целевого устройства."
   (if name
-      (memory-config (target-platform *target*) name)
+      (if (sysdev::memory-config-p name)
+          name
+          (memory-config (target-platform *target*) name))
       (platform-memory-configuration (target-platform *target*))))
 
 (defun compile-memconfig (&optional name)
@@ -58,26 +60,6 @@
   (iter (for (regname regbitnames regbitvalues) in (memory-config-register-values (memconfig name)))
         (multiple-value-bind (address value) (target-compile-raw-register-value *target* regname regbitnames regbitvalues)
           (collect (list address value)))))
-
-(defun explain-memconfig (&optional name)
-  #+help-ru
-  "Детально, по битовым полям, разобрать структуру конфигурации памяти
-с именем NAME.  Если имя не указано, разобрать текущую настройку."
-  (let* ((config (memconfig name))
-         (target *target*))
-    (format *log-stream* "Memory config ~A:~%" (memory-config-name config))
-    (iter (for (regname fieldnames fieldvalues) in (memory-config-register-values config))
-          (let* ((space (space :platform))
-                 (fields (mapcar (curry #'bitfield space) fieldnames))
-                 (bytes (mapcar (curry #'bitfield-byte space) fieldnames))
-                 (bytemasks (mapcar #'byte-bitmask bytes)))
-            (format *log-stream* "  ~8,'0X ~A:~18T ~8,'0X ~:{ ~A(~X)~}~%~28T <= ~:{ ~A(~X)~}~%"
-                    (target-reg-addr target regname) regname (fbits fieldnames fieldvalues)
-                    (mapcar #'list fieldnames bytemasks)
-                    (iter (for field in fields)
-                          (for byte in bytes)
-                          (for value in fieldvalues)
-                          (collect (list value (interpret-field-value field byte value)))))))))
 
 (defun set-memconfig (name &key test (test-size #x10000) remember)
   #+help-ru
@@ -124,3 +106,52 @@ remembered for the current target."
                                       (format t "The ~X => ~X value/register pair is not valid for the current platform ~S~%"
                                               regval reg/addr (target-platform target))
                                       nil))))))))
+
+(defun explain-memconfig (&optional name)
+  #+help-ru
+  "Детально, по битовым полям, разобрать структуру конфигурации памяти
+с именем NAME.  Если имя не указано, разобрать текущую настройку."
+  (let* ((config (memconfig name))
+         (target *target*))
+    (format *log-stream* "Memory config ~A:~%" (memory-config-name config))
+    (iter (for (regname fieldnames fieldvalues) in (memory-config-register-values config))
+          (let* ((space (space :platform))
+                 (fields (mapcar (curry #'bitfield space) fieldnames))
+                 (bytes (mapcar (curry #'bitfield-byte space) fieldnames))
+                 (bytemasks (mapcar #'byte-bitmask bytes)))
+            (format *log-stream* "  ~8,'0X ~A:~18T ~8,'0X ~:{ ~A(~X)~}~%~28T <= ~:{ ~A(~X)~}~%"
+                    (target-reg-addr target regname) regname (fbits fieldnames fieldvalues)
+                    (mapcar #'list fieldnames bytemasks)
+                    (iter (for field in fields)
+                          (for byte in bytes)
+                          (for value in fieldvalues)
+                          (collect (list value (interpret-field-value field byte value)))))))))
+
+(defun print-memconfig (&optional name)
+  #+help-ru
+  "Напечатать конфигурацию памяти в тех двух вариантах, в котором она может
+храниться в файлах."
+  (let* ((config (memconfig name))
+         (cooked (memory-config-register-values config))
+         (raw (compile-memconfig config))
+         (size (size (memory-region-extent (target-device *target* '(ram 0))))))
+    (syncformat t "~%~
+                   Current memory configuration~%~
+                   ~%~
+                   Structured:~%~
+                   -----------------------------------  8<  -----------------------------------~%~
+                   (~S~%~
+                   ~{  ~S~%~}  ~S)~%~
+                   ~:[~;(:SIZE ~:*~X)~%~]~
+                   -----------------------------------  >8  -----------------------------------~%~
+                   ~%~
+                   Raw:~%~
+                   -----------------------------------  8<  -----------------------------------~%~
+                   (~S~%~
+                   ~{  ~S~%~}  ~S)~%~
+                   ~:[~;(:SIZE ~:*~X)~%~]~
+                   -----------------------------------  >8  -----------------------------------~%"
+                (memory-config-name config)
+                (butlast cooked) (lastcar cooked) size
+                (memory-config-name config)
+                (butlast raw) (lastcar raw) size)))

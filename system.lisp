@@ -101,13 +101,16 @@
   (:documentation
    "The implementation must return a MEMORY-CONFIG object constructed
 from the information provided in FORM.")
-  (:method (f (p platform))
+  (:method (f (p platform) &aux (target (platform-target p)))
     (lret ((config (handler-case
                        (destructuring-bind (name &rest regspecs) f
                          (declare (ignore name))
                          (apply #'make-memory-config :manual
-                                (iter (for (regname bitfields bitfield-values) in regspecs)
-                                      (collect (list regname bitfields bitfield-values)))))
+                                (iter (for (regname/addr bitfields/rawval bitfield-values) in regspecs)
+                                      (multiple-value-bind (regname bitfields bitfield-values) (etypecase bitfields/rawval
+                                                                                                 (list    (values regname/addr bitfields/rawval bitfield-values))
+                                                                                                 (integer (target-decompile-raw-register-value target regname/addr bitfields/rawval)))
+                                          (collect (list regname bitfields bitfield-values))))))
                      (error ()
                        (platform-error "~@<In PARSE-MEMORY-CONFIG: bad structure ~S, must be ~
                             (:name (:register-name (bitfield-name...) (bitfield-value...))...), ~

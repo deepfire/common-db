@@ -146,6 +146,7 @@ case is handled elsewhere).")
     --no-platform-init          Do not do platform-level initialisation.
     --memory-config <filename>  Read memory configuration from provided file,
                                   queuing it first in the variant list.
+    --print-memory-config       Print the finally chosen memory config.
     --no-memory-configuration   Don't try detecting and configuring memory.
                                   Suppresses --memory-config.
     --no-memory-detection       Don't try detecting if the provided memory
@@ -199,7 +200,7 @@ case is handled elsewhere).")
                                 (:memory-config :string)))
 (defvar *standard-switches*   '(:no-rc :virtual :physical :no-parport :no-usb :no-scan :no-platform-init
                                 :list-contexts :list-platforms :help :help-en :version
-                                :no-memory-configuration :no-memory-detection :memory-configuration-failure-error-p :keep-target-intact
+                                :print-memory-config :no-memory-configuration :no-memory-detection :memory-configuration-failure-error-p :keep-target-intact
                                 :disable-debugger :print-backtrace-on-errors :early-break-on-signals :break-on-signals
                                 :run-tests :ignore-test-failure :quit
                                 :examine-tlb
@@ -212,7 +213,7 @@ case is handled elsewhere).")
                                (help-needed-discriminator (constantly nil))
                                (user-package :comdb)
                                ;; default option customisation
-                               no-rc no-platform-init disable-debugger print-backtrace-on-errors
+                               no-rc no-platform-init disable-debugger print-backtrace-on-errors print-memory-config
                                no-memory-configuration no-memory-detection memory-detection-threshold verbose)
   (declare (optimize debug))
   (setf opfr:*opfr-repeat-on-return-key* t)
@@ -239,6 +240,7 @@ case is handled elsewhere).")
                                     list-contexts context list-platforms platform
                                     early-break-on-signals break-on-signals help help-en orgify version
                                     ;; customisable
+                                    (print-memory-config print-memory-config)
                                     (no-memory-configuration (unless run-tests no-memory-configuration))
                                     (no-memory-detection no-memory-detection)
                                     (memory-detection-threshold memory-detection-threshold)
@@ -298,8 +300,10 @@ case is handled elsewhere).")
              (unless no-scan
                (with-retry-restarts ((retry () :report "Retry scanning interface busses."))
                  (scan :physical physical :virtual virtual :tapserver-address tapserver :tapserver-port tapserver-port)
-                 (unless *current*
-                   (error "~@<No devices were found attached to active busses.~:@>"))))
+                 (if *current*
+                     (when print-memory-config
+                       (print-memconfig))
+                     (error "~@<No devices were found attached to active busses.~:@>"))))
              ;;
              ;; Phase 1a: context querying
              ;;
