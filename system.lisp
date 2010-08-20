@@ -23,6 +23,8 @@
 (in-package :sysdev)
 
 
+(defvar *manual-memory-config* nil)
+
 (defmethod detect-platform-memory-size ((o platform) (base integer) &key (minimum #x8000) (maximum #x80000000) (when-infinite :error))
   (let ((target (platform-target o))
         (size minimum)
@@ -79,14 +81,59 @@
 
 (defgeneric platform-memory-configurations (platform)
   (:documentation
-   "The implementation must return an alist of MEMORY-CONFIGs keyed by name."))
+   "The implementation must return an alist of MEMORY-CONFIGs keyed by name.")
+  (:method :around ((o platform))
+    (xform *manual-memory-config* (curry #'acons :manual *manual-memory-config*)
+           (call-next-method))))
+
 (defgeneric platform-memory-configuration-order (platform)
   (:documentation
-   "The implementation must return a list of memory configuration names."))
+   "The implementation must return a list of memory configuration names.")
+  (:method :around ((o platform))
+    (xform *manual-memory-config* (curry #'cons :manual)
+           (call-next-method))))
 
 (defun memory-config (platform name)
   (or (cdr (assoc name (platform-memory-configurations platform)))
       (platform-error "~@<Platform ~A doesn't have a memory config named ~A.~:@>" (type-of platform) name)))
+
+(defgeneric parse-memory-config (form platform)
+  (:documentation
+   "The implementation must return a MEMORY-CONFIG object constructed
+from the information provided in FORM.")
+  (:method (f (p platform))
+    (lret ((config (handler-case
+                       (destructuring-bind (name &rest regspecs) f
+                         (declare (ignore name))
+                         (apply #'make-memory-config :manual
+                                (iter (for (regname bitfields bitfield-values) in regspecs)
+                                      (collect (list regname bitfields bitfield-values)))))
+                     (error ()
+                       (platform-error "~@<In PARSE-MEMORY-CONFIG: bad structure ~S, must be ~
+                            (:name (:register-name (bitfield-name...) (bitfield-value...))...), ~
+                            with T designating all-1s and NIL designating all-0s.~@:>"
+                                       f)))))
+      (unless (memory-config-valid-for-platform-p p config)
+        (error "~@<In PARSE-MEMORY-CONFIG: memory config ~S is not valid for platform ~S.~:@>" config p)))))
+
+(defgeneric serialise-memory-config (form platform)
+  (:documentation
+   "The implementation must serialise MEMORY-CONFIG, in such a way
+that its PRINT form could be reconstructed by PARSE-MEMORY-CONFIG."))
+
+(defun read-memory-config-file-for-platform (platform config-file)
+  (with-safe-reader-context ()
+    (with-input-from-file (s config-file)
+      (let ((*read-base* #x10))
+        (handler-case
+            (values (parse-memory-config (read s nil nil) platform)
+                    (lret ((size (destructuring-bind (&key size) (read s nil nil)
+                                   size)))
+                      (unless (or (null size)
+                                  (and (integerp size) (plusp size)))
+                        (platform-error "~@<Memory size, whenever specified in configuration file, must be a positive integer.~:@>"))))
+          (error (c)
+            (platform-error "~@<Error reading memory config ~A:~_~A~:@>" config-file c)))))))
 
 (defun memory-config-valid-for-device-classes-p (config classes)
   "See if all of CONFIG's registers refer to the union of registers
@@ -137,7 +184,7 @@ MEMORY-CONFIG-VALID-FOR-DEVICE-CLASSES-P could be used."))
   ((target :initarg :target))
   (:report (target) "~@<No memory could be assigned for bus address #x00000000 to ~S.~:@>" target))
 
-(defun detect-and-configure-platform-memory (platform detection-threshold &optional (if-not-found :error))
+(defun detect-and-configure-platform-memory (platform inhibit-detection-p detection-threshold &optional (if-not-found :error))
   "Try every known memory configuration for PLATFORM, applying and returning
 the first one which works as the primary value, and the size of the detected
 memory extent as the secondary value.
@@ -156,39 +203,66 @@ the consequent behavior:
       (terpri *log-stream*)
       (pprint-logical-block (*log-stream* nil :per-line-prefix "NOTE: ")
         (format *log-stream* "trying memory configurations for bus address #x00000000:~%")
-        (multiple-value-bind (config size)
-            (iter (for config-name in (platform-memory-configuration-order platform))
-                  (for config = (memory-config platform config-name))
-                  (unless (memory-config-valid-for-platform-p platform config)
-                    (next-iteration))
-                  (finish-output *log-stream*)
-                  (apply-memory-config platform config)
-                  (for size = (detect-platform-memory-size platform #x00000000))
-                  (when (and size (let ((*log-platform-processing* nil))
-                                    (test-target-memory target #x0 detection-threshold :if-fails :continue)))
-                    (pprint-newline :mandatory *log-stream*)
-                    (format *log-stream* "found ~DK of ~A-type memory at bus address #x00000000"
-                            (ash size -10) (memory-config-name config))
-                    (terpri *log-stream*)
-                    (finish-output *log-stream*)
-                    (return-from detect-and-configure-platform-memory (values config size))))
-          (declare (ignore size))
-          (terpri *log-stream*)
-          (finish-output *log-stream*)
-          (unless config
-            (ecase if-not-found
-              (:continue)
-              (:warn (warn 'platform-no-usable-memory-detected :target target))
-              (:error (error 'platform-no-usable-memory-detected-error :target target)))))))))
+        (iter (for config in (remove-if-not (curry #'memory-config-valid-for-platform-p platform)
+                                            (mapcar (curry #'memory-config platform)
+                                                    (platform-memory-configuration-order platform))))
+              (finish-output *log-stream*)
+              (apply-memory-config platform config)
+              (when inhibit-detection-p
+                (return-from detect-and-configure-platform-memory config))
+              (for size = (detect-platform-memory-size platform #x00000000))
+              (when (and size (let ((*log-platform-processing* nil))
+                                (test-target-memory target #x0 detection-threshold :if-fails :continue)))
+                (pprint-newline :mandatory *log-stream*)
+                (format *log-stream* "found ~DK of ~A-type memory at bus address #x00000000"
+                        (ash size -10) (memory-config-name config))
+                (terpri *log-stream*)
+                (finish-output *log-stream*)
+                (return-from detect-and-configure-platform-memory (values config size)))
+              (when (eq :manual (memory-config-name config))
+                (syncformat *terminal-io* "WARNING: manually provided memory configuration rejected!~%")))
+        (terpri *log-stream*)
+        (finish-output *log-stream*)
+        (ecase if-not-found
+          (:continue)
+          (:warn (warn 'platform-no-usable-memory-detected :target target))
+          (:error (error 'platform-no-usable-memory-detected-error :target target)))))))
 
-(defmethod configure-platform-memory ((o platform) force-detection detection-threshold detection-failure-error-p)
+(defmethod configure-platform-memory ((o platform) detection-mode config-file detection-threshold detection-failure-error-p)
+  (declare (type (member :force :allow :inhibit) detection-mode)
+           (type (or null string pathname stream) config-file)) ;; XXX: RTP: STREAM-DESIGNATOR
   (let ((target (platform-target o))
         (*log-stream* (if *log-platform-processing*
                           *log-stream*
-                          (make-broadcast-stream))))
-    (if-let ((configuration (platform-memory-configuration o))
-             (no-forced-detection (null force-detection)))
-      (apply-memory-config o configuration)
-      (multiple-value-bind (config size) (detect-and-configure-platform-memory o detection-threshold detection-failure-error-p)
-        (make-target-device target 'ram :extent (extent 0 size) :master (target-device target '(general-purpose-core 0)))
-        (setf (platform-memory-configuration o) config)))))
+                          (make-broadcast-stream)))
+        (inhibit-detection (eq :inhibit detection-mode))
+        (preexisting-config (platform-memory-configuration o))
+        manually-forced-size)
+    (when (and inhibit-detection
+               (not preexisting-config)
+               (not config-file))
+      (platform-error "~@<There is no validated memory configuration for ~S, ~
+                          no memory configuration file was provided, ~
+                          and automatic memory detection was disabled. ~
+                          Yet memory configuration wasn't explicitly disabled. ~
+                          In these circumstances proceeding is impossible.~:@>"
+                      o))
+    (cond ((and preexisting-config
+                (not inhibit-detection))
+           (apply-memory-config o preexisting-config))
+          (t
+           (when config-file
+             (multiple-value-bind (config size) (read-memory-config-file-for-platform o config-file)
+               (setf *manual-memory-config* config
+                     manually-forced-size (or size
+                                              (when inhibit-detection
+                                                (platform-error "~@<Memory config file must contain memory size, when automatic detection is disabled.~:@>"))))))
+           (when inhibit-detection
+             (syncformat *log-stream* "WARNING: memory detection disabled!~%"))
+           (multiple-value-bind (config size) (detect-and-configure-platform-memory o inhibit-detection detection-threshold detection-failure-error-p)
+             (make-target-device target 'ram
+                                 :extent (extent 0 (if inhibit-detection
+                                                       manually-forced-size
+                                                       size))
+                                 :master (target-device target '(general-purpose-core 0)))
+             (setf (platform-memory-configuration o) config))))))

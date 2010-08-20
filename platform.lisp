@@ -82,12 +82,34 @@
 ;;;;
 (defgeneric detect-platform-memory-size (platform base &key minimum maximum when-infinite))
 (defgeneric configure-platform-system (platform system &key &allow-other-keys))
-(defgeneric configure-platform-memory (platform force-detection detection-threshold memory-configuration-failure-error-p)
+(defgeneric configure-platform-memory (platform detection-mode config-file detection-threshold memory-configuration-failure-error-p)
   (:documentation 
-   "Configure PLATFORM's memory, performing detection when there is no stored 
-configuration or when FORCE-DETECTION is non-NIL, otherwise using the configuration
-stored in PLATFORM.  DETECTION-THRESHOLD is used as the size of the test memory
-region used to determine if the configuration is stable enough.
+   "Configure PLATFORM's memory, either activating a previously validated
+configuration, or performing a search through available memory configurations
+ (either specified manually, or built-in), then activating the one deemed
+appropriate.
+
+DETECTION-MODE is one of:
+  :INHIBIT  - forbids the configuration search when there's none stored, and
+              suppresses validation of configuration specified in CONFIG-FILE,
+  :FORCE    - forces configuration search, including reconsideration of
+              the configuration specified in CONFIG-FILE (which includes
+              re-reading its contents), regardless of existence of
+              the prevalidated configuration stored within platform,
+  :ALLOW    - depending on the existence of prevalidated configuration,
+              stored within the platform, search through available
+              memory configurations.
+
+Unless DETECTION-MODE is :INHIBIT, specification of CONFIG-FILE does not radically
+change the process, but merely adds a memory configuration called :MANUAL at the top
+of the list of configurations considered by the search process, thereby subjecting
+it to all the checks performed by the detection process.
+
+When DETECTION-MODE is :INHIBIT, CONFIG-FILE is used to blindly force the value
+of the configuration stored within the PLATFORM.
+
+DETECTION-THRESHOLD is used as the size of the test memory region used to determine
+if the configuration is suitably stable.
 
 When no working configuration is found, and MEMORY-CONFIGURATION-FAILURE-ERROR-P is non-NIL,
 an error of type PLATFORM-NO-USABLE-MEMORY-DETECTED-ERROR is signalled.  

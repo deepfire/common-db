@@ -1,6 +1,6 @@
 How are command-line arguments affecting platform init handled?
 ===============================================================
-August 19, 2010, Samium Gromoff <_deepfire@feelingofgreen.ru>
+August 20, 2010, Samium Gromoff <_deepfire@feelingofgreen.ru>
 
 
 First of all, let's have a pretty picture (worth a lot of words, yes):
@@ -51,5 +51,7 @@ strings                               plist                            plist
           --core-multiplier,                       CORE-MULTIPLIER (also used by comdb:reset)
 
          - Passed to platform:configure-platform-memory:
+          --memory-config,                         MEMORY-CONFIG
+          --no-memory-detection,                   INHIBIT-MEMORY-DETECTION
           --memory-detection-threshold,            MEMORY-DETECTION-THRESHOLD
           --memory-configuration-failure-error-p,  MEMORY-CONFIGURATION-FAILURE-ERROR-P

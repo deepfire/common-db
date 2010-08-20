@@ -150,23 +150,31 @@ potential SLAVES."
       (when (typep device 'master-device)
         (setf (master-device-slaves device) slaves)))))
 
-(defgeneric configure-target-platform (target platform &key inhibit-memory-configuration force-memory-detection memory-detection-threshold memory-configuration-failure-error-p
+(defgeneric configure-target-platform (target platform &key inhibit-memory-configuration inhibit-memory-detection memory-config
+                                              force-memory-detection memory-detection-threshold memory-configuration-failure-error-p
                                               prereset-core-multiplier core-multiplier &allow-other-keys)
   (:documentation
    "Keyword options:
    command-line-available:   INHIBIT-MEMORY-CONFIGURATION, MEMORY-CONFIGURATION-FAILURE-ERROR-P
    command-line-unavailable: FORCE-MEMORY-DETECTION")
-  (:method ((tg target) (p platform) &key inhibit-memory-configuration force-memory-detection (memory-detection-threshold 1024) (memory-configuration-failure-error-p t)
+  (:method ((tg target) (p platform) &key inhibit-memory-configuration inhibit-memory-detection memory-config
+            force-memory-detection (memory-detection-threshold 1024) (memory-configuration-failure-error-p t)
              prereset-core-multiplier core-multiplier)
     (configure-platform-system p (target-device tg '(system 0))
                                :prereset-core-multiplier prereset-core-multiplier
                                :core-multiplier core-multiplier)
     (if inhibit-memory-configuration
-        (unless (find #x0 (target-devices-by-type tg 'ram) :key (compose #'car #'memory-region-extent))
-          (make-target-device tg 'ram
-                              :extent (extent 0 67108864) ; yay hardcoded values!
-                              :master (target-device tg '(general-purpose-core 0))))
-        (configure-platform-memory p force-memory-detection memory-detection-threshold memory-configuration-failure-error-p))))
+        (progn
+          (syncformat *log-stream* "WARNING: memory configuration disabled!~%")
+          (unless (find #x0 (target-devices-by-type tg 'ram) :key (compose #'car #'memory-region-extent))
+            (make-target-device tg 'ram
+                                :extent (extent 0 67108864) ; yay hardcoded values!
+                                :master (target-device tg '(general-purpose-core 0)))))
+        (configure-platform-memory p
+                                   (cond (inhibit-memory-detection :inhibit)
+                                         (force-memory-detection   :force)
+                                         (t                        :allow))
+                                   memory-config memory-detection-threshold memory-configuration-failure-error-p))))
 
 ;;;
 ;;; The :AFTER INITIALIZE-INSTANCE method for PLATFORM only can be described in terms of system.lisp
@@ -181,11 +189,12 @@ potential SLAVES."
                                (interface-reset-target (backend o) t)))
                            (detect-target-platform o))))
     (when *log-platform-processing*
-      (format *log-stream* "~@<NOTE: ~@;initializing ~S with ~S.~:@>~%" o platform-type))
+      (syncformat *log-stream* "~@<NOTE: ~@;initializing ~S with ~S.~:@>~%" o platform-type))
     (setf (target-platform o) (make-instance platform-type :target o))
-    (unless skip-platform-init
-      (apply #'configure-target-platform o (target-platform o)
-             (remove-from-plist platform-initargs :backend :keep-target-intact :skip-platform-init :forced-platform)))))
+    (if skip-platform-init
+        (syncformat *log-stream* "WARNING: platform initialisation disabled!~%")
+        (apply #'configure-target-platform o (target-platform o)
+               (remove-from-plist platform-initargs :backend :keep-target-intact :skip-platform-init :forced-platform)))))
 
 ;;;;
 ;;;; Queries

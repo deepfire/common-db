@@ -29,6 +29,7 @@
    ;; Grab bag
    #:*virtual-interface-enabled*        ; interface
    #:*virtual-target-enabled*           ; targets/virtual
+   #:*manual-memory-config*             ; 
    #:*orgify*                           ; common-db-tui
    #:*map-to-zeroth-page*
    ;;
@@ -605,6 +606,9 @@
    #:memory-config-name
    #:memory-config-register-values
    #:do-memory-configs
+   #:parse-memory-config
+   #:serialise-memory-config
+   #:read-memory-config-file-for-platform
    #:memory-config-valid-for-device-classes-p
    #:memory-config-valid-for-platform-p
    #:apply-memory-config

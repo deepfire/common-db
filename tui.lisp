@@ -144,14 +144,20 @@ case is handled elsewhere).")
     --no-usb                    Omit looking for USB-attached targets.
     --no-scan                   Don't scan interfaces.
     --no-platform-init          Do not do platform-level initialisation.
+    --memory-config <filename>  Read memory configuration from provided file,
+                                  queuing it first in the variant list.
     --no-memory-configuration   Don't try detecting and configuring memory.
                                   Suppresses --memory-config.
+    --no-memory-detection       Don't try detecting if the provided memory
+                                  configuration works.
+                                  Requires --memory-config.
     --memory-configuration-failure-error-p
                                 Consider it an error when no working memory
                                   configuration is found.  Defaults to T.
     --keep-target-intact        Try to keep init-time hardware affairs to
                                   the absolute bare minimum.
-                                  Works best with --platform specified.
+                                  Works best with --platform and --memory-config
+                                  specified.
     --memory-detection-threshold  While detecting type of main memory
                                   use that much memory for I/O correctness
                                   testing.
@@ -189,9 +195,11 @@ case is handled elsewhere).")
     (write-string "#+END_EXAMPLE") (terpri)))
 
 (defvar *standard-parameters* '((:load :string) (:core-multiplier :decimal) :early-eval :context :platform :memory-detection-threshold :eval
-                                (:tapserver :string "127.0.0.1") (:tapserver-port :decimal) (:trace-exchange :decimal 1024)))
+                                (:tapserver :string "127.0.0.1") (:tapserver-port :decimal) (:trace-exchange :decimal 1024)
+                                (:memory-config :string)))
 (defvar *standard-switches*   '(:no-rc :virtual :physical :no-parport :no-usb :no-scan :no-platform-init
-                                :list-contexts :list-platforms :help :help-en :version :no-memory-configuration :memory-configuration-failure-error-p :keep-target-intact
+                                :list-contexts :list-platforms :help :help-en :version
+                                :no-memory-configuration :no-memory-detection :memory-configuration-failure-error-p :keep-target-intact
                                 :disable-debugger :print-backtrace-on-errors :early-break-on-signals :break-on-signals
                                 :run-tests :ignore-test-failure :quit
                                 :examine-tlb
@@ -205,7 +213,7 @@ case is handled elsewhere).")
                                (user-package :comdb)
                                ;; default option customisation
                                no-rc no-platform-init disable-debugger print-backtrace-on-errors
-                               no-memory-configuration memory-detection-threshold verbose)
+                               no-memory-configuration no-memory-detection memory-detection-threshold verbose)
   (declare (optimize debug))
   (setf opfr:*opfr-repeat-on-return-key* t)
   (portability:set-and-activate-repl-fun
@@ -232,6 +240,7 @@ case is handled elsewhere).")
                                     early-break-on-signals break-on-signals help help-en orgify version
                                     ;; customisable
                                     (no-memory-configuration (unless run-tests no-memory-configuration))
+                                    (no-memory-detection no-memory-detection)
                                     (memory-detection-threshold memory-detection-threshold)
                                     (disable-debugger disable-debugger)
                                     (print-backtrace-on-errors print-backtrace-on-errors)
@@ -273,8 +282,10 @@ case is handled elsewhere).")
                       (when no-usb                               `(:disable-usb-interfaces t))
                       (when keep-target-intact                   `(:keep-target-intact t))
                       (when forced-platform                      `(:forced-platform t))
+                      (when memory-config                        `(:memory-config ,memory-config))
                       (when no-platform-init                     `(:skip-platform-init t))
                       (when no-memory-configuration              `(:inhibit-memory-configuration t))
+                      (when no-memory-detection                  `(:inhibit-memory-detection t))
                       (when memory-detection-threshold           `(:memory-detection-threshold ,memory-detection-threshold))
                       (when print-backtrace-on-errors            `(:print-backtrace-on-errors t))
                       (when memory-configuration-failure-error-p `(:memory-configuration-failure-error-p t))
