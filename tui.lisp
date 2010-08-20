@@ -279,6 +279,8 @@ case is handled elsewhere).")
                                      ((or list-contexts) nil)
                                      (help               (display-invocation-help help-ru) t))))
                (quit))
+             ;; We expect these arguments to be somewhat permanent, which is why er meddle with *INITARGS*,
+             ;; instead of passing them to SCAN.
              (appendf (args)
                       (when no-parport                           `(:disable-parport-interfaces t))
                       (when no-usb                               `(:disable-usb-interfaces t))

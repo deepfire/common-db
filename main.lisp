@@ -90,7 +90,7 @@ To be called once, before any use of COMMON-DB."
 (defmethod add-target-device :after ((target target) (o mips-core))
   (patch-core-pipeline-reginstances o))
 
-(defun scan (&rest initargs &key force-rescan virtual (physical (not virtual)) tapserver-address tapserver-port &allow-other-keys)
+(defun scan (&rest initargs &key (break-on-signals nil bosp) force-rescan virtual (physical (not virtual)) tapserver-address tapserver-port &allow-other-keys)
   #+help-ru
   "Функция производит следующие операции:
 
@@ -110,10 +110,11 @@ To be called once, before any use of COMMON-DB."
         *print-base* #x10)
   (let ((*initargs* (plist-merge *initargs* (remove-from-plist initargs
                                                                :force-rescan :virtual :physical :tapserver-address :tapserver-port))))
-    (scan-interface-busses :force-rescan force-rescan
-                           :virtual virtual
-                           :physical physical
-                           :tapserver-address tapserver-address :tapserver-port tapserver-port))
+    (with-maybe-set-break-on-signals (bosp break-on-signals)
+      (scan-interface-busses :force-rescan force-rescan
+                             :virtual virtual
+                             :physical physical
+                             :tapserver-address tapserver-address :tapserver-port tapserver-port)))
   (values))
 
 (defun reset (&rest platform-args &key (core *core*) (state *depth*) &allow-other-keys)
