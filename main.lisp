@@ -90,11 +90,6 @@ To be called once, before any use of COMMON-DB."
 (defmethod add-target-device :after ((target target) (o mips-core))
   (patch-core-pipeline-reginstances o))
 
-(defun merge-plists (overridee overrider)
-  (lret ((result (copy-list overridee)))
-    (iter (for (k v) on overrider by #'cddr)
-          (setf (getf result k) v))))
-
 (defun scan (&rest initargs &key force-rescan virtual (physical (not virtual)) tapserver-address tapserver-port &allow-other-keys)
   #+help-ru
   "Функция производит следующие операции:
@@ -113,8 +108,8 @@ To be called once, before any use of COMMON-DB."
 придаёт адаптерам на шине USB определённый приоритет."
   (setf *print-circle* t
         *print-base* #x10)
-  (let ((*initargs* (merge-plists *initargs* (remove-from-plist initargs
-                                                                :force-rescan :virtual :physical :tapserver-address :tapserver-port))))
+  (let ((*initargs* (plist-merge *initargs* (remove-from-plist initargs
+                                                               :force-rescan :virtual :physical :tapserver-address :tapserver-port))))
     (scan-interface-busses :force-rescan force-rescan
                            :virtual virtual
                            :physical physical
@@ -135,7 +130,7 @@ To be called once, before any use of COMMON-DB."
   #-help-ru
   "Reset the target device."
   (let ((prereset-mult (ignore-errors (core-frequency-multiplier core)))
-        (final-platform-args (merge-plists (args) platform-args)))
+        (final-platform-args (plist-merge (args) platform-args)))
     (when-let ((multiplier (or (getf final-platform-args :core-multiplier)
                                (when (core-frequency-multiplier-valid-p core prereset-mult)
                                  prereset-mult))))
@@ -144,4 +139,7 @@ To be called once, before any use of COMMON-DB."
     (setf (state core) state)
     (values)))
 
-(defgeneric default-display-list (platform interface target core))
+(defgeneric default-display-list (platform interface target core)
+  (:documentation
+   "Provide a default display list for the combination of
+PLATFORM, INTERFACE, TARGET and CORE."))
