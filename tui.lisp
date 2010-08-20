@@ -177,19 +177,19 @@ case is handled elsewhere).")
     --verbose                   During operation print out MORE STATUS.
                                   Implies --print-backtrace-on-errors.
     --version                   Print version and quit.
-    --help                      Display a help message in russian and quit.
-    --help-en                   Display this help message and quit.")
+    --help                      Display this help message and quit.
+    --help-ru                   Display a help message in russian and quit.")
 
 (defvar *additional-help-ru* nil)
 (defvar *additional-help-en* nil)
 
-(defun display-invocation-help (&optional englishp)
+(defun display-invocation-help (&optional russianp)
   (when *orgify*
     (write-string "#+BEGIN_EXAMPLE") (terpri))
-  (write-string (format nil (if englishp *comdb-help-en* *comdb-help-ru*)
+  (write-string (format nil (if russianp *comdb-help-ru* *comdb-help-en*)
                         (argv0-executable-name))) (terpri)
   (terpri)
-  (when-let ((additional-help (if englishp *additional-help-en* *additional-help-ru*)))
+  (when-let ((additional-help (if russianp *additional-help-ru* *additional-help-en*)))
     (write-string additional-help) (terpri)
     (terpri))
   (when *orgify*
@@ -199,7 +199,7 @@ case is handled elsewhere).")
                                 (:tapserver :string "127.0.0.1") (:tapserver-port :decimal) (:trace-exchange :decimal 1024)
                                 (:memory-config :string)))
 (defvar *standard-switches*   '(:no-rc :virtual :physical :no-parport :no-usb :no-scan :no-platform-init
-                                :list-contexts :list-platforms :help :help-en :version
+                                :list-contexts :list-platforms :help :help-ru :version
                                 :print-memory-config :no-memory-configuration :no-memory-detection :memory-configuration-failure-error-p :keep-target-intact
                                 :disable-debugger :print-backtrace-on-errors :early-break-on-signals :break-on-signals
                                 :run-tests :ignore-test-failure :quit
@@ -238,7 +238,7 @@ case is handled elsewhere).")
                                     load eval run-tests ignore-test-failures quit
                                     examine-tlb log-pipeline-crit
                                     list-contexts context list-platforms platform
-                                    early-break-on-signals break-on-signals help help-en orgify version
+                                    early-break-on-signals break-on-signals help help-ru orgify version
                                     ;; customisable
                                     (print-memory-config print-memory-config)
                                     (no-memory-configuration (unless run-tests no-memory-configuration))
@@ -267,7 +267,7 @@ case is handled elsewhere).")
                   (*examine-tlb* examine-tlb)
                   (*log-core-pipeline-crit* log-pipeline-crit)
                   (*print-base* #x10)
-                  (help (or help help-en (funcall help-needed-discriminator args))))
+                  (help (or help help-ru (funcall help-needed-discriminator args))))
              (when disable-debugger
                #+sbcl
                (sb-ext:disable-debugger))
@@ -277,7 +277,7 @@ case is handled elsewhere).")
              (when-let ((quitp (cond (list-platforms     (list-platforms) t)
                                      (version            (version) t)
                                      ((or list-contexts) nil)
-                                     (help               (display-invocation-help help-en) t))))
+                                     (help               (display-invocation-help help-ru) t))))
                (quit))
              (appendf (args)
                       (when no-parport                           `(:disable-parport-interfaces t))
