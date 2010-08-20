@@ -94,5 +94,5 @@
   (let ((mport (target-device (platform-target o) '(mport 0))))
     (unless (memory-config-valid-for-device-classes-p config (list (class-of-device mport)))
       (error "~@<Memory configuration ~A is invalid for mport device class ~S.~:@>"
-             (memory-config-name config) (class-name (class-of-device mport))))
+             (memory-config-name config) (name (class-of-device mport))))
     (apply-memory-config-using-mport mport config)))
