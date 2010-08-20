@@ -127,14 +127,18 @@ To be called once, before any use of COMMON-DB."
   * устанавливается соответствующая текущим настройкам глубина режима отладки (по умолчанию – :DEBUG)."
   #-help-ru
   "Reset the target device."
-  (let ((prereset-mult (ignore-errors (core-frequency-multiplier core)))
-        (specified-mult (getf platform-args :core-multiplier)))
-    (when-let ((multiplier (or specified-mult (and (core-frequency-multiplier-valid-p core prereset-mult)
-                                                   prereset-mult))))
-      (appendf platform-args
-               `(:core-multiplier ,multiplier)))
-    (apply #'reset-platform core (remove-from-plist platform-args :core :state))
-    (setf (state core) state)
-    (values)))
+  (flet ((merge-plists (overridee overrider)
+           (lret ((result (copy-list overridee)))
+             (iter (for (k v) on overrider by #'cddr)
+                   (setf (getf result k) v)))))
+    (let ((prereset-mult (ignore-errors (core-frequency-multiplier core)))
+          (final-platform-args (merge-plists (args) platform-args)))
+      (when-let ((multiplier (or (getf final-platform-args :core-multiplier)
+                                 (when (core-frequency-multiplier-valid-p core prereset-mult)
+                                   prereset-mult))))
+        (setf (getf final-platform-args :core-multiplier) multiplier))
+      (apply #'reset-platform core (remove-from-plist final-platform-args :core :state))
+      (setf (state core) state)
+      (values))))
 
 (defgeneric default-display-list (platform interface target core))
