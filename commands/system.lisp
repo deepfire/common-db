@@ -43,21 +43,28 @@
           (xform target (curry #'remove-if-not (curry #'memory-config-valid-for-platform-p (target-platform target)))
                  (mapcar #'cdr (platform-memory-configurations (target-platform target))))))
 
-(defun compile-memconfig (name)
+(defun memconfig (&optional name)
   #+help-ru
-  "Вывести список пар адрес-значение соответствующих названной конфигурации памяти."
-  (iter (for (regname regbitnames regbitvalues) in (memory-config-register-values (memory-config (target-platform *target*) name)))
+  "Найти конфигурацию памяти с заданным именем, среди множества доступного для
+платформы текущего целевого устройства."
+  (if name
+      (memory-config (target-platform *target*) name)
+      (platform-memory-configuration (target-platform *target*))))
+
+(defun compile-memconfig (&optional name)
+  #+help-ru
+  "Вывести список пар адрес-значение соответствующих названной конфигурации памяти.
+Если имя не указано, использовать активную конфигурацию памяти."
+  (iter (for (regname regbitnames regbitvalues) in (memory-config-register-values (memconfig name)))
         (multiple-value-bind (address value) (compute-raw-register-value regname regbitnames regbitvalues)
-          (collect (cons address value)))))
+          (collect (list address value)))))
 
 (defun explain-memconfig (&optional name)
   #+help-ru
   "Детально, по битовым полям, разобрать структуру конфигурации памяти
 с именем NAME.  Если имя не указано, разобрать текущую настройку."
-  (let* ((target *target*)
-         (config (if name
-                     (memory-config (target-platform target) name)
-                     (platform-memory-configuration (target-platform target)))))
+  (let* ((config (memconfig name))
+         (target *target*))
     (format *log-stream* "Memory config ~A:~%" (memory-config-name config))
     (iter (for (regname fieldnames fieldvalues) in (memory-config-register-values config))
           (let* ((space (space :platform))
@@ -98,3 +105,22 @@ remembered for the current target."
     (when remember
       (setf (platform-memory-configuration platform) config)))
   (values))
+
+(defun decompile-memconfig (address/value-pair-list)
+  #+help-ru
+  "Декодировать набор пар адрес-или-имя-регистра/значение как конфигурацию памяти
+для текущей платформы."
+  (let ((target *target*))
+    (apply #'make-memory-config :decompiled
+           (iter (for (reg/addr regval) in address/value-pair-list)
+                 (collect (remove nil
+                                  (handler-case (multiple-value-call
+                                                    #'list (parse-raw-register-value
+                                                            (etypecase reg/addr
+                                                              (keyword (target-reg-addr target reg/addr))
+                                                              (integer reg/addr))
+                                                            regval))
+                                    (error ()
+                                      (format t "The ~X => ~X value/register pair is not valid for the current platform ~S~%"
+                                              regval reg/addr (target-platform target))
+                                      nil))))))))

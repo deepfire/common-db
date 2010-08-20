@@ -47,7 +47,7 @@ SECONDS могут быть любым неотрицательным реаль
               #+help-ru "Устройства"
               :conc-name dev)
      scan
-     compile-memconfig list-memconfigs set-memconfig explain-memconfig
+     compile-memconfig decompile-memconfig list-memconfigs set-memconfig explain-memconfig
      list-contexts ctx)
     ((input/output #-help-ru "Input/output"
                    #+help-ru "Ввод/вывод"
