@@ -111,11 +111,11 @@ from the information provided in FORM.")
                                                                                                  (list    (values regname/addr bitfields/rawval bitfield-values))
                                                                                                  (integer (target-decompile-raw-register-value target regname/addr bitfields/rawval)))
                                           (collect (list regname bitfields bitfield-values))))))
-                     (error ()
+                     (error (c)
                        (platform-error "~@<In PARSE-MEMORY-CONFIG: bad structure ~S, must be ~
                             (:name (:register-name (bitfield-name...) (bitfield-value...))...), ~
-                            with T designating all-1s and NIL designating all-0s.~@:>"
-                                       f)))))
+                            with T designating all-1s and NIL designating all-0s.  The parse error was: ~@<~A~:@>~@:>"
+                                       f c)))))
       (unless (memory-config-valid-for-platform-p p config)
         (error "~@<In PARSE-MEMORY-CONFIG: memory config ~S is not valid for platform ~S.~:@>" config p)))))
 
