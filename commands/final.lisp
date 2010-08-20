@@ -24,7 +24,6 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (mar 'print-documentation-entry 'print-api-documentation 'print-help 'display-invocation-help-and-quit
-       'compute-raw-register-value 'parse-raw-register-value
        'coerce-to-address 'address-resolution-condition-address
        'ctxs-of-type 'ctx-id 'ctx-by-id 'ctx-initargs 'ctx-interface 'ctx-target 'ctx-core 'remove-context 'set-context
        'do-all-target-contexts

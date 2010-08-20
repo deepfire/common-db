@@ -337,6 +337,8 @@
    #:target-reg-addr
    #:target-reg
    #:set-target-reg
+   #:target-compile-raw-register-value
+   #:target-decompile-raw-register-value
    ;;
    #:make-target-device
    #:create-target-device-from-spec

@@ -50,24 +50,6 @@
         (error "~@<The device of type ~A, that register ~A refers to, is not a memory-mapped device.~:@>"
                (type-of device) (name ri)))))
 
-(defun compute-raw-register-value (name bitfield-names bitfield-values &aux
-                                   (ri (register-instance (target-enumpool *target*) name))
-                                   (device (reginstance-device ri)))
-  (values (mapped-device-register-address device (name (reginstance-register ri)))
-          (fbits bitfield-names bitfield-values)))
-
-(defun parse-raw-register-value (address raw-value &aux
-                                 (target *target*)
-                                 (address (fixmap-address target address))
-                                 (artifact (target-artifact-by-address target address)))
-  (if (typep artifact 'register-instance)
-      (let* ((reg (reginstance-register artifact))
-             (bitfield-values (decode-using-format (reg-format reg) raw-value)))
-        (values (name reg)
-                (nreverse (mapcar #'car bitfield-values))
-                (nreverse (mapcar #'cdr bitfield-values))))
-      (error "~@<Address ~X contains ~S, which is not a device register.~:@>" address artifact)))
-
 (defun get (name-or-address &aux
             (target *target*))
   #+help-ru

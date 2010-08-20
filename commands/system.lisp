@@ -56,7 +56,7 @@
   "Вывести список пар адрес-значение соответствующих названной конфигурации памяти.
 Если имя не указано, использовать активную конфигурацию памяти."
   (iter (for (regname regbitnames regbitvalues) in (memory-config-register-values (memconfig name)))
-        (multiple-value-bind (address value) (compute-raw-register-value regname regbitnames regbitvalues)
+        (multiple-value-bind (address value) (target-compile-raw-register-value *target* regname regbitnames regbitvalues)
           (collect (list address value)))))
 
 (defun explain-memconfig (&optional name)
@@ -115,7 +115,7 @@ remembered for the current target."
            (iter (for (reg/addr regval) in address/value-pair-list)
                  (collect (remove nil
                                   (handler-case (multiple-value-call
-                                                    #'list (parse-raw-register-value
+                                                    #'list (target-decompile-raw-register-value target
                                                             (etypecase reg/addr
                                                               (keyword (target-reg-addr target reg/addr))
                                                               (integer reg/addr))

@@ -131,6 +131,23 @@ to devices registered within TARGET."
 
 (defsetf target-reg set-target-reg)
 
+(defun target-compile-raw-register-value (target name bitfield-names bitfield-values &aux
+                                          (ri (register-instance (target-enumpool target) name))
+                                          (device (reginstance-device ri)))
+  (values (mapped-device-register-address device (name (reginstance-register ri)))
+          (fbits bitfield-names bitfield-values)))
+
+(defun target-decompile-raw-register-value (target address raw-value &aux
+                                            (address (fixmap-address target address))
+                                            (artifact (target-artifact-by-address target address)))
+  (if (typep artifact 'register-instance)
+      (let* ((reg (reginstance-register artifact))
+             (bitfield-values (decode-using-format (reg-format reg) raw-value)))
+        (values (name reg)
+                (nreverse (mapcar #'car bitfield-values))
+                (nreverse (mapcar #'cdr bitfield-values))))
+      (error "~@<Address ~X contains ~S, which is not a device register.~:@>" address artifact)))
+
 ;;;;
 ;;;; Target device creation
 ;;;;
