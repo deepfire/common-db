@@ -545,7 +545,7 @@ step-core-asynchronous and exec-raw."
 (defmethod interface-reset ((i parport-interface) &aux (port-base (parport-interface-epp-base i)))
   (port-reset port-base)
   (send-command port-base :start)
-  (prog1 (parport-read-idcode i)
+  (prog1 (place-bit-value (parport-read-idcode i) :idcode :oncd-version)
     (with-reset-bit-twitch :trst port-base
       (nanosleep +generic-delay+))))
 
