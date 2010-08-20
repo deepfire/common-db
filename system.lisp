@@ -262,7 +262,9 @@ the consequent behavior:
                                                 (platform-error "~@<Memory config file must contain memory size, when automatic detection is disabled.~:@>"))))))
            (when inhibit-detection
              (syncformat *log-stream* "WARNING: memory detection disabled!~%"))
-           (multiple-value-bind (config size) (detect-and-configure-platform-memory o inhibit-detection detection-threshold detection-failure-error-p)
+           (multiple-value-bind (config size) (detect-and-configure-platform-memory o inhibit-detection detection-threshold (if detection-failure-error-p
+                                                                                                                                :error
+                                                                                                                                :warn))
              (make-target-device target 'ram
                                  :extent (extent 0 (if inhibit-detection
                                                        manually-forced-size
