@@ -64,8 +64,8 @@
       (let* ((reg (reginstance-register artifact))
              (bitfield-values (decode-using-format (reg-format reg) raw-value)))
         (values (name reg)
-                (mapcar #'car bitfield-values)
-                (mapcar #'cdr bitfield-values)))
+                (nreverse (mapcar #'car bitfield-values))
+                (nreverse (mapcar #'cdr bitfield-values))))
       (error "~@<Address ~X contains ~S, which is not a device register.~:@>" address artifact)))
 
 (defun get (name-or-address &aux
