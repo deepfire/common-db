@@ -46,14 +46,14 @@
 
 (define-reported-condition win32-error (error)
   ((function-name :accessor function-name :initarg :function-name)
-   (args :accessor args :initarg :args)
+   (error-args :accessor error-args :initarg :error-args)
    (return-value :accessor return-value :initarg :return-value)
    (secondary-return-value :accessor secondary-return-value :initarg :secondary-return-value)
    (error-code :accessor error-code :initarg :error-code)
    (decoded :accessor decoded :initarg :decoded)
    (addendum :accessor addendum :initarg :addendum))
-  (:report (function-name args return-value secondary-return-value error-code decoded addendum)
-           "~@<Win32 error while calling ~A with parameters ~S: return value ~D/~D, error code ~D, decoded: ~A.~A~:@>" function-name args return-value secondary-return-value error-code (or decoded "Unknown.") addendum)
+  (:report (function-name error-args return-value secondary-return-value error-code decoded addendum)
+           "~@<Win32 error while calling ~A with parameters ~S: return value ~D/~D, error code ~D, decoded: ~A.~A~:@>" function-name error-args return-value secondary-return-value error-code (or decoded "Unknown.") addendum)
   (:default-initargs
    :secondary-return-value nil
     :addendum ""))
@@ -106,7 +106,7 @@
     (syncformat t "NOTE: opening an EZUSB device on ~A~%" name)
     (unless ret
       (let ((ler (get-last-error)))
-        (error 'win32-error :function-name 'create-file :args (list name)
+        (error 'win32-error :function-name 'create-file :error-args (list name)
                :return-value ret :secondary-return-value nil :addendum ""
                :error-code ler :decoded (case ler
                                           (2 "The system cannot find the file specified")))))))
@@ -181,7 +181,7 @@
   "Close the EZUSB interface."
   (unless (close-handle (ezusb-interface-handle interface))
     (let ((ler (get-last-error)))
-      (error 'win32-error :function-name 'close-handle :args (list (ezusb-interface-handle interface))
+      (error 'win32-error :function-name 'close-handle :error-args (list (ezusb-interface-handle interface))
              :return-value 0 :error-code ler :decoded (case ler)))))
 
 (define-device-class ezusb-bus :empty (root-bus probe-discovery-bus interface-bus)
