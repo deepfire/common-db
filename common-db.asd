@@ -88,6 +88,7 @@
              (:file "dsp")
              (:file "io")
              (:file "query")
+             (:file "misc")
              (:file "system")
              (:file "test")
              ;;
