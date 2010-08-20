@@ -29,6 +29,7 @@
   (:shadowing-import-from :isa #:disassemble)
   (:shadowing-import-from :bitmop #:space #:*space*)
   (:shadowing-import-from :common-db #:catch #:step #:get #:set #:trace)
+  (:shadowing-import-from :options #:*trace-exchange*)
   (:export
    #:*poll-interval*
    #:*trace-comdb-calls*
