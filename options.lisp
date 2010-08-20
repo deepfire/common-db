@@ -25,6 +25,9 @@
 (defvar *log-stream* t 
   "Global log stream for the whole debugger.")
 
+(defvar *trace-exchange* nil
+  "Whether to report wire exchanges to *STANDARD-OUTPUT*.")
+
 (defvar *virtual-target-enabled* nil
   "Whether the virt target shows up on the virt interface.")
 

@@ -28,14 +28,10 @@
    #:tap-server
    #:serve
    #:tapserver-toplevel
-   #:*trace-exchange*
    #:*log-stream*))
 
 (in-package :tapserver)
 
-
-(defvar *trace-exchange* nil
-  "Whether to report wire exchange to *STANDARD-OUTPUT*.")
 
 (defvar *log-stream* *trace-output*)
 
