@@ -360,6 +360,8 @@
   (:shadowing-import-from :bitmop #:space)
   (:shadowing-import-from :isa #:disassemble)
   (:export
+   ;; addressing
+   #:core-bus-address
    ;; moment
    #:moment
    #:moment-fetch

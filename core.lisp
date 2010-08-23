@@ -65,6 +65,9 @@ This responsibility is on the concrete classes.")
   (:layouts
    (:control %pc (setf %pc))))
 
+;;; addressing
+(defgeneric core-bus-address (core address virtualp))
+
 ;;; pipeline: moment
 (defgeneric current-core-moment (core))
 (defgeneric set-current-core-moment (core moment))
@@ -241,7 +244,7 @@ might vary depending on situation."))
 (defgeneric trans-funcall (core cenv address-space function-name args &key &allow-other-keys))
 (defgeneric watch-core (core cenv stack-top))
 
-;;; misc
+;;; stack
 (defgeneric core-call-stack (core))
 
 ;;; traps
@@ -374,6 +377,12 @@ return the corresponding trap."))
 
 (defun core-report (core format-control &rest format-arguments)
   (apply #'format *log-stream* (concatenate 'string "~&CORE~A: " format-control "~%") (enumerated-id core) format-arguments))
+
+;;;;
+;;;; Addressing
+;;;;
+(defmethod core-bus-address ((o core) address (virtualp null))
+  (fixmap-address (backend o) address))
 
 ;;;;
 ;;;; State management
