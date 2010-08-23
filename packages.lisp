@@ -248,7 +248,8 @@
    #:interface-bus
    #:*initializing-interface*
    #-disable-virtcore  #:virtif-bus
-   #-disable-tapclient #:tapclient-bus
+   #-disable-networking #:tapclient-bus
+   #-disable-networking #:client-bus
    #-disable-parport   #:parport-bus
    #:ezusb-bus
    #:interface

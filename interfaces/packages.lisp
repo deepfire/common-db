@@ -24,13 +24,22 @@
    #:lpt4-base
    ))
 
-#-disable-tapclient
+#-disable-networking
 (cl:defpackage #:interface-tapclient
   (:use :common-lisp :alexandria :iterate :usocket :pergamum :setc :bitmop :device-model
         :portability :options :bus :interface)
   (:shadowing-import-from :bitmop #:space)
   (:export
    #:tapclient-interface
+   ))
+
+#-disable-networking
+(cl:defpackage #:interface-rtlclient
+  (:use :common-lisp :alexandria :iterate :usocket :pergamum :setc :bitmop :device-model
+        :portability :options :bus :interface)
+  (:shadowing-import-from :bitmop #:space)
+  (:export
+   #:client-interface
    ))
 
 (cl:defpackage #:interface-ezusb-elvees

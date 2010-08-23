@@ -127,10 +127,14 @@ case is handled elsewhere).")
     --list-platforms            List all known platforms and quit.
     --platform <platform-name>  Specify platform manually, instead of detection.
     --physical                  Look for physical targets.  Defaults to T,
-                                  unless --virtual or --tapserver are specified.
+                                  unless --virtual, --tapserver or --rtlserver
+                                  are specified.
     --virtual                   Enable the virtual interface/target/core.
                                   Forces --physical to default to NIL.
     --tapserver [<dotted-quad>] Connect to a tapserver at the optionally 
+                                  specified address, defaulting to 127.0.0.1
+                                  Forces --physical to default to NIL.
+    --rtlserver [<dotted-quad>] Connect to an rtlserver at the optionally 
                                   specified address, defaulting to 127.0.0.1
                                   Forces --physical to default to NIL.
     --trace-exchange [<integer>]  
@@ -139,6 +143,8 @@ case is handled elsewhere).")
                                   limit might also be provided, which defaults
                                   to 1024.
     --tapserver-port <integer>  Tapserver TCP port number.
+                                  Defaults to 9001.
+    --rtlserver-port <integer>  Rtlserver TCP port number.
                                   Defaults to 9001.
     --no-parport                Omit looking for EPP-attached targets.
     --no-usb                    Omit looking for USB-attached targets.
@@ -196,7 +202,8 @@ case is handled elsewhere).")
     (write-string "#+END_EXAMPLE") (terpri)))
 
 (defvar *standard-parameters* '((:load :string) (:core-multiplier :decimal) :early-eval :context :platform :memory-detection-threshold :eval
-                                (:tapserver :string "127.0.0.1") (:tapserver-port :decimal) (:trace-exchange :decimal 1024)
+                                (:tapserver :string "127.0.0.1") (:rtlserver :string "127.0.0.1") (:tapserver-port :decimal) (:rtlserver-port :decimal)
+                                (:trace-exchange :decimal 1024)
                                 (:memory-config :string)))
 (defvar *standard-switches*   '(:no-rc :virtual :physical :no-parport :no-usb :no-scan :no-platform-init
                                 :list-contexts :list-platforms :help :help-ru :version
@@ -233,7 +240,8 @@ case is handled elsewhere).")
        (with-quit-restart
          (destructuring-bind (&rest args &key (verbose verbose)
                                     (no-rc no-rc) early-eval
-                                    core-multiplier tapserver (tapserver-port 9001) virtual (physical (not (or virtual tapserver))) no-parport no-usb trace-exchange
+                                    core-multiplier tapserver rtlserver (tapserver-port (when tapserver 9001)) (rtlserver-port (when rtlserver 8090))
+                                    virtual (physical (not (or virtual tapserver rtlserver))) no-parport no-usb trace-exchange
                                     no-scan (no-platform-init no-platform-init) keep-target-intact memory-config memory-configuration-failure-error-p
                                     load eval run-tests ignore-test-failures quit
                                     examine-tlb log-pipeline-crit
@@ -301,7 +309,10 @@ case is handled elsewhere).")
                (eval early-eval))
              (unless no-scan
                (with-retry-restarts ((retry () :report "Retry scanning interface busses."))
-                 (scan :physical physical :virtual virtual :tapserver-address tapserver :tapserver-port tapserver-port)
+                 (scan :physical physical :virtual virtual
+                       :server-address (or tapserver rtlserver)
+                       :server-port (or tapserver-port rtlserver-port)
+                       :server-type (cond (tapserver :tap) (rtlserver :rtl)))
                  (if *current*
                      (when print-memory-config
                        (print-memconfig))

@@ -137,22 +137,27 @@ ERROR-RETURN-FORM."
                     (call-next-method))
     (makunbound '*initializing-interface*)))
 
-(defun scan-interface-busses (&key force-rescan virtual (physical t) tapserver-address tapserver-port)
+(defun scan-interface-busses (&key force-rescan virtual (physical t) server-address server-port server-type)
   (declare (ignore #+disable-virtcore
                    virtual
-                   #+disable-tapclient #+disable-tapclient
-                   tapserver-address tapserver-port))
+                   #+disable-networking #+disable-networking #+disable-networking
+                   server-address server-port server-type)
+           #-disable-networking
+           (type (member nil :tap :rtl) server-type))
   #-disable-virtcore
   (let ((*virtual-interface-enabled* virtual)
         (*virtual-target-enabled* virtual))
     (bus-scan (or (root-bus 'virtif :if-does-not-exist :continue) (make-instance 'virtif-bus :name 'virtif)) force-rescan))
-  #-disable-tapclient
-  (when tapserver-address
-    (bus-scan (or (when-let ((bus (root-bus 'tapclient :if-does-not-exist :continue)))
-                    (reinitialize-instance bus :address tapserver-address :port tapserver-port)
-                    bus)
-                  (make-instance 'tapclient-bus :name 'tapclient :address tapserver-address :port tapserver-port))
-              force-rescan))
+  #-disable-networking
+  (when server-address
+    (let ((bus-type (ecase server-type
+                      (:tap 'tapclient-bus)
+                      (:rtl 'client-bus))))
+      (bus-scan (or (when-let ((bus (root-bus bus-type :if-does-not-exist :continue)))
+                      (reinitialize-instance bus :address server-address :port server-port)
+                      bus)
+                    (make-instance bus-type :name bus-type :address server-address :port server-port))
+                force-rescan)))
   (when physical
     #-disable-parport
     (unless (arg :disable-parport-interfaces)
@@ -164,8 +169,10 @@ ERROR-RETURN-FORM."
   "Return the list of all active interfaces."
   (append #-disable-virtcore
           (bus-devices (root-bus 'virtif))
-          #-disable-tapclient
-          (bus-devices (root-bus 'tapclient))
+          #-disable-networking
+          (bus-devices (root-bus 'tapclient-bus))
+          #-disable-networking
+          (bus-devices (root-bus 'client-bus))
           #-disable-parport
           (bus-devices (root-bus 'parport))
           (bus-devices (root-bus 'ezusb))))

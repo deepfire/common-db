@@ -7,7 +7,7 @@
 
 (defsystem :common-db
   :depends-on (alexandria iterate pergamum semi-precious custom-harness bitmop symtable executor assem bintype cl-io-elf cffi opfr
-               #-disable-tapclient usocket
+               #-disable-networking usocket
 	       #-disable-ironclad ironclad
                #+linux lh-usb
                #+sbcl sb-x86-portio)
@@ -40,8 +40,10 @@
              ;;
 	     #-disable-virtcore
              (:file "virtif" :depends-on ("packages" "elvees"))
-	     #-disable-tapclient
+             #-disable-networking
              (:file "tapclient" :depends-on ("packages" "elvees"))
+             #-disable-networking
+             (:file "rtlclient" :depends-on ("packages" "elvees"))
 	     #-disable-parport
              (:file "parport" :depends-on ("packages" "elvees"))
              #+linux
