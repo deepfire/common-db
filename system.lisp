@@ -107,9 +107,11 @@ from the information provided in FORM.")
                          (declare (ignore name))
                          (apply #'make-memory-config :manual
                                 (iter (for (regname/addr bitfields/rawval bitfield-values) in regspecs)
-                                      (multiple-value-bind (regname bitfields bitfield-values) (etypecase bitfields/rawval
-                                                                                                 (list    (values regname/addr bitfields/rawval bitfield-values))
-                                                                                                 (integer (target-decompile-raw-register-value target regname/addr bitfields/rawval)))
+                                      (multiple-value-bind (regname bitfields bitfield-values)
+                                          (etypecase bitfields/rawval
+                                            (list    (values regname/addr bitfields/rawval bitfield-values))
+                                            (integer (target-decompile-raw-register-value
+                                                      target (fixmap-address target regname/addr) bitfields/rawval)))
                                           (collect (list regname bitfields bitfield-values))))))
                      (error (c)
                        (platform-error "~@<In PARSE-MEMORY-CONFIG: bad structure ~S, must be ~
