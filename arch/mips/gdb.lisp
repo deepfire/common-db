@@ -22,9 +22,24 @@
 
 (in-package :gdb)
 
+(defvar *name->gdb-register-id*
+  (alexandria:alist-hash-table
+   '((:r0 .   0) (:r1  .  1) (:r2  .  2) (:r3  .  3) (:r4  .  4) (:r5  .  5) (:r6  .  6) (:r7  .  7)
+     (:r8 .   8) (:r9  .  9) (:r10 . 10) (:r11 . 11) (:r12 . 12) (:r13 . 13) (:r14 . 14) (:r15 . 15)
+     (:r16 . 16) (:r17 . 17) (:r18 . 18) (:r19 . 19) (:r20 . 20) (:r21 . 21) (:r22 . 22) (:r23 . 23)
+     (:r24 . 24) (:r25 . 25) (:r26 . 26) (:r27 . 27) (:r28 . 28) (:r29 . 29) (:r30 . 30) (:r31 . 31)
+     (:status . 32) (:lo . 33) (:hi . 34) (:badvaddr . 35) (:cause . 36) (:pc . 37)
+     (:f0  . 38) (:f1  . 39) (:f2  . 40) (:f3  . 41) (:f4  . 42) (:f5  . 43) (:f6  . 44) (:f7  . xs45)
+     (:f8  . 46) (:f9  . 47) (:f10 . 48) (:f11 . 49) (:f12 . 50) (:f13 . 51) (:f14 . 52) (:f15 . 53)
+     (:f16 . 54) (:f17 . 55) (:f18 . 56) (:f19 . 57) (:f20 . 58) (:f21 . 59) (:f22 . 60) (:f23 . 61)
+     (:f24 . 62) (:f25 . 63) (:f26 . 64) (:f27 . 65) (:f28 . 66) (:f29 . 67) (:f30 . 68) (:f31 . 69)
+     (:fcsr . 70) (:fir . 71))))
+
+(defmethod core-register-id ((o mips-core) name)
+  (gethash name *name->gdb-register-id*))
+
 (defmethod describe-core ((o mips-core) reginstance-cb &aux
-                          (space (space :core))
-                          (register-id 0))
+                          (space (space :core)))
   (with-html-output-to-string (s)
     (flet ((export-layout (name type group prefer-aliases &rest layouts-or-registers)
              (htm (:feature :name name (terpri s)
@@ -44,15 +59,14 @@
                                                           (and prefer-aliases
                                                                (first (reginstance-aliases ri)))
                                                           (name ri))))
-                                            (funcall reginstance-cb ri register-id)
-                                            (incf register-id)
-                                            (str (describe-register o name 32 (reginstance-id ri) type group))))))))))
+                                            (funcall reginstance-cb ri name)
+                                            (str (describe-register o name 32 (core-register-id o name) type group))))))))))
              (terpri s)))
       (export-layout "org.gnu.gdb.mips.cpu" nil    :general t
                      (layout space :gpr)
                      (list (layout space :hilo) :hi :lo)
                      (layout space :control))
-      (export-layout "org.gnu.gdb.mips.fpu" :float :float   nil
+      (export-layout "org.gnu.gdb.mips.fpu" :ieee_single :float   nil
                      (layout space :fpr)
                      (layout space :cop1control))
       (export-layout "org.gnu.gdb.mips.cp0" nil    :general nil
@@ -80,4 +94,4 @@
   (list :r0 :r1 :r2 :r3 :r4 :r5 :r6 :r7 :r8 :r9 :r10 :r11 :r12 :r13 :r14 :r15 :r16 :r17 :r18 :r19 :r20 :r21 :r22 :r23 :r24 :r25 :r26 :r27 :r28 :r29 :r30 :r31
         :status :lo :hi :badvaddr :cause :pc
         :f0 :f1 :f2 :f3 :f4 :f5 :f6 :f7 :f8 :f9 :f10 :f11 :f12 :f13 :f14 :f15 :f16 :f17 :f18 :f19 :f20 :f21 :f22 :f23 :f24 :f25 :f26 :f27 :f28 :f29 :f30 :f31
-        :fcsr :fir :fcsr))
+        :fcsr :fir))

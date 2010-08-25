@@ -82,8 +82,8 @@
 ;;;; Explain out our guts to GDB
 (defmethod gdb-describe-target ((o common-db-gdbserver))
   (gdb:describe-target (ctx-target o)
-                       (lambda (ri register-nr)
-                         (setf (gdb-reginstance register-nr) ri))))
+                       (lambda (ri name)
+                         (setf (gdb-reginstance (gdb:core-register-id (ctx-core o) name)) ri))))
 
 (defmethod gdb-describe-target-memory-map ((o common-db-gdbserver))
   (gdb:describe-memory-map (ctx-core o)))
@@ -116,32 +116,32 @@
           (setf (reginstance-value ri) (u8-vector-word32le regvec offt)))))
 
 ;;; reroute these calls to re-dispatch on core endianness
-(defmethod gdb-read-target-register ((o common-db-gdbserver) register-nr)
-  (gdb-read-target-register (ctx-core o) register-nr))
-(defmethod gdb-write-target-register ((o common-db-gdbserver) register-nr value)
-  (gdb-write-target-register (ctx-core o) register-nr value))
+(defmethod gdb-read-target-register ((o common-db-gdbserver) register-id)
+  (gdb-read-target-register (ctx-core o) register-id))
+(defmethod gdb-write-target-register ((o common-db-gdbserver) register-id value)
+  (gdb-write-target-register (ctx-core o) register-id value))
 
-(defmethod gdb-read-target-register ((o little-endian-core) register-nr &aux
-                                     (ri (gdb-reginstance register-nr)))
+(defmethod gdb-read-target-register ((o little-endian-core) register-id &aux
+                                     (ri (gdb-reginstance register-id)))
   (when *trace-comdb-calls*
     (log-comdb 'reginstance-value "~A" (name ri)))
   (swap-word32 (reginstance-value ri)))
 
-(defmethod gdb-read-target-register ((o big-endian-core) register-nr &aux
-                                     (ri (gdb-reginstance register-nr)))
+(defmethod gdb-read-target-register ((o big-endian-core) register-id &aux
+                                     (ri (gdb-reginstance register-id)))
   (when *trace-comdb-calls*
     (log-comdb 'reginstance-value "~A" (name ri)))
   (reginstance-value ri))
 
-(defmethod gdb-write-target-register ((o little-endian-core) register-nr value &aux
-                                      (ri (gdb-reginstance register-nr))
+(defmethod gdb-write-target-register ((o little-endian-core) register-id value &aux
+                                      (ri (gdb-reginstance register-id))
                                       (value (swap-word32 value)))
   (when *trace-comdb-calls*
     (log-comdb '(setf reginstance-value) "~A ~X" (name ri) value))
   (setf (reginstance-value ri) value))
 
-(defmethod gdb-write-target-register ((o big-endian-core) register-nr value &aux
-                                      (ri (gdb-reginstance register-nr)))
+(defmethod gdb-write-target-register ((o big-endian-core) register-id value &aux
+                                      (ri (gdb-reginstance register-id)))
   (when *trace-comdb-calls*
     (log-comdb '(setf reginstance-value) "~A ~X" (name ri) value))
   (setf (reginstance-value ri) value))

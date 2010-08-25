@@ -30,9 +30,14 @@
    #:describe-target
    #:describe-memory-map
    #:describe-spu
+   #:core-register-id
    #:core-register-order))
 
 (in-package :gdb)
+
+(defgeneric core-register-id (core name)
+  (:documentation
+   "Map register names to GDB ids, which it unfortunately mandates."))
 
 (defgeneric describe-target (target reginstance-cb)
   (:method ((o target) reginstance-cb &aux gdb-id-to-register-instance-map)
