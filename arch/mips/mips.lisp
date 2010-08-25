@@ -190,7 +190,7 @@
     (:errorepc  30)
     (:desave    31))
    ((:cop1control "MIPS FPU control registers")
-    (:fir       0)
+    (:fir       0 :aliases (:fcr0))
     (:fccr      25)
     (:fexr      26)
     (:fenr      28)
