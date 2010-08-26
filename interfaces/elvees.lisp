@@ -201,3 +201,57 @@
   (:layouts
    ((:irdec-regf "The blessing of MForce/NVCom.")
     (:regf       0 :format :irdec-regf))))
+
+
+(define-device-class elvees-interface :interface (interface)
+    ()
+  (:layouts (:tap-ir     nil nil)
+            (:tap-ird    nil nil)
+            (:tap-idcode nil nil)
+            (:tap-dr     nil nil))
+  (:extended-layouts :tap-dr))
+
+
+(defconstant +memory-iteration-period+ 1000000)
+
+(defmethod interface-bus-word ((o elvees-interface) address)
+  "Read 32 bits from a given bus address."
+  (declare (type (unsigned-byte 32) address))
+  (lret (result)
+    (setc (devbits o :oscr (:slctmem :ro)) (t t)
+          (devreg o :omar) address
+          (devreg o :mem) 0)
+    (busywait (test-devbits o :oscr :rdym)
+              ((error 'interface-memory-timeout :interface o))
+              :iteration-period +memory-iteration-period+ :timeout 300)
+    (setc result (devreg o :omdr)
+          (devbits o :oscr (:slctmem :ro)) (nil nil))))
+
+(defmethod (setf interface-bus-word) (val (o elvees-interface) address)
+  "Write 32 bits into a given bus address."
+  (declare (type (unsigned-byte 32) val address))
+  (setc (devbit o :oscr :slctmem) t
+        (devreg o :omar) address
+        (devreg o :omdr) val
+        (devreg o :mem) 0)
+  (busywait (test-devbits o :oscr :rdym)
+            ((error "RDYM!"))
+            :iteration-period +memory-iteration-period+ :timeout 300)
+  (setc (devbit o :oscr :slctmem) nil)
+  val)
+
+(defmethod interface-bus-io ((o elvees-interface) buffer address size direction &optional (offset 0))
+  (declare (type (simple-array (unsigned-byte 8)) buffer)
+           (type (unsigned-byte 32) address)
+           (type (unsigned-byte 28) size)
+           (type (member :read :write) direction))
+  (assert (zerop (ldb (byte 2 0) size)))
+  (assert (zerop (ldb (byte 2 0) address)))
+  (let ((addr address))
+    (loop :for size :from size :above 3 :by 4
+       :for buf-offset :upfrom offset :by 4
+       :do
+       (if (eq direction :read)
+           (setf (u8-vector-word32le buffer buf-offset) (interface-bus-word o addr))
+           (setf (interface-bus-word o addr) (u8-vector-word32le buffer buf-offset)))
+       (incf addr 4))))

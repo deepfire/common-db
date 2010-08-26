@@ -279,6 +279,8 @@
    #:interface-bus-io
    #:scan-interface-busses
    #:interfaces
+   ;;
+   #:elvees-interface
    ))
 
 (defpackage #:platform ;; needed by :test-hardware

@@ -40,12 +40,22 @@
 (define-device-class client-bus :empty (root-bus enumerating-bus interface-bus)
   ((address :reader   server-address :initarg :address)
    (port    :reader   server-port    :initarg :port)
+   (type    :reader   server-type    :initarg :type)
    (stream  :accessor server-stream)))
 
 (defun sendpkt (stream type &rest args)
   (let ((pkt (list* type args))
-        (*print-base* #x10))
-    (print pkt stream)
+        (*print-base* #x10)
+        (sexp (keywordp type)))
+    (if sexp
+        (print pkt stream)
+        (iter (for (elt . rest) on pkt)
+              (when (integerp elt)
+                (write-string "0x" stream))
+              (write elt :stream stream)
+              (if rest
+                  (write-char #\Space stream)
+                  (terpri stream))))
     (finish-output stream)
     (when *trace-exchange*
       (format *trace-output* "<REQ ~S~%" pkt))))
@@ -53,17 +63,35 @@
 (defun call-with-response (interface stream expectation eof-error-p fn)
   (with-safe-reader-context ()
     (let* ((*read-base* #x10)
-           (response (read stream nil '(:eof))))
+           (sexp (keywordp expectation))
+           (response (if sexp
+                         (read stream nil '(:eof))
+                         (string-right-trim '(#\Return) (read-line stream nil nil)))))
       (when *trace-exchange*
         (format *trace-output* "> ~S~%" response))
-      (case (first response)
-        (:eof   (when eof-error-p
-                  (interface-error interface "~@<EOF on server stream ~S~:@>" stream)))
-        (:error (error "~@<Remote signalled error: ~@<~S~:@>~:@>" (second response)))
-        (t
-         (unless (eq expectation (first response))
-           (error "~@<Expected response type ~S, got ~S.~:@>" expectation (first response)))
-         (funcall fn response))))))
+      (flet ((handle-eof ()
+               (when eof-error-p
+                 (interface-error interface "~@<EOF on server stream ~S~:@>" stream)))
+             (handle-unexpected-response (response)
+               (error "~@<Expected response type ~S, got ~S.~:@>" expectation response)))
+        (if sexp
+            (case (first response)
+              (:eof   (handle-eof))
+              (:error (error "~@<Remote signalled error: ~@<~S~:@>~:@>" (second response)))
+              (t
+               (unless (eq expectation (first response))
+                 (handle-unexpected-response (first response)))
+               (funcall fn response)))
+            (if response
+                (multiple-value-bind (okayp suffix) (starts-with-subseq "ok" response :return-suffix t)
+                  (if okayp
+                      (funcall fn (list* nil (when (> (length suffix) 2)
+                                               (list (parse-integer suffix :start (if (char= #\x (char suffix 2))
+                                                                                      3
+                                                                                      1)
+                                                                    :junk-allowed t)))))
+                      (handle-unexpected-response (subseq response (or (position #\Space response) 0)))))
+                (handle-eof)))))))
 
 (defmacro with-response (interface lambda-list stream eof-error-p &body body)
   (with-gensyms (response)
@@ -89,8 +117,8 @@
       (syncformat *trace-output* "; trying to connect to server at ~A:~D~%" address port))
     ;; XXX: handle errors here
     (cond ((setf stream (ignore-errors (socket-stream (socket-connect address port))))
-           (when-let ((line1 (read-line stream nil nil))
-                      (line2 (read-line stream nil nil)))
+           (when-let ((line1 (string-right-trim '(#\Return) (read-line stream nil nil)))
+                      (line2 (string-right-trim '(#\Return) (read-line stream nil nil))))
              (cond ((and (starts-with-subseq +rtlserver-banner-prefix-1+ line1)
                          (starts-with-subseq +rtlserver-banner-prefix-2+ line2))
                     (syncformat *trace-output* "; remote server protocol version: ~S~%" (subseq line2 (length +rtlserver-banner-prefix-2+)))
@@ -100,89 +128,163 @@
           (t
            (syncformat *trace-output* "; failed to connect to server at ~A:~D~%" address port)))))
 
-(defun (setf client-tap-ird) (val iface null &aux
-                              (stream (stream-of iface)))
-  (declare (type (unsigned-byte 32) val) (ignore null))
-  (sendpkt stream :set-ird val)
-  (with-response iface (:ird value) stream t
-    value))
+(defun id2reg (reg)
+ (ecase reg
+   (#x0 "OSCR")
+   (#x1 "OMBC")
+   (#x2 "OLR0")
+   (#x3 "OLR1")
+   (#x4 "OBCR")
+   (#x5 "IRdec")
+   (#x6 "OTC")
+   (#x7 "PCdec")
+   (#x8 "PCexec")
+   (#x9 "PCmem")
+   (#xa "PCfetch")
+   (#xb "OMAR")
+   (#xc "OMDR")
+   (#xd "EnMEM")
+   (#xe "PCwb")
+   (#xf "EnGO")
+   (#x100 "EnREGF")))
 
-(defun client-tap-idcode (iface null &aux
-                          (stream (stream-of iface)))
-  (declare (ignore null))
-  (sendpkt stream :idcode)
-  (with-response iface (:idcode idcode) stream t
-    idcode))
+(defun (setf %client-tap-ird) (val interface null)
+  (declare (type (integer 0) val) (type interface interface) (ignore null))
+  (setf (client-tap-ird interface nil) val))
 
-(defun client-tap-dr (iface reg &aux
-                      (stream (stream-of iface)))
-  (sendpkt stream :get-dr reg)
-  (with-response iface (:dr value) stream t
-    value))
-
-(defun (setf client-tap-dr) (val iface reg &aux
-                             (stream (stream-of iface)))
-  (sendpkt stream :set-dr reg val)
-  (with-response iface (:ok) stream t)
-  val)
+(defun (setf %client-tap-dr) (val interface reg)
+  (declare (type (integer 0) val) (type interface interface))
+  (setf (client-tap-dr interface reg) val))
 
 (defmethod bus-populate-address ((o client-bus) address)
-  (lret ((iface (make-instance 'client-interface :bus o :address address :stream (stream-of o))))
+  (lret ((iface (make-instance (ecase (server-type o)
+                                 (:rtl 'rtl-client-interface)
+                                 (:tap 'tap-client-interface))
+                               :bus o :address address :stream (server-stream o))))
     (setf (iface-idcode iface) (decode-bitfield :oncd-version (interface-reset iface)))))
 
-(define-device-class client-interface :interface (interface)
+(define-device-class client-interface :interface (elvees-interface)
   ((stream :reader stream-of :initarg :stream))
-  (:layouts (:tap-ird nil (setf client-tap-ird))             ;; wronly, not enforced
+  (:layouts (:tap-ird nil (setf %client-tap-ird))            ;; wronly, not enforced
             (:tap-idcode client-tap-idcode nil)              ;; XXX: this story is yet to be heard...
-            (:tap-dr client-tap-dr (setf client-tap-dr))) ;; want pass
+            (:tap-dr client-tap-dr (setf %client-tap-dr)))   ;; want pass
   (:extended-layouts :tap-dr))
 
-(defmethod interface-reset ((o client-interface) &aux
-                            (stream (stream-of o)))
+(define-device-class rtl-client-interface :interface (client-interface)
+  ()
+  (:extended-layouts :tap-dr))
+
+(define-device-class tap-client-interface :interface (client-interface)
+  ()
+  (:extended-layouts :tap-dr))
+
+(defgeneric (setf client-tap-ird) (val iface null)
+  (:method (val (iface tap-client-interface) null &aux (stream (stream-of iface)))
+    (sendpkt stream :set-ird val)
+    (with-response iface (:ird value) stream t
+      value))
+  (:method (val (iface rtl-client-interface) null &aux (stream (stream-of iface)))
+    (sendpkt stream "wrDR" val)
+    (with-response iface ("ok" value) stream t
+      value)))
+
+(defgeneric client-tap-idcode (iface null)
+  (:method ((iface tap-client-interface) null &aux (stream (stream-of iface)))
+    (sendpkt stream :idcode)
+    (with-response iface (:idcode idcode) stream t
+      idcode))
+  (:method ((iface rtl-client-interface) null &aux (stream (stream-of iface)))
+    (sendpkt stream "reset")
+    (with-response iface ("ok") stream t)
+    (sendpkt stream "rdIR")
+    (with-response iface ("ok" idcode) stream t
+      idcode)))
+
+(defgeneric client-tap-dr (iface reg)
+  (:method ((iface tap-client-interface) reg &aux (stream (stream-of iface)))
+    (sendpkt stream :get-dr reg)
+    (with-response iface (:dr value) stream t
+      value))
+  (:method ((iface rtl-client-interface) reg &aux (stream (stream-of iface)))
+    (sendpkt stream "show" (id2reg reg))
+    (with-response iface ("ok" value) stream t
+      value)))
+
+(defgeneric (setf client-tap-dr) (val iface reg)
+  (:method (val (iface tap-client-interface) reg &aux (stream (stream-of iface)))
+    (sendpkt stream :set-dr reg val)
+    (with-response iface (:ok) stream t)
+    val)
+  (:method (val (iface rtl-client-interface) reg &aux (stream (stream-of iface)))
+    (sendpkt stream "set" (id2reg reg) val)
+    (with-response iface ("ok" ignore) stream t
+      (declare (ignore ignore)))
+    val))
+
+(defmethod interface-reset ((o tap-client-interface) &aux (stream (stream-of o)))
   (with-condition-recourses interface-error
       (progn
         (sendpkt stream :reset-interface)
         (with-response o (:idcode idcode) stream t
           idcode))))
 
-(defmethod interface-stop-target ((o client-interface) &aux
-                                  (stream (stream-of o)))
+(defmethod interface-reset ((o client-interface) &aux (stream (stream-of o)))
+  (with-condition-recourses interface-error
+      (progn
+        (sendpkt stream "reset")
+        (with-response o ("ok") stream t)
+        (sendpkt stream "rdIR")
+        (with-response o ("ok" value) stream t
+          value))))
+
+(defmethod interface-stop-target ((o tap-client-interface) &aux (stream (stream-of o)))
   (sendpkt stream :stop-target)
   (with-response o (:ok) stream t
     t))
 
-(defmethod interface-attach-target ((o client-interface) &aux
-                                    (stream (stream-of o)))
+(defmethod interface-stop-target ((o rtl-client-interface) &aux (stream (stream-of o)))
+  (sendpkt stream "wrIR" (bits :tap-opcode :debug-request))
+  (with-response o ("ok" ir) stream t
+    (declare (ignore ir))
+    t))
+
+(defmethod interface-attach-target ((o tap-client-interface) &aux (stream (stream-of o)))
   (sendpkt stream :attach-target)
   (with-response o (:ird ird) stream t
     ird))
 
-(defmethod interface-reset-target ((o client-interface) stop-cores-p &aux
-                                   (stream (stream-of o)))
+(defmethod interface-attach-target ((o rtl-client-interface) &aux (stream (stream-of o)))
+  (iter (sendpkt stream "wrIR" (bits :tap-opcode :debug-enable))
+        (until (with-response o ("ok" ird) stream t
+                 (= ird (bits :tap-opcode :debug-enable))))))
+
+(defmethod interface-reset-target ((o tap-client-interface) stop-cores-p &aux (stream (stream-of o)))
   (declare (ignore stop-cores-p))
   (sendpkt stream :reset-target)
   (with-response o (:ok) stream t)
   (interface-stop-target o)
   (interface-attach-target o))
 
-(defmethod interface-bus-word ((o client-interface) address &aux
-                               (stream (stream-of o)))
-  "Read 32 bits from a given bus address."
+(defmethod interface-reset-target ((o rtl-client-interface) stop-cores-p &aux (stream (stream-of o)))
+  (declare (ignore stop-cores-p))
+  (sendpkt stream "reset")
+  (with-response o ("ok") stream t)
+  (interface-stop-target o)
+  (interface-attach-target o))
+
+(defmethod interface-bus-word ((o tap-client-interface) address &aux (stream (stream-of o)))
   (declare (type (unsigned-byte 32) address))
   (sendpkt stream :read-word address)
   (with-response o (:word value) stream t
     value))
 
-(defmethod (setf interface-bus-word) (val (o client-interface) address &aux
-                                      (stream (stream-of o)))
-  "Write 32 bits into a given bus address."
+(defmethod (setf interface-bus-word) (val (o tap-client-interface) address &aux (stream (stream-of o)))
   (declare (type (unsigned-byte 32) val address))
   (sendpkt stream :write-word address val)
   (with-response o (:ok) stream t
     val))
 
-(defmethod interface-bus-io ((o client-interface) buffer address size direction &optional (offset 0) &aux
-                             (stream (stream-of o)))
+(defmethod interface-bus-io ((o tap-client-interface) buffer address size direction &optional (offset 0) &aux (stream (stream-of o)))
   
   (multiple-value-call #'sendpkt stream (ecase direction
                                           (:read  (values :read-sequence  address size))
@@ -194,13 +296,29 @@
     (when (eq direction :read)
       (setf (subseq buffer offset) data))))
 
-(defmethod interface-close ((o client-interface) &aux
-                            (stream (stream-of o)))
+(defmethod interface-bus-io ((o rtl-client-interface) buffer address size direction &optional (offset 0) &aux (stream (stream-of o)))
+  
+  ;; (multiple-value-call #'sendpkt stream (ecase direction
+  ;;                                         (:read  (values :read-sequence  address size))
+  ;;                                         (:write (values :write-sequence address (if (and (zerop offset)
+  ;;                                                                                          (= size (length buffer)))
+  ;;                                                                                     buffer
+  ;;                                                                                     (subseq buffer offset (+ offset size)))))))
+  ;; (with-response o (:data/ok &optional data) stream t
+  ;;   (when (eq direction :read)
+  ;;     (setf (subseq buffer offset) data)))
+  )
+
+(defmethod interface-close ((o tap-client-interface) &aux (stream (stream-of o)))
   (when (open-stream-p stream)
     (unwind-protect
          (progn (ignore-errors (sendpkt stream :bye))
                 (with-response o (:bye) nil stream))
       (close (stream-of o)))))
+
+(defmethod interface-close ((o rtl-client-interface) &aux (stream (stream-of o)))
+  (when (open-stream-p stream)
+    (close (stream-of o))))
 
 (defmethod bus-remove ((bus client-bus) (o client-interface))
   (interface-close o))

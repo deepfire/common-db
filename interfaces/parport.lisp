@@ -77,7 +77,6 @@
 ;; Delay values, in nanoseconds.
 (defconstant +reset-delay+ 1000000)
 (defconstant +generic-delay+ 10000)
-(defconstant +memory-delay+ 1000000)
 
 (defparameter *epp-reset-delay* 500000)
 (defvar *log-graft-access* nil)
@@ -533,7 +532,7 @@ step-core-asynchronous and exec-raw."
 ;;;;
 ;;;; Interface
 ;;;;
-(define-device-class parport-interface :interface (interface)
+(define-device-class parport-interface :interface (elvees-interface)
   ((epp-base :accessor parport-interface-epp-base :type (unsigned-byte 32) :initarg :epp-base)
    (ircache :accessor iface-ircache :initform :undefined :type (or (member :undefined) (unsigned-byte 4))))
   (:layouts (:tap-ir nil (setf tap-ir))                     ;; wronly, not enforced
@@ -584,34 +583,6 @@ step-core-asynchronous and exec-raw."
 ;;;
 ;;; Interface bus I/O
 ;;;
-(defmethod interface-bus-word ((o parport-interface) address)
-  "Read 32 bits from a given bus address."
-  (declare (type (unsigned-byte 32) address))
-  (lret (result)
-    (setc (devbits o :oscr (:slctmem :ro)) (t t)
-          (devreg o :omar) address
-          (devreg o :mem) 0)
-    (busywait (test-devbits o :oscr :rdym)
-              ((error 'interface-memory-timeout :interface o))
-              :timeout 3000
-              :iteration-period +memory-delay+)
-    (setc result (devreg o :omdr)
-          (devbits o :oscr (:slctmem :ro)) (nil nil))))
-
-(defmethod (setf interface-bus-word) (val (o parport-interface) address)
-  "Write 32 bits into a given bus address."
-  (declare (type (unsigned-byte 32) val address))
-  (setc (devbit o :oscr :slctmem) t
-        (devreg o :omar) address
-        (devreg o :omdr) val
-        (devreg o :mem) 0)
-  (busywait (test-devbits o :oscr :rdym)
-            ((error 'interface-memory-timeout :interface o))
-            :timeout 3000
-            :iteration-period +memory-delay+)
-  (setc (devbit o :oscr :slctmem) nil)
-  val)
-
 (defmethod interface-bus-io ((o parport-interface) buffer address size direction &optional (offset 0) &aux (port-base (parport-interface-epp-base o)))
   (declare (type (simple-array (unsigned-byte 8)) buffer)
            (type (unsigned-byte 32) address)

@@ -154,9 +154,9 @@ ERROR-RETURN-FORM."
                       (:tap 'tapclient-bus)
                       (:rtl 'client-bus))))
       (bus-scan (or (when-let ((bus (root-bus bus-type :if-does-not-exist :continue)))
-                      (reinitialize-instance bus :address server-address :port server-port)
+                      (reinitialize-instance bus :address server-address :port server-port :type server-type)
                       bus)
-                    (make-instance bus-type :name bus-type :address server-address :port server-port))
+                    (make-instance bus-type :name bus-type :address server-address :port server-port :type server-type))
                 force-rescan)))
   (when physical
     #-disable-parport

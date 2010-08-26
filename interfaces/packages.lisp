@@ -40,6 +40,8 @@
   (:shadowing-import-from :bitmop #:space)
   (:export
    #:client-interface
+   #:tap-client-interface
+   #:rtl-client-interface
    ))
 
 (cl:defpackage #:interface-ezusb-elvees

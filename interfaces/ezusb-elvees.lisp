@@ -29,11 +29,6 @@
 (defconstant +oncd-ird-length+  8)
 (defconstant +idcode-length+    32)
 
-;; Delay values, in nanoseconds.
-(defconstant +reset-delay+ 1000000)
-(defconstant +generic-delay+ 10000)
-(defconstant +memory-delay+ 1000000)
-
 (defmacro build-pkt (type size irdr ndebug nrst ntrst)
   `(bits (:ez-hdr-type :sys-nrst :sys-ntrst :size :ndebug-oper :irdrsel) ,type ,nrst ,ntrst ,size ,ndebug ,irdr))
 
@@ -210,7 +205,7 @@
   (lret ((iface (make-instance 'ezusb-interface :bus o :address address :handle (ezusb-open address))))
     (setf (iface-idcode iface) (decode-bitfield :oncd-version (interface-reset iface)))))
 
-(define-device-class ezusb-interface :interface (interface)
+(define-device-class ezusb-interface :interface (elvees-interface)
   ((handle :accessor ezusb-interface-handle :type (or null #-windows stream #+windows integer) :initarg :handle))
   (:layouts (:tap-ird nil (setf ezusb-tap-ird))        ;; wronly, not enforced
             (:tap-idcode ezusb-tap-idcode nil)
@@ -249,32 +244,6 @@
   (ezusb-target-reset o)
   (interface-stop-target o)
   (interface-attach-target o))
-
-(defmethod interface-bus-word ((o ezusb-interface) address)
-  "Read 32 bits from a given bus address."
-  (declare (type (unsigned-byte 32) address))
-  (lret (result)
-    (setc (devbits o :oscr (:slctmem :ro)) (t t)
-          (devreg o :omar) address
-          (devreg o :mem) 0)
-    (busywait (test-devbits o :oscr :rdym)
-              ((error 'interface-memory-timeout :interface o))
-              :iteration-period +memory-delay+ :timeout 300)
-    (setc result (devreg o :omdr)
-          (devbits o :oscr (:slctmem :ro)) (nil nil))))
-
-(defmethod (setf interface-bus-word) (val (o ezusb-interface) address)
-  "Write 32 bits into a given bus address."
-  (declare (type (unsigned-byte 32) val address))
-  (setc (devbit o :oscr :slctmem) t
-        (devreg o :omar) address
-        (devreg o :omdr) val
-        (devreg o :mem) 0)
-  (busywait (test-devbits o :oscr :rdym)
-            ((error "RDYM!"))
-            :iteration-period +memory-delay+ :timeout 300)
-  (setc (devbit o :oscr :slctmem) nil)
-  val)
 
 (defparameter *iovec* (make-array 4000 :element-type '(unsigned-byte 8)))
 
