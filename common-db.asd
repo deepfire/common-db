@@ -12,9 +12,40 @@
                #+linux lh-usb
                #+sbcl sb-x86-portio)
   :components
-  ((:file "portability")
-   ;;
-   (:file "packages" :depends-on ("portability"))
+  ((:module "packages"
+            :components
+            ((:file "options")
+             (:file "portability")
+             (:file "spaces")
+             ;;
+             (:file "address-map" :depends-on ("options"))
+             (:file "bank" :depends-on ("options"))
+             (:file "generic" :depends-on ("options"))
+             (:file "mdb-emulation" :depends-on ("options"))
+             (:file "bus" :depends-on ("options" "spaces"))
+             (:file "host-pci" :depends-on ("options" "spaces"))
+             (:file "graft" :depends-on ("options" "portability" "spaces"))
+             ;;
+             (:file "loadable" :depends-on ("options" "bank"))
+             (:file "interface" :depends-on ("options" "portability" "spaces" "bus"))
+             (:file "platform" :depends-on ("options" "portability" "spaces" "generic"))
+             ;;
+             (:file "tgt" :depends-on ("options" "portability" "spaces" "generic" "platform" "interface"))
+             ;;
+             (:file "platform-definitions" :depends-on ("spaces" "platform" "tgt" "sysdev" "mips"))
+             (:file "sysdev" :depends-on ("options" "portability" "spaces" "generic" "platform" "interface" "tgt"))
+             (:file "core" :depends-on ("options" "portability" "spaces" "address-map" "generic" "platform" "tgt"))
+             (:file "mips" :depends-on ("options" "spaces" "address-map" "generic" "interface" "tgt" "core"))
+             (:file "pci" :depends-on ("options" "portability" "spaces" "address-map" "bus" "generic" "platform" "loadable" "interface" "tgt"
+                                                 "core" "mips"))
+             (:file "dsp" :depends-on ("options" "spaces" "generic" "address-map" "interface" "tgt" "core"))
+             (:file "flash" :depends-on ("options" "portability" "spaces" "address-map" "bus" "loadable" "generic" "interface" "platform" "tgt"
+                                                   "core" "mips" "sysdev"))
+             (:file "common-db" :depends-on ("options" "portability" "spaces" "address-map" "bus" "loadable" "generic" "interface" "platform" "tgt"
+                                                       "core" "sysdev" "mips" "dsp" "flash"))
+             (:file "test-hardware" :depends-on ("options" "spaces" "generic" "interface" "platform" "tgt" "sysdev" "core" "mips" "dsp" "common-db"))
+             (:file "common-db-user" :depends-on ("options" "spaces" "generic" "interface" "platform" "tgt" "core" "mips" "dsp" "common-db"))))
+   (:file "portability" :depends-on ("packages"))
    ;;
    (:file "address-map" :depends-on ("packages"))
    (:file "generic" :depends-on ("packages"))
