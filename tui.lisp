@@ -104,8 +104,9 @@ case is handled elsewhere).")
   #+help-ru
   "Вывести версию отладчика.
 Команда различает релизные версии и версии в разработке."
-  (format t "~:[~*~;~A, ~]commit-id ~A, ~:[development version, built on ~A~;release, made on ~A~]~%"
-          *common-db-release-p* *common-db-version* *common-db-commit-id* *common-db-release-p* *common-db-date*)
+  (format t "~:[~*~;~A, ~]commit-id ~A, ~:[development version, built on ~A~;release, made on ~A~], running on ~A ~A~%"
+          *common-db-release-p* *common-db-version* *common-db-commit-id* *common-db-release-p* *common-db-date*
+          (lisp-implementation-type) (lisp-implementation-version))
   (values))
 
 (defvar *comdb-help-ru*)
