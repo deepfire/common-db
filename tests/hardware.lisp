@@ -348,10 +348,8 @@
     (expect-value x (gpr-by-name core :r1))))
 
 (defun continuity-checker (core pc-offt pcdec-offt pcexec-offt opcode)
-  (declare (ignore core opcode))
-  (not (or (= 7 pc-offt)
-           (= 7 pcdec-offt)
-           (= 7 pcexec-offt))))
+  (declare (ignore core pcdec-offt pcexec-offt opcode))
+  (not (= 7 pc-offt)))
 
 (defun make-exception-checker (exception-type &optional expected-epc)
   (lambda (core)
@@ -522,8 +520,7 @@
 ;;;;
 ;;;; Run the packed tests.
 ;;;;
-(defcomdbtest :mips pipeline-continuity (core)
-    (:unstable-failure t)
+(defcomdbtest :mips pipeline-continuity (core) ()
   (run-test-pack core 'run-maybe-swbreak-and-dsd-test *pipeline-continuity-test-pack*))
 
 (defcomdbtest :mips hw-breakpoints (core) ()
