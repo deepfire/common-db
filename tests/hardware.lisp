@@ -347,9 +347,11 @@
   (lambda (core)
     (expect-value x (gpr-by-name core :r1))))
 
-(defun continuity-checker (core pc-offt pcdec-offt opcode)
-  (declare (ignore core pc-offt opcode))
-  (not (= pcdec-offt 7)))
+(defun continuity-checker (core pc-offt pcdec-offt pcexec-offt opcode)
+  (declare (ignore core opcode))
+  (not (or (= 7 pc-offt)
+           (= 7 pcdec-offt)
+           (= 7 pcexec-offt))))
 
 (defun make-exception-checker (exception-type &optional expected-epc)
   (lambda (core)
@@ -501,6 +503,7 @@
                          (unless (funcall test core
                                           (pc-to-insn-nr (devreg core :pc))
                                           (pc-to-insn-nr (trail-decode (saved-core-trail core)))
+                                          (pc-to-insn-nr (trail-execute (saved-core-trail core)))
                                           (moment-opcode (saved-core-moment core)))
                            (return nil)))
                        (finally (return t)))))))))
