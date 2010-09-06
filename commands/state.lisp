@@ -47,11 +47,7 @@
     (reinstate-saved-moment core)
     ;; shall we use OTC/TRACE-MODE here, instead (wouldn't that be a lie)?
     (iter (repeat count)
-          (while (prog1 (step-core-synchronous core step-slaves)
-                   (when step-slaves
-                     (dolist (slave (core-slaves core))
-                       (when (core-running-p slave)
-                         (step-core-debug slave)))))))
+          (step-core-synchronous core step-slaves))
     (free-to-stop core))
   (when display (display))    
   (values))
@@ -137,11 +133,7 @@
                  ;; restore peace in the tubes...
                  (reinstate-saved-moment core)
                  (setf moment-invaded-p nil))
-               (step-core-synchronous core step-slaves)
-               (when step-slaves
-                 (dolist (slave (core-slaves core))
-                   (when (core-running-p slave)
-                     (step-core-debug slave))))))
+               (step-core-synchronous core step-slaves)))
       (with-temporary-state (core :stop)
         (let ((symstack (list (cons (current-sym) 0)))
               stay-decay-p

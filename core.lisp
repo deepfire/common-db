@@ -868,6 +868,12 @@ exists as a single entity, on pipelined CPUs."
 ;;;;
 ;;;; Core protocol -based toolkit
 ;;;;
+(defmethod step-core-asynchronous :after ((o core) &optional (step-slaves t))
+  (when step-slaves
+    (dolist (slave (core-slaves o))
+      (when (core-running-p slave)
+        (step-core-debug slave)))))
+
 (defun step-core-synchronous (core &optional (step-slaves t))
   "Perform steps necessary to make CORE do one step, and wait until it stops.
 The return value is T, except when execution is interrupted by SIGINT, 
