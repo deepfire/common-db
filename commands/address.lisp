@@ -71,7 +71,7 @@ which defaults to :SYSTEM-MAP (and is the only accepted type as of now."
 in =*SYMS*=."
   (declare (type (unsigned-byte 32)))
   (when-let ((table (first *syms*)))
-    (multiple-value-bind (sym address) (oct-1d:tree-left address (sym::symtable-store table))
+    (multiple-value-bind (sym address) (intree:tree-left address (sym::symtable-store table))
       (values address sym))))
 
 (defun nextaddr (address)
@@ -82,7 +82,7 @@ in =*SYMS*=."
 in =*SYMS*=."
   (declare (type (unsigned-byte 32)))
   (when-let ((table (first *syms*)))
-    (multiple-value-bind (sym address) (oct-1d:tree-right address (sym::symtable-store table))
+    (multiple-value-bind (sym address) (intree:tree-right address (sym::symtable-store table))
       (values address sym))))
 
 (defun symlength (symbol)

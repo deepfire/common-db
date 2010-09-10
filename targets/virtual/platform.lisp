@@ -27,7 +27,7 @@
   (:instantiate-p t)
   (:predefined-devices)
   (:default-initargs
-   :memory-map (oct-1d:make-tree :length #x20000000)))
+   :memory-map (intree:make-tree :length #x20000000)))
 
 (define-protocol-device-class virtual-mapped-device nil (mapped-device platform-device)
   ()
@@ -49,7 +49,7 @@
   (:layouts (:vdma mapped-ref (setf mapped-ref))))
 
 (define-device-class virtimer :platform (virtual-mapped-device)
-  ()
+    ()
   (:layouts (:vtimer mapped-ref (setf mapped-ref))))
 
 (define-device-class virtsys :platform (system virtual-mapped-device) ())

@@ -55,7 +55,7 @@
 
 (defmethod initialize-instance :after ((o mapped-platform-memory-region) &key &allow-other-keys)
   (let* ((extent (memory-region-extent o)))
-    (oct-1d:insert (car extent) o (platform-memory-map (device-platform o)))))
+    (intree:insert (car extent) o (platform-memory-map (device-platform o)))))
 
 (defvar *platforms* (make-hash-table :test 'equal)
   "For prototype-ish registration, as CLASS-PROTOTYPE won't cut it for us.")
@@ -75,7 +75,7 @@
 ;;;; Address regions
 ;;;;
 (defun platform-address-region (platform address)
-  (oct-1d:tree-left address (platform-memory-map platform)))
+  (intree:tree-left address (platform-memory-map platform)))
 
 ;;;;
 ;;;; Memory
