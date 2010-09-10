@@ -50,7 +50,9 @@
   ((backend :type interface)
    (platform :accessor target-platform :initarg :platform)
    (enumpool :accessor target-enumpool :initarg :enumpool)
-   (mapped-artifact-map :accessor target-mapped-artifact-map :initarg :mapped-artifact-map))
+   (mapped-artifact-map :accessor target-mapped-artifact-map :initarg :mapped-artifact-map)
+   (artifact-extent :accessor target-artifact-extent
+                    :documentation "The extent de-facto covered by memory-mapped artifacts."))
   (:default-initargs
    :enumpool (make-reginstance-enumeration-pool)
    :memory-configuration nil))

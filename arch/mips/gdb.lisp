@@ -76,9 +76,7 @@
 
 (defmethod describe-memory-map ((o mips-core) &aux
                                 (target (backend o)))
-  (let ((extents (mapcar #'memory-region-extent
-                         (append (target-devices-by-type target 'ram)
-                                 (target-devices-by-type target 'internal-memory)))))
+  (let ((extents (mapcar #'memory-region-extent (oct-1d:tree-list (platform-memory-map (target-platform target))))))
     (with-output-to-string (str)
       (dolist (seg (list mips:kuseg mips:x32kseg0 mips:x32kseg1))
         (let ((extents (mapcar (lambda (e)

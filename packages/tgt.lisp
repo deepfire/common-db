@@ -12,6 +12,7 @@
    #:target-enumpool
    #:target-platform
    #:target-mapped-artifact-map
+   #:target-artifact-extent
    #:find-target-class-for-interface
    #:detect-target-platform
    #:target-platform-discrimination-tree
