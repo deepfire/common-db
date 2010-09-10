@@ -209,7 +209,11 @@ potential SLAVES."
                            (detect-target-platform o))))
     (when *log-platform-processing*
       (syncformat *log-stream* "~@<NOTE: ~@;initializing ~S with ~S.~:@>~%" o platform-type))
-    (setf (target-platform o) (make-instance platform-type :target o))
+    (setf (target-platform o) (make-instance platform-type :target o) ;; this creates platform devices
+          ;; compute the extent covering all memory mapped registers 
+          (target-artifact-extent o) (let ((l (intree:leftmost (sym::symtable-store (target-mapped-artifact-map o))))
+                                           (r (intree:rightmost (sym::symtable-store (target-mapped-artifact-map o)))))
+                                       (extent (intree:leaf-measure l) (- (intree:leaf-measure r) (intree:leaf-measure l) -4))))
     (if skip-platform-init
         (syncformat *log-stream* "WARNING: platform initialisation disabled!~%")
         (apply #'configure-target-platform o (target-platform o)
