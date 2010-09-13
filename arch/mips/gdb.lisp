@@ -57,7 +57,7 @@
 (defmethod describe-core ((o mips-core) reginstance-cb &aux
                           (space (space :core)))
   (with-html-output-to-string (s)
-    (flet ((export-layout (name type group prefer-aliases &rest layouts-or-registers)
+    (flet ((emit-feature-from-registers/layouts (name type group prefer-aliases &rest layouts-or-registers)
              (htm (:feature :name name (terpri s)
                             (iter (for l-or-r in layouts-or-registers)
                                   (destructuring-bind (l &rest rs) (ensure-cons l-or-r)
@@ -78,15 +78,15 @@
                                             (funcall reginstance-cb ri name)
                                             (str (describe-register o name 32 (core-register-id o name) type group))))))))))
              (terpri s)))
-      (export-layout "org.gnu.gdb.mips.cpu" nil    :general t
-                     (layout space :gpr)
-                     (list (layout space :hilo) :hi :lo)
-                     (layout space :control))
-      (export-layout "org.gnu.gdb.mips.fpu" :ieee_single :float   nil
-                     (layout space :fpr)
-                     (layout space :cop1control))
-      (export-layout "org.gnu.gdb.mips.cp0" nil    :general nil
-                     (list* (layout space :cop0) :badvaddr :status :cause (additional-mips-register-order)))
+      (emit-feature-from-registers/layouts "org.gnu.gdb.mips.cpu" nil    :general t
+                                           (layout space :gpr)
+                                           (list (layout space :hilo) :hi :lo)
+                                           (layout space :control))
+      (emit-feature-from-registers/layouts "org.gnu.gdb.mips.fpu" :ieee_single :float   nil
+                                           (layout space :fpr)
+                                           (layout space :cop1control))
+      (emit-feature-from-registers/layouts "org.gnu.gdb.mips.cp0" nil    :general nil
+                                           (list* (layout space :cop0) :badvaddr :status :cause (additional-mips-register-order)))
       (when (next-method-p)
         (call-next-method)))))
 
