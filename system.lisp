@@ -70,7 +70,9 @@
                   (intmem-extent (memory-region-extent intmem)))
         (setf (cdr intmem-extent) (or (detect-platform-memory-size o (car intmem-extent))
                                       (error "~@<During initialisation of platform ~A: couldn't detect size of internal memory ~8,'0X.~:@>"
-                                             (type-of o) (car intmem-extent))))))))
+                                             (type-of o) (car intmem-extent))))
+        (format *log-stream* "~@<;;; ~@;Detected internal memory region extent: ~8,'0X-~8,'0X~:@>~%"
+                (car intmem-extent) (+ (car intmem-extent) (cdr intmem-extent) -4))))))
 
 ;;;;
 ;;;; Platform memory configuration
