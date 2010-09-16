@@ -21,6 +21,7 @@
              (:file "address-map" :depends-on ("options"))
              (:file "bank" :depends-on ("options"))
              (:file "generic" :depends-on ("options"))
+             (:file "trace" :depends-on ("options"))
              (:file "mdb-emulation" :depends-on ("options"))
              (:file "bus" :depends-on ("options" "spaces"))
              (:file "host-pci" :depends-on ("options" "spaces"))
@@ -50,6 +51,7 @@
    (:file "address-map" :depends-on ("packages"))
    (:file "generic" :depends-on ("packages"))
    (:file "options" :depends-on ("packages"))
+   (:file "trace" :depends-on ("packages"))
    ;;
    (:file "loadable" :depends-on ("options"))
    (:file "bus" :depends-on ("options"))
