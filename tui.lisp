@@ -165,7 +165,7 @@ case is handled elsewhere).")
     --keep-target-intact        Try to keep init-time hardware affairs to
                                   the absolute bare minimum.
                                   Works best with --platform and --memory-config
-                                  specified.
+                                  (or --no-memory-configuration) specified.
     --memory-detection-threshold  While detecting type of main memory
                                   use that much memory for I/O correctness
                                   testing.
