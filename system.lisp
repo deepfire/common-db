@@ -179,8 +179,7 @@ MEMORY-CONFIG-VALID-FOR-DEVICE-CLASSES-P could be used."))
                    (digest-as-string (ironclad:digest-sequence :sha1 iarr))))
           (:print-delta
            (let ((errors (print-u8-sequence-diff *log-stream* oarr iarr :error-report-limit #x200)))
-             (format *log-stream* "Total errors: ~2,'0D%, or ~D/~D of total space.~%~
-                                  Error count limiting: total maximum of 512 byte errors were shown.~%"
+             (format *log-stream* "Total errors: ~2,'0D%, or ~D/~D of total space.~%Error count limiting: total maximum of 512 byte errors were shown.~%"
                      (if (zerop errors) 0 (/ errors size 0.01)) errors size)))))))
 
 (define-reported-condition platform-no-usable-memory-detected-error (platform-error)
