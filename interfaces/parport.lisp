@@ -185,9 +185,9 @@
     (cffi:defcfun "get_winnt_lpt_access" :int))
   #+sbcl
   (progn
-    (cffi:define-foreign-library liblptaccess
-      (t (:default "liblptaccess")))
-    (cffi:use-foreign-library liblptaccess)
+    (cffi:define-foreign-library libportaccess
+      (t (:default "libportaccess")))
+    (cffi:use-foreign-library libportaccess)
     (cffi:defcfun "get_winnt_lpt_access" :int))
   #+ccl
   (progn
