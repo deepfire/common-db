@@ -234,11 +234,17 @@
 
 (defmethod gdb-single-step-at ((o common-db-gdbserver) addr &aux
                                (core (ctx-core o)))
-  (when *trace-comdb-calls*
-    (log-comdb 'set-core-insn-execution-limit "1"))
-  (set-core-insn-execution-limit core 1)
-  (let ((*poll-interval* 0))
-    (gdb-continue-at o addr)))
+  (cond (addr
+         (when *trace-comdb-calls*
+           (log-comdb 'set-core-insn-execution-limit "1"))
+         (set-core-insn-execution-limit core 1)
+         (let ((*poll-interval* 0))
+           (gdb-continue-at o addr)))
+        (t
+         (let ((*core* core))
+           (when *trace-comdb-calls*
+             (log-comdb 'step))
+           (step 1)))))
 
 (defmethod gdb-extended-command ((o common-db-gdbserver) (c (eql :cont)) arguments)
   "Use the first action and completely ignore all thread IDs."
