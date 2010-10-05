@@ -1,0 +1,98 @@
+### -*- mode: org; -*-
+#+STARTUP: hidestars #+STARTUP: odd #+STARTUP: logdone
+#+STYLE: <link rel="stylesheet" type="text/css" href="style.css" />
+#+OPTIONS: H:7
+
+COMMON-DB: general documentation
+
+#+BEGIN_CENTER
+=October 6, 2010, 02:49= \\
+\\
+=Serge Kosyrev, aka Samium Gromoff <_deepfire at feelingofgreen dot ru>=
+#+END_CENTER
+
+* About this document
+
+This is the general documentation about /common-db/.
+
+The last version of this document comes along with its source code,
+and is also canonically available [[http://www.feelingofgreen.ru/shared/src/common-db/doc/documentation.html][from]]:
+
+    : http://www.feelingofgreen.ru/shared/src/common-db/doc/documentation.html
+
+* What is /common-db/
+
+A programmable debugging substrate, mostly geared to driving target
+devices by establishing control via on-chip debugging machinery
+through a JTAG (IEEE 1149.1) external port.
+
+On-chip machinery control can be obtained either directly, through a
+JTAG adapter dongle, or through a network proxy, talking either the
+/TAPCLIENT/ or /RTLJTAG/ protocol.
+
+/Common-db/ itself can serve as a GDB remote target, by exposing its
+functionality through the GDB RSP protocol. Alternatively, it can
+expose the directly-attached JTAG target through its own /TAPCLIENT/
+protocol.
+
+/Common-db/ is designed to be capable to drive targets of different
+architecture, although only MIPS32 target is implemented.
+
+Besides being a substrate, /common-db/ includes a number of
+component applications, among which it includes:
+
+    - /comdb/, a command-line-driven debugger
+    - /comgdbsrv/, a GDB RSP remote target server
+    - /flasher/, a flash programming utility
+
+*** Portability
+
+/Common-db/ is written in /Common Lisp/, so in addition to depending
+on the host OS, it also depends on the Lisp implementation.
+
+***** Supported host operating systems
+
+|   |             | linux-x86/amd64 | windows-x86 |
+|---+-------------+-----------------+-------------|
+| / | <>          | <               | >           |
+| # | /comdb/     | +               | +           |
+| # | /comgdbsrv/ | +               | +           |
+| # | /flasher/   | +               | +           |
+
+***** Supported Common Lisp compilers
+
+|   |             | SBCL | Clozure CL | ECL |
+|---+-------------+------+------------+-----|
+| / | <>          | <    |            | >   |
+| # | /comdb/     | +    | +          |     |
+| # | /comgdbsrv/ | +    | +          |     |
+| # | /flasher/   | +    | +          |     |
+
+* Obtaining /common-db/
+
+/Common-db/ is distributed in source code form, and can be obtained via
+its /git/ repository:
+
+    : git clone git://git.feelingofgreen.ru/common-db
+
+However, this won't deal with the myriad of its dependencies, so an
+alternative, simpler path is using the /desire/ package management
+substrate.
+
+First, ensure that you have SBCL installed, and then issue the
+following commands:
+
+    : curl -O http://feelingofgreen.ru/shared/src/desire/climb.sh
+    : sh climb.sh -m common-db ~/desr
+
+...which would take a while.
+
+* Reporting bugs
+
+Please, report /common-db/ bugs either by mail, to its author:
+
+    : <_deepfire at feelingofgreen dot ru>
+
+or, via the [[http://feelingofgreen.ru:3000/projects/common-db/issues][bugtracker]]:
+
+    : http://feelingofgreen.ru:3000/projects/common-db/issues

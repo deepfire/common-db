@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+               "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+lang="en" xml:lang="en">
+<head>
+<title>COMMON-DB: general documentation</title>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+<meta name="generator" content="Org-mode"/>
+<meta name="generated" content="2010-10-06 02:58:55 MSD"/>
+<meta name="author" content="Samium Gromoff"/>
+<meta name="description" content=""/>
+<meta name="keywords" content=""/>
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  html { font-family: Times, serif; font-size: 12pt; }
+  .title  { text-align: center; }
+  .todo   { color: red; }
+  .done   { color: green; }
+  .tag    { background-color: #add8e6; font-weight:normal }
+  .target { }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  p.verse { margin-left: 3% }
+  pre {
+	border: 1pt solid #AEBDCC;
+	background-color: #F3F5F7;
+	padding: 5pt;
+	font-family: courier, monospace;
+        font-size: 90%;
+        overflow:auto;
+  }
+  table { border-collapse: collapse; }
+  td, th { vertical-align: top; }
+  dt { font-weight: bold; }
+  div.figure { padding: 0.5em; }
+  div.figure p { text-align: center; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size:smaller }
+  .code-highlighted {background-color:#ffff00;}
+  .org-info-js_info-navigation { border-style:none; }
+  #org-info-js_console-label { font-size:10px; font-weight:bold;
+                               white-space:nowrap; }
+  .org-info-js_search-highlight {background-color:#ffff00; color:#000000;
+                                 font-weight:bold; }
+  /*]]>*/-->
+</style>
+<link rel="stylesheet" type="text/css" href="style.css" />
+<script type="text/javascript">
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+
+<h1 class="title">COMMON-DB: general documentation</h1>
+
+
+
+<div style="text-align: center">
+<p><code>October 6, 2010, 02:49</code> <br/>
+<br/>
+<code>Serge Kosyrev, aka Samium Gromoff &lt;_deepfire at feelingofgreen dot ru&gt;</code>
+</p>
+</div>
+
+
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#sec-1">1 About this document </a></li>
+<li><a href="#sec-2">2 What is <i>common-db</i> </a>
+<ul>
+<li><a href="#sec-2_1">2.1 Portability </a>
+<ul>
+<li><a href="#sec-2_1_1">2.1.1 Supported host operating systems </a></li>
+<li><a href="#sec-2_1_2">2.1.2 Supported Common Lisp compilers </a></li>
+</ul></li>
+</ul>
+</li>
+<li><a href="#sec-3">3 Obtaining <i>common-db</i> </a></li>
+<li><a href="#sec-4">4 Reporting bugs </a></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-1" class="outline-2">
+<h2 id="sec-1"><span class="section-number-2">1</span> About this document </h2>
+<div class="outline-text-2" id="text-1">
+
+
+<p>
+This is the general documentation about <i>common-db</i>.
+</p>
+<p>
+The last version of this document comes along with its source code,
+and is also canonically available <a href="http://www.feelingofgreen.ru/shared/src/common-db/doc/documentation.html">from</a>:
+</p>
+<pre class="example">
+http://www.feelingofgreen.ru/shared/src/common-db/doc/documentation.html
+</pre>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-2" class="outline-2">
+<h2 id="sec-2"><span class="section-number-2">2</span> What is <i>common-db</i> </h2>
+<div class="outline-text-2" id="text-2">
+
+
+<p>
+A programmable debugging substrate, mostly geared to driving target
+devices by establishing control via on-chip debugging machinery
+through a JTAG (IEEE 1149.1) external port.
+</p>
+<p>
+On-chip machinery control can be obtained either directly, through a
+JTAG adapter dongle, or through a network proxy, talking either the
+<i>TAPCLIENT</i> or <i>RTLJTAG</i> protocol.
+</p>
+<p>
+<i>Common-db</i> itself can serve as a GDB remote target, by exposing its
+functionality through the GDB RSP protocol. Alternatively, it can
+expose the directly-attached JTAG target through its own <i>TAPCLIENT</i>
+protocol.
+</p>
+<p>
+<i>Common-db</i> is designed to be capable to drive targets of different
+architecture, although only MIPS32 target is implemented.
+</p>
+<p>
+Besides being a substrate, <i>common-db</i> includes a number of
+component applications, among which it includes:
+</p>
+<ul>
+<li>
+<i>comdb</i>, a command-line-driven debugger
+</li>
+<li>
+<i>comgdbsrv</i>, a GDB RSP remote target server
+</li>
+<li>
+<i>flasher</i>, a flash programming utility
+
+</li>
+</ul>
+
+</div>
+
+<div id="outline-container-2_1" class="outline-3">
+<h3 id="sec-2_1"><span class="section-number-3">2.1</span> Portability </h3>
+<div class="outline-text-3" id="text-2_1">
+
+
+<p>
+<i>Common-db</i> is written in <i>Common Lisp</i>, so in addition to depending
+on the host OS, it also depends on the Lisp implementation.
+</p>
+
+</div>
+
+<div id="outline-container-2_1_1" class="outline-4">
+<h4 id="sec-2_1_1"><span class="section-number-4">2.1.1</span> Supported host operating systems </h4>
+<div class="outline-text-4" id="text-2_1_1">
+
+
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<caption></caption>
+<colgroup><col align="left" /></colgroup><colgroup><col align="left" /><col align="left" /></colgroup>
+<thead>
+<tr><th scope="col"></th><th scope="col">linux-x86/amd64</th><th scope="col">windows-x86</th></tr>
+</thead>
+<tbody>
+<tr><td><i>comdb</i></td><td>+</td><td>+</td></tr>
+<tr><td><i>comgdbsrv</i></td><td>+</td><td>+</td></tr>
+<tr><td><i>flasher</i></td><td>+</td><td>+</td></tr>
+</tbody>
+</table>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-2_1_2" class="outline-4">
+<h4 id="sec-2_1_2"><span class="section-number-4">2.1.2</span> Supported Common Lisp compilers </h4>
+<div class="outline-text-4" id="text-2_1_2">
+
+
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<caption></caption>
+<colgroup><col align="left" /></colgroup><colgroup><col align="left" /><col align="left" /><col align="left" /></colgroup>
+<thead>
+<tr><th scope="col"></th><th scope="col">SBCL</th><th scope="col">Clozure CL</th><th scope="col">ECL</th></tr>
+</thead>
+<tbody>
+<tr><td><i>comdb</i></td><td>+</td><td>+</td><td></td></tr>
+<tr><td><i>comgdbsrv</i></td><td>+</td><td>+</td><td></td></tr>
+<tr><td><i>flasher</i></td><td>+</td><td>+</td><td></td></tr>
+</tbody>
+</table>
+
+
+</div>
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-3" class="outline-2">
+<h2 id="sec-3"><span class="section-number-2">3</span> Obtaining <i>common-db</i> </h2>
+<div class="outline-text-2" id="text-3">
+
+
+<p>
+<i>Common-db</i> is distributed in source code form, and can be obtained via
+its <i>git</i> repository:
+</p>
+<pre class="example">
+git clone git://git.feelingofgreen.ru/common-db
+</pre>
+
+
+<p>
+However, this won't deal with the myriad of its dependencies, so an
+alternative, simpler path is using the <i>desire</i> package management
+substrate.
+</p>
+<p>
+First, ensure that you have SBCL installed, and then issue the
+following commands:
+</p>
+<pre class="example">
+curl -O http://feelingofgreen.ru/shared/src/desire/climb.sh
+sh climb.sh -m common-db ~/desr
+</pre>
+
+
+<p>
+&hellip;which would take a while.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-4" class="outline-2">
+<h2 id="sec-4"><span class="section-number-2">4</span> Reporting bugs </h2>
+<div class="outline-text-2" id="text-4">
+
+
+<p>
+Please, report <i>common-db</i> bugs either by mail, to its author:
+</p>
+<pre class="example">
+&lt;_deepfire at feelingofgreen dot ru&gt;
+</pre>
+
+
+<p>
+or, via the <a href="http://feelingofgreen.ru:3000/projects/common-db/issues">bugtracker</a>:
+</p>
+<pre class="example">
+http://feelingofgreen.ru:3000/projects/common-db/issues
+</pre>
+
+</div>
+</div>
+<div id="postamble">
+<p class="author"> Author: Samium Gromoff
+</p>
+<p class="date"> Date: 2010-10-06 02:58:55 MSD</p>
+<p class="creator">HTML generated by org-mode 7.01h in emacs 23</p>
+</div>
+</div>
+</body>
+</html>
