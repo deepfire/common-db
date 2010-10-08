@@ -147,6 +147,12 @@ NAME-OR-ADDRESS.  В том случае если указано имя реги
 равным PAGE-SIZE, определяемому по умолчанию текущим состоянию процессора."
   (tlb-address-map core (get-tlb core) page-size))
 
+(defun clear-tlb-entry (i &aux
+                        (core *core*))
+  #+help-ru
+  "Очистить i-тую ячейку TLB."
+  (set-tlb-entry core i (make-clear-tlb-entry core)))
+
 (defun pipesyms ()
   #+help-ru
   "Вернуть список имён функций соответствующих адресам на конвейере,

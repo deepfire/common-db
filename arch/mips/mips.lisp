@@ -483,6 +483,9 @@ such kind of thing.")
   (not (or (kseg0p address)
            (kseg1p address))))
 
+(defmethod make-clear-tlb-entry ((o mips-core))
+  (make-mips-tlb-entry 0 0 0))
+
 (defmethod tlb-active-p ((o mips-core))
   (eq (devbit-decode o :config :mmu-mode) :tlb))
 

@@ -169,6 +169,7 @@
    #:tlb-active-p
    #:tlb
    #:tlb-entry
+   #:make-clear-tlb-entry
    #:set-tlb-entry
    #:decode-tlb-entry
    #:listify-tlb-entry
