@@ -778,12 +778,20 @@ BREAKPOINT is released when the form is exited, by any means."
 ;;;     RESET
 (defmethod reset-platform ((o core) &key &allow-other-keys))
 (defmethod reset-platform :around ((o core) &rest platform-args &key stop-cores-p &allow-other-keys)
-  (let ((target (backend o)))
-    (iface:interface-reset-target (backend target) stop-cores-p)
-    (mapc #'reset-core (target-devices-by-type target 'general-purpose-core))
-    (call-next-method)
-    (apply #'configure-target-platform target (target-platform target)
-           (remove-from-plist platform-args :stop-cores-p))))
+  ;; The IGNORE-ERRORS below ain't pretty, but the number of issues we can face
+  ;; before a full hardware reset is truly staggering...
+  (let ((prereset-mult (ignore-errors (core-frequency-multiplier o)))
+        (platform-args (copy-list platform-args)))
+    (when-let ((multiplier (or (getf platform-args :core-multiplier)
+                               (when (core-frequency-multiplier-valid-p o prereset-mult)
+                                 prereset-mult))))
+      (setf (getf platform-args :core-multiplier) multiplier))
+    (let ((target (backend o)))
+      (iface:interface-reset-target (backend target) stop-cores-p)
+      (mapc #'reset-core (target-devices-by-type target 'general-purpose-core))
+      (call-next-method)
+      (apply #'configure-target-platform target (target-platform target)
+             (remove-from-plist platform-args :stop-cores-p)))))
 
 (defmethod reset-core :around ((o general-purpose-core))
   (save-core-moment o)
