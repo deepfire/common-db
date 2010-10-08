@@ -189,6 +189,16 @@ in which case it is NIL."))
 (defgeneric reset-core (core)
   (:documentation
    "The backend is required to provide a primary method."))
+(defgeneric clear-core-sysregs (core)
+  (:documentation
+   "Set registers untouched by PLATFORM-RESET to some sensible, clean-ish values."))
+(defgeneric clear-core-tlb (core))
+(defgeneric clear-core-fpu (core))
+(defgeneric clear-core-gprs (core))
+(defgeneric clear-core (core)
+  (:documentation
+   "A better reset than RESET itself: do RESET-PLATFORM, 
+then set registers untouched by PLATFORM-RESET to some sensible, clean-ish values."))
 (defgeneric analyse-core (core)
   (:documentation
    "The backend is required to provide a primary method, which would collect
@@ -805,6 +815,27 @@ BREAKPOINT is released when the form is exited, by any means."
     (mapc #'disable-trap bs))
   (setf (core-stop-reason o) nil)
   (call-next-method))
+
+(defmethod clear-core-sysregs ((o general-purpose-core)))
+(defmethod clear-core-tlb ((o general-purpose-core)))
+
+(defmethod clear-core-gprs ((o general-purpose-core))
+  (dotimes (i (isa-gpr-count (core-isa o)))
+    (setf (gpr o i) 0)))
+
+(defmethod clear-core-fpu ((o general-purpose-core))
+  (dotimes (i (isa-fpr-count (core-isa o)))
+    (setf (fpr o i) 0)))
+
+(defmethod clear-core ((o general-purpose-core))
+  (reset-platform o)
+  (clear-core-tlb o)
+  (clear-core-sysregs o)
+  (clear-core-fpu o)
+  (clear-core-gprs o))
+
+(defmethod reset-instruction-counters :after ((o core))
+  (setf (core-instruction-counter o) 0))
 ;;; *** RESET ***
 
 ;;;     PIPELINE
@@ -874,9 +905,6 @@ exists as a single entity, on pipelined CPUs."
     (:timeout :timeout)
     ((t nil) (setf (state o) :stop))))
 ;;; *** STATE ***
-
-(defmethod reset-instruction-counters :after ((o core))
-  (setf (core-instruction-counter o) 0))
 
 ;;;;
 ;;;; Core protocol -based toolkit

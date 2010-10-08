@@ -177,6 +177,12 @@
    #:get-tlb
    #:set-tlb
    #:tlb-address-map
+   ;; clearing
+   #:clear-core
+   #:clear-core-gprs
+   #:clear-core-fpu
+   #:clear-core-tlb
+   #:clear-core-sysregs
    ;; frequency multipliers
    #:core-frequency-multiplier
    #:default-core-frequency-multiplier

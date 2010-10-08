@@ -550,6 +550,26 @@ such kind of thing.")
                                  (logandc1 (ash pagemask -1) (ash (bit-value lo1 :addr) 12)))))))))
 
 ;;;;
+;;;; Clear
+;;;;
+(defmethod clear-core-tlb ((o mips-core))
+  (dotimes (i (core-tlb-entries-nr o))
+    (set-tlb-entry o i (make-mips-tlb-entry 0 0 0))))
+
+(defmethod clear-core-fpu :after ((o mips-core) &aux
+                                  (space (device-space o)))
+  (dolist (name '(:fir :fccr :fenr :fexr :fcsr))
+    (set-device-register o (register-id space name) 0)))
+
+(defmethod clear-core-sysregs ((o mips-core) &aux
+                               (space (device-space o)))
+  (dolist (name '(:index :random :entrylo0 :entrylo1 :context :pagemask :wired :c0.rsvd0
+                  :badvaddr :count :entryhi :compare :status :cause :epc :prid :config
+                  :lladdr :watchlo :watchhi :c0.rsvd1 :config1 :c0.rsvd3 :debug :debugepc
+                  :perfcnt :ecc :cacheerr :taglo :taghi :errorepc :desave))
+    (set-device-register o (register-id space name) 0)))
+
+;;;;
 ;;;; Memory device
 ;;;;
 (defmethod memory-device-8bit-ref ((o mips-core) address)

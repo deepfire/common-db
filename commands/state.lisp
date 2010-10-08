@@ -401,6 +401,15 @@ in the bank format, when BANK is non-NIL."
   "Пересохранить состояние из FILENAME в форме банк-восстановитель в файле с расширением 'bank'."
   (write-state-restorer-bank core (read-state-for-core core filename) (make-pathname :defaults filename :type "bank")))
 
+(defun clear (&key (core *core*))
+  #-help-ru
+  "Reset CORE's state to pristinity as much as possible.
+NOTE: this requires more than just a RESET-PLATFORM."
+  #+help-ru
+  "Очистить состояние CORE в максимально-возможной степени.
+ПРИМЕЧАНИЕ: эта операция требует большего, нежели просто RESET-PLATFORM."
+  (clear-core core))
+
 (defun testate (&rest args &key filename (core *core*) (state t) bank (pause t) &allow-other-keys)
   #-help-ru
   "Save current state, reset CORE and then apply the saved state."
