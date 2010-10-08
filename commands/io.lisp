@@ -72,7 +72,7 @@ it has to be specified by ENTRY-POINT (which defaults to *CORE*'s default PC)."
     включить проверку целостности записи."
   #-help-ru
   "Load raw bytes from FILENAME into memory at address ADDRESS."
-  (loadable:upload-loadable *core* (loadable:extract-loadable :raw filename :base address) :check check))
+  (loadable:upload-loadable *core* (loadable:extract-loadable :raw filename :base address :entry-point (default-core-pc *core*)) :check check))
 
 (defun make-annotating-disassembly-printer (annotations)
   (lambda (stream addr opcode width insn params)
