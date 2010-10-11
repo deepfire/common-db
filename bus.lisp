@@ -62,7 +62,7 @@
 ;;    - represent both smart busses, able to enumerate attached devices, and probe-style busses
 
 (define-root-container *root-busses* root-bus :if-exists :error)
-(define-subcontainer bus-device :container-slot devices :if-exists :error :remover t :mapper t :iterator t)
+(define-subcontainer bus-device :container-slot devices :if-exists :continue :remover t :mapper t :iterator t)
 
 (define-print-object-method ((o bus) devices)
     "~@<devices: ~S~:@>" devices)
