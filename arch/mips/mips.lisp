@@ -32,10 +32,23 @@
      (:cache-mode       3 3 "cache mode"
        ((#b010  :uncached       "uncached")
         (#b011  :cacheable      "cacheable noncoherent")))
-     (:addr             20 6 "address part"))
+     (:addr            20 6 "address part"))
    (:entryhi ""
      (:asid             8 0 "AS Id")
      (:vpn2            19 13 "Virtual Page Number"))
+   (:rfelo ""
+     (:rf-valid         1 0 "page valid")
+     (:rf-dirty         1 1 "page dirty")
+     (:rf-cache-mode    3 2 "cache mode"
+       ((#b010  :uncached       "uncached")
+        (#b011  :cacheable      "cacheable noncoherent")))
+     (:rf-addr         20 5 "address part"))
+   (:rfehia ""
+     (:rf-asid          8 0 "AS Id")
+     (:rf-global        1 8 "page global"))
+   (:rfehiv ""
+     (:rf-vpn2         19 0 "Virtual Page Number")
+     (:rf-pagemask      8 19 "Page mask"))
    (:status ""
      (:ie               1 0 "Interrupts Enabled")
      (:exl              1 1 "Exception Level")

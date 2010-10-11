@@ -193,9 +193,9 @@
        (#b010    :cop0)
        (#b011    :hilo)
        (#b100    :cop1control "FIR, FCSR")
-       (#b101    :tlb-pfn0    "PFN0, C0, D0, V0")
-       (#b110    :tlb-pfn1    "PFN1, C1, D1, V1")
-       (#b111    :tlb-flags   "R, W, G, ASID, PM, VPN")))
+       (#b101    :rfelo0      "Lo0 - G")
+       (#b110    :rfelo1      "Lo1 - G")
+       (#b111    :rfehipm     "Hi")))
      (:selector-bottom  5 3 "")
      (:selector-top     5 16 "")))
   (:layouts
