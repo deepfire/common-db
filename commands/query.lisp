@@ -151,7 +151,7 @@ NAME-OR-ADDRESS.  В том случае если указано имя реги
                         (core *core*))
   #+help-ru
   "Очистить i-тую ячейку TLB."
-  (set-tlb-entry core i (make-clear-tlb-entry core)))
+  (set-tlb-entry core i (make-clear-tlb-entry core i)))
 
 (defun pipesyms ()
   #+help-ru
