@@ -25,13 +25,18 @@
 
 (defun snapshot-gprs (core)
   #+help-ru
-  "Произвести снимок регистрового файла."
+  "Произвести снимок регистрового файла GPR."
+  #-help-ru
+  "Produce a GPR register file snapshot."
   (map 'vector (curry #'gpr core) (iota 32)))
 
 (defun compare-gpr-snaplists (s0 s1 &optional ignores)
   #+help-ru
   "Сравнить списки снимков регистровых файлов S0 и S1, за возможным исключением
 регистров с номерами из списка IGNORES."
+  #-help-ru
+  "Compare register file snapshots S0 and S1, possibly excluding registers 
+with numbers contained in IGNORES."
   (iter (for s0elt in s0) (for s1elt in s1)
         (for i from 0)
         (dotimes (j 32)
@@ -44,6 +49,10 @@
   #+help-ru
   "Произвести трассировку со съёмом снимков регистрового файла при попадании
 на адрес заданный ADDR-OR-SYM."
+  #-help-ru
+  "Perform a trace by setting a breakpoint on ADDR-OR-SYM, and running either 
+indefinitely, or until NSNAPS stops happen, taking a state snapshot every time
+a stop happens."
   (with-free-hardware-breakpoints (core) ((b (coerce-to-address addr-or-sym)))
     (iter (for i from 0)
           (when (and nsnaps (= i nsnaps))

@@ -24,7 +24,9 @@
 
 (defun simple-trace (&optional count &key (core *core*) (step-lightly t) step-slaves print-trail)
   #+help-ru
-  "Произвести простую, пошаговую трассировку."
+  "Произвести простую, пошаговую трассировку, печатая содержимое конвейера на каждом шагу."
+  #-help-ru
+  "Perform a simple, stepping trace, printing the pipeline on each step."
   (declare (type (or null (integer -1)) count))
   (with-maybe-temporary-state (core :stop step-lightly)
     (oneline-report :prefix "   0" :print-trail print-trail)

@@ -47,15 +47,18 @@ SECONDS могут быть любым неотрицательным реаль
               #+help-ru "Устройства"
               :conc-name dev)
      scan
-     compile-memconfig decompile-memconfig list-memconfigs set-memconfig explain-memconfig
+     memconfig compile-memconfig decompile-memconfig list-memconfigs set-memconfig explain-memconfig print-memconfig
      list-contexts ctx)
     ((input/output #-help-ru "Input/output"
                    #+help-ru "Ввод/вывод"
                    :conc-name io)
      clearmem loadelf
      loadbin savebin
-     loadbank saveeltext
-     loadldr)
+     loadbank savebank
+     loadldr
+     save restore
+     generate-file
+     state-to-bank)
     ((state #-help-ru "State control"
             #+help-ru "Управление состоянием")
      reset
@@ -64,7 +67,9 @@ SECONDS могут быть любым неотрицательным реаль
      step stepw trace
      dspreset dsprun dspstep dspstop
      explain
-     ret)
+     ret
+     save restore clear
+     state-to-bank)
     ((traps #-help-ru "Traps"
             #+help-ru "Ловушки")
      hbreak sw-break watch catch trace settrace
@@ -72,7 +77,7 @@ SECONDS могут быть любым неотрицательным реаль
      dspbreak)
     ((dsp #-help-ru "DSP"
           #+help-ru "DSP")
-     dsp dspbreak dspreset dsprun dspstep dspstop)
+     dspbreak dspreset dsprun dspstep dspstop)
     ((addresses #-help-ru "Addresses & symbols"
                 #+help-ru "Адреса и символы"
                :conc-name addr)
@@ -83,28 +88,35 @@ SECONDS могут быть любым неотрицательным реаль
                #+help-ru "Анализ"
                :conc-name query)
      disasm displash dispack
-     dump print-memory print-tlb
-     display edisplay display-list
+     dump print-memory print-tlb clear-tlb-entry
+     display edisplay display-list display-register
      explain
      get set peek show
-     pipeline pipesyms)
+     pipesyms)
     ((tracing #-help-ru "Tracing"
               #+help-ru "Трассировка"
               :conc-name trc)
-     trace block-trace count-trace insn-trace staircase-trace)
+     trace block-trace count-trace insn-trace staircase-trace simple-trace snaptrace
+     snapshot-gprs compare-gpr-snaplists
+     callog)
     ((miscellaneous #-help-ru "Miscellaneous"
                     #+help-ru "Прочее"
                     :conc-name misc)
-     sleep write-completions
+     write-completions
+     in-hex out-hex in-dec out-dec
      list-platforms version)
-    ((control #-help-ru "Rough control"
-              #+help-ru "Грубое управление"
-              :conc-name ctl)
-     load quit)
     ((testing #-help-ru "Testing"
               #+help-ru "Тестирование"
               :conc-name test)
-     run-tests testir testmem)))
+     run-tests examine-test
+     testir testmem)
+    ((meta #-help-ru "Meta"
+           #+help-ru "Мета")
+     get-register coerce-to-register coerce-to-address register-address)
+    ((control #-help-ru "Rough control"
+              #+help-ru "Грубое управление"
+              :conc-name ctl)
+     pause sleep load quit)))
 
 (defun print-documentation-entry (name type &optional lambda-list print-category orgify (indentation 5))
   (let* ((indent (make-string indentation :initial-element #\Space))

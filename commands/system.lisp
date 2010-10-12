@@ -46,7 +46,11 @@
 (defun memconfig (&optional name)
   #+help-ru
   "Найти конфигурацию памяти с заданным именем, среди множества доступного для
-платформы текущего целевого устройства."
+платформы текущего целевого устройства.  Если имя не задано, вернуть текущую конфигурацию."
+  #-help-ru
+  "Find the memory configuration with specified name, among configurations
+valid for the current target device.  When the name is not specified, return the
+current configuration."
   (if name
       (if (sysdev::memory-config-p name)
           name
@@ -129,8 +133,10 @@ remembered for the current target."
 
 (defun print-memconfig (&optional name)
   #+help-ru
-  "Напечатать конфигурацию памяти в тех двух вариантах, в котором она может
-храниться в файлах."
+  "Напечатать конфигурацию памяти в тех двух вариантах, которые пригодны в качестве аргумента
+для опции --memconfig."
+  #-help-ru
+  "Print the memory configuration in both of the formats valid for the --memconfig option."
   (let* ((config (memconfig name))
          (cooked (memory-config-register-values config))
          (raw (compile-memconfig config))

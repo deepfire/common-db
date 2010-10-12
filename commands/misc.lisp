@@ -26,19 +26,27 @@
 (defun in-hex ()
   #+help-ru
   "Установить базу читаемых чисел в 16."
+  #-help-ru
+  "Set *READ-BASE* to 16."
   (setf *read-base* #x10))
 
 (defun out-hex ()
   #+help-ru
   "Установить базу печатаемых чисел в 16."
+  #-help-ru
+  "Set *PRINT-BASE* to 16."
   (setf *print-base* #x10))
 
 (defun in-dec ()
   #+help-ru
   "Установить базу читаемых чисел в 10."
+  #-help-ru
+  "Set *READ-BASE* to 10."
   (setf *read-base* #xa))
 
 (defun out-dec ()
   #+help-ru
   "Установить базу печатаемых чисел в 10."
+  #-help-ru
+  "Set *PRINT-BASE* to 10."
   (setf *print-base* #xa))

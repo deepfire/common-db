@@ -24,11 +24,11 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (mar 'print-documentation-entry 'print-api-documentation 'print-help 'display-invocation-help-and-quit
-       'coerce-to-address 'address-resolution-condition-address
-       'ctxs-of-type 'ctx-id 'ctx-by-id 'ctx-initargs 'ctx-interface 'ctx-target 'ctx-core 'remove-context 'set-context
+       'address-resolution-condition-address
+       'ctxs-of-type 'ctx-id 'ctx-by-id 'ctx-initargs 'remove-context 'set-context
        'do-all-target-contexts
        'show-value-using-value 'display-code-address-register-value
-       'coerce-to-dsp 'coerce-to-register
+       'coerce-to-dsp
        'describe-insn-jump-target
        'set-display-list 'default-display-list
        'make-annotating-disassembly-printer
@@ -36,6 +36,10 @@
        'init
        'comdb-tui 'read-option 'read-args-safely 'write-package-readline-completions
        'comdb-toplevel-wrapper
-       'comdb-debugger)
+       'comdb-debugger
+       'findcritmem 'testate 'oneline-report 'edisplay-using-core
+       'display-register-using-core 'default-display-list
+       'print-generic-register-and-value
+       'opfr-toplevel)
 
   (export-unmarred #'fboundp (find-package :common-db)))

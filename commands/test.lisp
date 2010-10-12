@@ -77,6 +77,9 @@
 (defun examine-test (name &optional (argument *core*))
   #+help-ru
   "Проанализировать тест NAME с пристрастием."
+  #-help-ru
+  "Analyse test with NAME with maximum thoroughness, which means enabling
+all available kinds of logging."
   (let* ((*log-core-pipeline-crit* t)
          (*examine-test* t)
          (sym (find-symbol (string name) :test-hardware)))

@@ -69,6 +69,10 @@
 до попадания в функцию/адрес заданный параметром UNTIL.
 Функции, имена которых находятся в списке SKIPLIST исключаются из детального
 анализа и пропускаются в ускоренном режиме."
+  #-help-ru
+  "Step iteratively, registering control transfers, possibly until reaching
+a specific address/function UNTIL.  Functions call subtrees with root names in SKIPLIST
+are skipped at full clock speed."
   (declare (optimize debug) (type (or null integer) stay-for-more))
   (let (moment-invaded-p
         (insn-width (memory-device-byte-width (backend core))))
@@ -374,6 +378,8 @@ address to be different from ADDRESS."
 (defun pause ()
   #+help-ru
   "Вывести сообщение, предлагающее нажать клавишу 'Enter' для продолжения."
+  #-help-ru
+  "Pause execution, until the user presses 'Enter'."
   (write-line "Press Enter to continue...")
   (read-line))
 

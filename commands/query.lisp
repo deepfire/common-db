@@ -28,6 +28,8 @@
 (defun get-register (name)
   #+help-ru
   "Найти регистр соответствующий NAME в текущем целевом контексте."
+  #-help-ru
+  "Find an object representing register with NAME in current target context."
   (register-instance (target-enumpool *target*) name))
 
 (defun coerce-to-register (register-or-name)
@@ -35,15 +37,20 @@
   "Если REGISTER-OR-NAME представляет собой ключевое слово, найти и вернуть
 соответствующий регистр.  Если же он представляет собой регистр, попросту
 вернуть его."
+  #-help-ru
+  "Coerce REGISTER-OR-NAME to the corresponding register object."
   (etypecase register-or-name
     (keyword (get-register register-or-name))
     (register-instance register-or-name)))
 
-(defun register-address (register)
+(defun register-address (register-or-name)
   #+help-ru
-  "Найти адрес регистра соответствующего спецификатору регистра REGISTER,
+  "Найти адрес регистра соответствующего спецификатору регистра REGISTER-OR-NAME,
 в том случае если он соответствует регистру отображённому в память."
-  (when-let* ((ri (coerce-to-register register))
+  #-help-ru
+  "When REGISTER-OR-NAME designates a memory-mapped register, return its address.
+Otherwise, raise an error."
+  (when-let* ((ri (coerce-to-register register-or-name))
               (device (reginstance-device ri)))
     (if (mapped-device-p device)
         (mapped-device-register-address device (name (reginstance-register ri)))
@@ -53,8 +60,11 @@
 (defun get (name-or-address &aux
             (target *target*))
   #+help-ru
-  "Получить регистр или ячейку памяти заданный/-ую через спецификатор адреса
-NAME-OR-ADDRESS, представляющем собой либо ключевое слово."
+  "Получить регистр или ячейку памяти заданный/-ую через спецификатор
+NAME-OR-ADDRESS, представляющем собой либо спецификатор регистра, либо
+положительное целое, обозначающее адрес."
+  #-help-ru
+  "Obtain the value of a register or memory cell designated by NAME-OR-ADDRESS."
   (etypecase name-or-address
     (integer
      (memory-ref target name-or-address))
@@ -66,6 +76,8 @@ NAME-OR-ADDRESS, представляющем собой либо ключево
   #+help-ru
   "Установить регистр или ячейку памяти заданный/-ую через спецификатор адреса
 NAME-OR-ADDRESS.  Также доступен синтаксис (setf (get NAME-OR-ADDRESS) VALUE)."
+  #-help-ru
+  "Set the value of a register or memory cell designated by NAME-OR-ADDRESS to VALUE."
   (etypecase name-or-address
     (integer
      (setf (memory-ref target name-or-address) value))
@@ -89,6 +101,10 @@ NAME-OR-ADDRESS.  Также доступен синтаксис (setf (get NAME
 NAME-OR-ADDRESS.  В том случае если указано имя регистра имеющего структуру,
 полученное значение разобирается по полям, и возвращается как второе значение
 функции."
+  #-help-ru
+  "Obtain the value of a register or memory cell designated by NAME-OR-ADDRESS.
+NOTE: when NAME-OR-ADDRESS is a non-keyword symbol, it is interpreted as a symbol
+from the currently active symbol tables."
   (multiple-value-bind (discriminator value)
       (etypecase name-or-address
         (integer
@@ -151,6 +167,8 @@ NAME-OR-ADDRESS.  В том случае если указано имя реги
                         (core *core*))
   #+help-ru
   "Очистить i-тую ячейку TLB."
+  #-help-ru
+  "Clear the i-th TLB entry."
   (set-tlb-entry core i (make-clear-tlb-entry core i)))
 
 (defun pipesyms ()
@@ -174,6 +192,9 @@ NAME-OR-ADDRESS.  В том случае если указано имя реги
   #+help-ru
   (:documentation
    "Интеллектуально отобразить регистр с именем NAME.")
+  #-help-ru
+  (:documentation
+   "Intelligently display register with NAME.")
   (:method (name &rest args &aux
             (*print-right-margin* 120)
             (*print-escape* nil))
