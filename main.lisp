@@ -82,7 +82,8 @@ To be called once, before any use of COMMON-DB."
            ;; And one to bind them all..
            (ctx (make-instance 'target-context :interface interface :target target :core core :initargs platform-initargs)))
       (push ctx *target-contexts*)
-      (set-context ctx))))
+      (set-context ctx)
+      (setf (state core) *depth*))))
 
 (defmethod bus-remove :after ((o interface-bus) interface)
   (remove-context (find interface *target-contexts* :key #'ctx-interface)))
