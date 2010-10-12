@@ -243,8 +243,9 @@
         (t
          (let ((*core* core))
            (when *trace-comdb-calls*
-             (log-comdb 'step))
-           (step 1)))))
+             (log-comdb 'step "stepping"))
+           (step 1)
+           "S00"))))
 
 (defmethod gdb-extended-command ((o common-db-gdbserver) (c (eql :cont)) arguments)
   "Use the first action and completely ignore all thread IDs."
