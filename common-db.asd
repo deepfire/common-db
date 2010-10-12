@@ -118,6 +118,7 @@
             (;;
              (:file "address")
              (:file "analysis")
+             (:file "data")
              (:file "documentation")
              (:file "dsp")
              (:file "io")
