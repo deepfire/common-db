@@ -43,5 +43,10 @@
    #:scan-interface-busses
    #:interfaces
    ;;
-   #:elvees-interface))
+   #:elvees-interface
+   #:+oncd-ir-length+
+   #:+oncd-ird-length+
+   #:+idcode-length+
+   #:with-writing-oncd-register-value-as-vector
+   #:tap-write-dr-register))
 

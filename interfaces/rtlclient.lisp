@@ -200,26 +200,28 @@
     (with-response iface ("ok" idcode) stream t
       idcode)))
 
+(defmethod tap-write-dr-register ((o rtl-client-interface) selector val read-only-p)
+  (declare (fixnum selector) (type (unsigned-byte 32) val) (boolean read-only-p))
+  (with-writing-oncd-register-value (irdval reglen) (o selector read-only-p)
+    (sendpkt-stream :set-dr reg (logior irdval (ash val 8)))
+    (with-response iface ("ok" ret) stream t
+      ret)))
+
 (defgeneric client-tap-dr (iface reg)
   (:method ((iface tap-client-interface) reg &aux (stream (stream-of iface)))
     (sendpkt stream :get-dr reg)
     (with-response iface (:dr value) stream t
       value))
   (:method ((iface rtl-client-interface) reg &aux (stream (stream-of iface)))
-    (sendpkt stream "show" (id2reg reg))
-    (with-response iface ("ok" value) stream t
-      value)))
+    (tap-write-dr-register o reg 0 t)))
 
 (defgeneric (setf client-tap-dr) (val iface reg)
-  (:method (val (iface tap-client-interface) reg &aux (stream (stream-of iface)))
+  (:method (val (o tap-client-interface) reg &aux (stream (stream-of o)))
     (sendpkt stream :set-dr reg val)
-    (with-response iface (:ok) stream t)
+    (with-response o (:ok) stream t)
     val)
-  (:method (val (iface rtl-client-interface) reg &aux (stream (stream-of iface)))
-    (sendpkt stream "set" (id2reg reg) val)
-    (with-response iface ("ok" ignore) stream t
-      (declare (ignore ignore)))
-    val))
+  (:method (val (o rtl-client-interface) reg &aux (stream (stream-of o)))
+    (tap-write-dr-register o reg val nil)))
 
 (defmethod interface-reset ((o tap-client-interface) &aux (stream (stream-of o)))
   (with-condition-recourses interface-error
@@ -296,18 +298,17 @@
     (when (eq direction :read)
       (setf (subseq buffer offset) data))))
 
+#+nil ;; let the ELVEES-INTERFACE method kick in
 (defmethod interface-bus-io ((o rtl-client-interface) buffer address size direction &optional (offset 0) &aux (stream (stream-of o)))
-  
-  ;; (multiple-value-call #'sendpkt stream (ecase direction
-  ;;                                         (:read  (values :read-sequence  address size))
-  ;;                                         (:write (values :write-sequence address (if (and (zerop offset)
-  ;;                                                                                          (= size (length buffer)))
-  ;;                                                                                     buffer
-  ;;                                                                                     (subseq buffer offset (+ offset size)))))))
-  ;; (with-response o (:data/ok &optional data) stream t
-  ;;   (when (eq direction :read)
-  ;;     (setf (subseq buffer offset) data)))
-  )
+  (multiple-value-call #'sendpkt stream (ecase direction
+                                          (:read  (values :read-sequence  address size))
+                                          (:write (values :write-sequence address (if (and (zerop offset)
+                                                                                           (= size (length buffer)))
+                                                                                      buffer
+                                                                                      (subseq buffer offset (+ offset size)))))))
+  (with-response o (:data/ok &optional data) stream t
+    (when (eq direction :read)
+      (setf (subseq buffer offset) data))))
 
 (defmethod interface-close ((o tap-client-interface) &aux (stream (stream-of o)))
   (when (open-stream-p stream)

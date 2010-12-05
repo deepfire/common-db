@@ -70,10 +70,6 @@
 (defconstant lpt3-base #xbc0)
 (defconstant lpt4-base #xb80)
 
-(defconstant +oncd-ir-length+   4)
-(defconstant +oncd-ird-length+  8)
-(defconstant +idcode-length+    32)
-
 ;; Delay values, in nanoseconds.
 (defconstant +reset-delay+ 1000000)
 (defconstant +generic-delay+ 10000)
@@ -424,7 +420,8 @@
         (iface-bits array port-base bits) :reverse)
   (values))
 
-(defun (setf tap-ir) (insn iface null &aux (port-base (parport-interface-epp-base iface)))
+(defun (setf tap-ir) (insn iface null &aux
+                      (port-base (parport-interface-epp-base iface)))
   (declare (type unsigned-byte insn) (ignore null) (type (unsigned-byte 16) port-base))
   (let ((ioarr (make-array 1 :element-type '(unsigned-byte 8) :initial-element insn)))
     (tap-write-ir-vector ioarr port-base +oncd-ir-length+)
@@ -432,16 +429,17 @@
     (aref ioarr 0)))
 
 (let ((ioarr (make-array 5 :element-type '(unsigned-byte 8))))
-  (defun tap-write-dr-path-integer (val interface selector read-only &aux (port-base (parport-interface-epp-base interface)))
-    (declare (type (unsigned-byte 32) val) (type (unsigned-byte 16) port-base) (fixnum selector) (boolean read-only))
-    (setf (aref ioarr 0) (logior selector (bits :rdonly/push-irdec read-only))
-          (u8-vector-word32le ioarr 1) val)
-    (let ((reglen (+ +oncd-ird-length+ (the (unsigned-byte 6) (aref (aref (the (simple-array (simple-array t)) (device-extensions interface)) selector) 1)))))
-      (tap-write-dr-vector ioarr port-base reglen))
-    (u8-vector-word32le ioarr 1)))
+  (defmethod tap-write-dr-register ((o parport-interface) selector val read-only-p)
+    (declare (fixnum selector) (type (unsigned-byte 32) val) (boolean read-only-p))
+    (with-writing-oncd-register-value (irdval reglen) (o selector read-only-p)
+      (setf (aref ioarr 0) irdval
+            (u8-vector-word32le ioarr 1) value)
+      (tap-write-dr-vector vector (parport-interface-epp-base o) reglen)
+      (u8-vector-word32le ioarr 1))))
 
 (let ((ioarr (make-array 5 :element-type '(unsigned-byte 8))))
-  (defun (setf parport-tap-ird) (val iface null &aux (port-base (parport-interface-epp-base iface)))
+  (defun (setf parport-tap-ird) (val iface null &aux
+                                 (port-base (parport-interface-epp-base iface)))
     "Used in interface-reset, interface-reset-target, (setf core-running-p),
 step-core-asynchronous and exec-raw."
     (declare (type (unsigned-byte 32) val) (type (unsigned-byte 16) port-base) (ignore null))
@@ -452,10 +450,10 @@ step-core-asynchronous and exec-raw."
       (u8-vector-wordle ioarr 0 bytelen))))
 
 (defun parport-tap-dr (iface reg)
-  (tap-write-dr-path-integer 0 iface reg t))
+  (tap-write-dr-register iface reg 0 t))
 
 (defun (setf parport-tap-dr) (val iface reg)
-  (tap-write-dr-path-integer val iface reg nil)
+  (tap-write-dr-register iface reg val nil)
   val)
 
 ;;;;

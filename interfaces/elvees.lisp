@@ -211,6 +211,26 @@
             (:tap-dr     nil nil))
   (:extended-layouts :tap-dr))
 
+(defconstant +oncd-ir-length+   4)
+(defconstant +oncd-ird-length+  8)
+(defconstant +idcode-length+    32)
+
+(defun invoke-writing-oncd-register-value (iface selector read-only-p fn)
+  (declare (fixnum selector) (boolean read-only-p))
+  (let ((irdval (logior selector (bits :rdonly/push-irdec read-only-p)))
+        (reglen (+ +oncd-ird-length+ (the (unsigned-byte 6) (aref (aref (the (simple-array (simple-array t)) (device-extensions iface)) selector) 1)))))
+    (funcall fn irdval reglen)))
+
+(defmacro with-writing-oncd-register-value ((vector nbits) (iface selector read-only-p)
+                                                      &body body)
+  "Capture the (register, read-only-p) => (<some-method> irdval nbits) interpretation."
+  `(invoke-writing-oncd-register-value ,iface ,selector ,read-only-p
+                                       (lambda (,vector ,nbits) ,@body)))
+
+(defgeneric tap-write-dr-register (interface selector val read-only-p)
+  (:documentation
+   "Write an integer into Elvees' OnCD registers through JTAG DR.
+Only useful for those interfaces not implementing register access directly."))
 
 (defconstant +memory-iteration-period+ 1000000)
 
