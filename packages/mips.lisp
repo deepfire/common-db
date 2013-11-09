@@ -5,6 +5,7 @@
 (defpackage #:mips ;; needed by common-db, test-hardware
   (:use :common-lisp :alexandria :pergamum :iterate :setc :bitmop :device-model :isa :isa-mips :assem :assem-mips
         :options :spaces :address-map :generic :interface :tgt :core)
+  (:shadowing-import-from :options #:arg)
   (:shadowing-import-from :bitmop #:space)
   (:shadowing-import-from :isa #:disassemble)
   (:export

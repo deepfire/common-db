@@ -5,6 +5,7 @@
 (defpackage #:loadable ;; needed by common-db
   (:use :common-lisp :alexandria :pergamum :iterate :bintype :elf
         :options :bank)
+  (:shadowing-import-from :options #:arg)
   (:export
    #:loadable
    #:loadable-entry-point

@@ -5,6 +5,7 @@
 (defpackage #:address-map ;; needed-by mips, common-db
   (:use :common-lisp :pergamum
         :options)
+  (:shadowing-import-from :options #:arg)
   (:export
    #:page-align
    #:address-map

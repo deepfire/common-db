@@ -5,6 +5,7 @@
 (defpackage #:bank ;; standalone
   (:use :common-lisp :alexandria :iterate :pergamum
         :options)
+  (:shadowing-import-from :options #:arg)
   (:export
    #:read-bank-extents
    #:u8-extent-print-as-bank

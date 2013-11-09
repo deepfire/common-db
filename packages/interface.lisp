@@ -6,6 +6,7 @@
   (:nicknames :iface)
   (:use :common-lisp :alexandria :iterate :pergamum :bintype :setc :bitmop :device-model
         :options :portability :spaces :bus)
+  (:shadowing-import-from :options #:arg)
   (:shadowing-import-from :bitmop #:space)
   (:export
    #:interface-bus

@@ -7,6 +7,7 @@
   (:use :common-lisp :alexandria :pergamum :iterate :setc :bitmop :device-model :isa :isa-mips :assem :assem-mips :custom-harness
         :options :spaces :generic :platform :interface :tgt :core :sysdev :mips :dsp
         :common-db)
+  (:shadowing-import-from :options #:arg)
   (:shadowing-import-from :bitmop #:space)
   (:shadowing-import-from :isa #:disassemble)
   (:shadowing-import-from :common-db #:get #:set #:reset #:trace #:catch #:step)

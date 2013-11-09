@@ -5,6 +5,7 @@
 (defpackage #:platform ;; needed by :test-hardware
   (:use :common-lisp :alexandria :pergamum :iterate :bintype :setc :bitmop :device-model
         :portability :options :spaces :generic)
+  (:shadowing-import-from :options #:arg)
   (:shadowing-import-from :bitmop #:space)
   (:export
    #:platform-target

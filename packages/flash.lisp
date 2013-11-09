@@ -11,6 +11,7 @@
         :setc :bitmop :device-model
         :portability :options :spaces :bus :address-map :loadable :generic :interface :platform :tgt :core
         :mips :sysdev)
+  (:shadowing-import-from :options #:arg)
   (:shadowing-import-from :bitmop #:space)
   (:shadowing-import-from :isa #:disassemble)
   (:export

@@ -5,6 +5,7 @@
 (defpackage #:graft ;; standalone
   (:use :common-lisp :alexandria :pergamum :setc :bitmop :device-model
         :options :portability :spaces)
+  (:shadowing-import-from :options #:arg)
   (:shadowing-import-from :bitmop #:space)
   (:export
    #:with-graft-io-capture

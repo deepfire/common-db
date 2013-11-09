@@ -8,6 +8,7 @@
         :isa :isa-mips :assem :assem-mips
         :setc :bitmop :device-model
         :portability :options :spaces :bus :address-map :loadable :generic :interface :platform :tgt :core :mips)
+  (:shadowing-import-from :options #:arg)
   (:shadowing-import-from :bitmop #:space)
   (:shadowing-import-from :isa #:disassemble)
   (:export

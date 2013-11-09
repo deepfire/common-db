@@ -5,6 +5,7 @@
 (defpackage #:trace
   (:use :common-lisp :pergamum
         :options)
+  (:shadowing-import-from :options #:arg)
   (:export
    #:setup-trace
    #:trace-fun-call

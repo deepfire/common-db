@@ -5,6 +5,7 @@
 (defpackage #:bus ;; needed by interface host-pci
   (:use :common-lisp :alexandria :iterate :bitmop :device-model :pergamum
         :options :spaces)
+  (:shadowing-import-from :options #:arg)
   (:shadowing-import-from :bitmop #:space)
   (:export
    #:bus

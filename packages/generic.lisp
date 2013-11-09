@@ -5,6 +5,7 @@
 (defpackage #:generic ;; needed by target, platform, common-db, test-hardware
   (:use :common-lisp :pergamum :bitmop :device-model
         :options)
+  (:shadowing-import-from :options #:arg)
   (:shadowing-import-from :bitmop #:space)
   (:export
    ;; memory-device
