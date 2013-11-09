@@ -1030,8 +1030,6 @@ inf-файла драйвера через всплывающее окно, ав
        Протестировать диапазон ячеек памяти длиной в LENGTH байт,
        начиная с ADDRESS.
 
-
-#+END
 *** Команды отладчика MDB получившие новое название
       - source [[file:~/source/mdb/src/cmd.c::void%20mdb_source%20int%20argc%20char%20argv][.]] => load :: 
       - load [[file:~/source/mdb/src/cmd.c::void%20mdb_load%20int%20argc%20char%20argv][.]] => loadeltext :: 
